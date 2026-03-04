@@ -44,12 +44,19 @@ fci-platform/
 - Streaming chat works end-to-end
 - Resizable split-panel investigation view (drag handle between case data and chat)
 
-## Active Task: Frontend Design Polish
-See `client/DESIGN_SPEC.md` for the complete design specification. The task is:
-- Apply the design spec to all frontend components
-- Pure Tailwind class adjustments — no logic changes, no new components, no restructuring
-- Focus: increase font sizes (most things are text-xs/text-sm, need text-base), add spacing/padding, add depth (shadows), improve drag handle usability
-- Work through components systematically per the spec's file-by-file table
+## Active Task: Frontend Design Overhaul
+See `client/DESIGN_SPEC.md` for the complete design specification. This is a comprehensive visual overhaul to make the dashboard look like a premium SaaS product. Key areas:
+
+- **Light/dark mode** — ThemeContext with system detection + manual toggle + localStorage persistence
+- **Typography** — Inter font, bump all font sizes (text-xs/text-sm → text-base for body)
+- **Animations** — fade-in-up on messages, staggered card animations, shimmer loading, blinking streaming cursor, smooth page transitions
+- **Polished components** — gradient buttons, glass-effect header, rounded-2xl bubbles, auto-growing textarea, proper drag handle with grip indicator
+- **Badge system** — consistent ring-based badges for case types and statuses in both themes
+- **Shadows & depth** — custom soft shadow scale, glow effects on hover
+- **Skeleton loading** — replace spinners with skeleton placeholders
+- **Two new files only:** ThemeContext.jsx and Skeleton.jsx. Everything else is styling updates.
+
+Follow the implementation order in Section 10 of the spec for maximum impact at each step.
 
 ## Future: Document Processing Pipeline
 See `DOCUMENT_PIPELINE_SPEC.md` for the full architecture spec. Key idea:

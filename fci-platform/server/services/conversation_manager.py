@@ -552,7 +552,7 @@ def _rebuild_api_messages(stored_messages: list[dict]) -> list[dict]:
                         })
                     except Exception as e:
                         logger.warning("Could not reload image %s: %s", img_ref.get("stored_path"), e)
-                content_blocks.append({"type": "text", "text": msg["content"]})
+                content_blocks.append({"type": "text", "text": msg["content"] or "Describe this image."})
                 api_messages.append({
                     "role": "user",
                     "content": content_blocks,
