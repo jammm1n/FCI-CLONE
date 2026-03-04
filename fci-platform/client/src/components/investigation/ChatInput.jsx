@@ -15,7 +15,6 @@ export default function ChatInput({ onSend, disabled }) {
     setImages([]);
   }, [text, images, onSend]);
 
-  // Enter to send, Shift+Enter for newline
   const handleKeyDown = useCallback(
     (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -45,7 +44,6 @@ export default function ChatInput({ onSend, disabled }) {
 
       if (imageFiles.length > 0) {
         e.preventDefault();
-        // Convert pasted images to base64
         Promise.all(imageFiles.map(fileToBase64)).then((newImages) => {
           setImages((prev) => [...prev, ...newImages]);
         });
@@ -56,7 +54,7 @@ export default function ChatInput({ onSend, disabled }) {
     return () => textarea.removeEventListener('paste', handlePaste);
   }, []);
 
-  // Handle drag and drop for images
+  // Handle drag and drop
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -90,10 +88,19 @@ export default function ChatInput({ onSend, disabled }) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border-t bg-surface-800 px-4 py-3 shrink-0 transition-colors ${
-        dragOver ? 'border-primary-500 bg-primary-900/20' : 'border-surface-700'
+      className={`border-t bg-surface-50 dark:bg-surface-800 px-5 py-4 shrink-0 ${
+        dragOver
+          ? 'border-2 border-dashed border-gold-400 bg-gold-500/5'
+          : 'border-surface-200 dark:border-surface-700'
       }`}
     >
+      {/* Drag overlay text */}
+      {dragOver && (
+        <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
+          Drop image here
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <ImageUpload images={images} onImagesChange={setImages} />
 
@@ -104,14 +111,14 @@ export default function ChatInput({ onSend, disabled }) {
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder="Type a message... (Shift+Enter for new line)"
-          rows={2}
-          className="flex-1 px-3 py-2 bg-surface-900 border border-surface-600 rounded text-sm text-surface-100 placeholder-surface-500 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none disabled:opacity-50"
+          rows={3}
+          className="flex-1 px-4 py-3 text-base rounded-xl bg-surface-100 dark:bg-surface-900 border border-surface-200 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 resize-none disabled:opacity-50"
         />
 
         <button
           onClick={handleSend}
           disabled={disabled || (!text.trim() && images.length === 0)}
-          className="px-4 py-2 bg-primary-700 hover:bg-primary-600 disabled:bg-surface-700 disabled:text-surface-500 text-sm font-medium text-white rounded transition-colors shrink-0"
+          className="px-5 py-2.5 text-base font-medium rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 shadow-md shadow-gold-500/20 active:scale-[0.97] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 disabled:shadow-none shrink-0"
         >
           Send
         </button>

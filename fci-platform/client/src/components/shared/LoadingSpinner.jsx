@@ -7,7 +7,7 @@ export default function LoadingSpinner({ size = 'md', className = '' }) {
 
   return (
     <div
-      className={`animate-spin rounded-full border-surface-600 border-t-primary-500 ${sizeClasses[size]} ${className}`}
+      className={`animate-spin rounded-full border-surface-300 dark:border-surface-600 border-t-gold-500 ${sizeClasses[size]} ${className}`}
     />
   );
 }

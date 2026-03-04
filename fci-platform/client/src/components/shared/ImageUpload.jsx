@@ -1,12 +1,5 @@
 import { useRef, useCallback } from 'react';
 
-/**
- * Handles image selection (file picker + paste) and base64 conversion.
- *
- * Props:
- *   images: array of { base64, media_type, preview } objects
- *   onImagesChange: callback to update images in parent state
- */
 export default function ImageUpload({ images, onImagesChange }) {
   const fileInputRef = useRef(null);
 
@@ -57,10 +50,11 @@ export default function ImageUpload({ images, onImagesChange }) {
         className="hidden"
         onChange={handleFileSelect}
       />
+      {/* Attachment button */}
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="p-1.5 text-surface-400 hover:text-surface-200 transition-colors"
+        className="w-9 h-9 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-400 hover:text-gold-500"
         title="Attach image"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,14 +73,14 @@ export default function ImageUpload({ images, onImagesChange }) {
           <img
             src={img.preview}
             alt=""
-            className="h-8 w-8 rounded object-cover border border-surface-600"
+            className="w-16 h-16 rounded-xl object-cover border-2 border-surface-200 dark:border-surface-700"
           />
           <button
             type="button"
             onClick={() => removeImage(i)}
-            className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-surface-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            x
+            &times;
           </button>
         </div>
       ))}
@@ -98,7 +92,6 @@ function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      // Strip the data:...;base64, prefix
       const result = reader.result;
       const base64 = result.split(',')[1];
       resolve(base64);

@@ -9,7 +9,7 @@ import CaseDataPanel from '../components/investigation/CaseDataPanel';
 import ChatMessageList from '../components/investigation/ChatMessageList';
 import ChatInput from '../components/investigation/ChatInput';
 import StreamingIndicator from '../components/investigation/StreamingIndicator';
-import LoadingSpinner from '../components/shared/LoadingSpinner';
+import Skeleton from '../components/shared/Skeleton';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
@@ -29,17 +29,14 @@ export default function InvestigationPage() {
   useEffect(() => {
     async function init() {
       try {
-        // Fetch case details
         const caseDetail = await api.getCase(token, caseId);
         setCaseData(caseDetail);
 
-        // Set the first available tab
         const ppd = caseDetail.preprocessed_data || {};
         const firstKey = Object.keys(ppd).find((k) => ppd[k]);
         if (firstKey) setActiveTab(firstKey);
 
         if (caseDetail.conversation_id) {
-          // Existing conversation — load history
           setConversationId(caseDetail.conversation_id);
           const history = await api.getConversationHistory(
             token,
@@ -47,7 +44,6 @@ export default function InvestigationPage() {
           );
           setMessages(history.messages || []);
         } else {
-          // New conversation — create and get initial assessment
           const result = await api.createConversation(token, caseId);
           setConversationId(result.conversation_id);
           setCaseData((prev) => ({
@@ -79,7 +75,6 @@ export default function InvestigationPage() {
     async (content, images) => {
       if (!conversationId || (!content.trim() && images.length === 0)) return;
 
-      // Optimistically add user message
       const userMsg = {
         message_id: `temp_${Date.now()}`,
         role: 'user',
@@ -90,7 +85,6 @@ export default function InvestigationPage() {
       setMessages((prev) => [...prev, userMsg]);
       setSending(true);
 
-      // Add a placeholder assistant message that we'll stream into
       const streamMsgId = `stream_${Date.now()}`;
       setMessages((prev) => [
         ...prev,
@@ -100,6 +94,7 @@ export default function InvestigationPage() {
           content: '',
           tools_used: [],
           timestamp: new Date().toISOString(),
+          isStreaming: true,
         },
       ]);
 
@@ -109,7 +104,7 @@ export default function InvestigationPage() {
           conversationId,
           content,
           images.map((img) => ({ base64: img.base64, media_type: img.media_type })),
-          true // streaming
+          true
         );
 
         const reader = response.body.getReader();
@@ -122,10 +117,8 @@ export default function InvestigationPage() {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-
-          // Parse SSE lines from buffer
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // keep incomplete line in buffer
+          buffer = lines.pop();
 
           for (const line of lines) {
             if (!line.startsWith('data:')) continue;
@@ -154,11 +147,10 @@ export default function InvestigationPage() {
                 document_title: event.document_title,
               });
             } else if (event.type === 'stored') {
-              // Update the placeholder message with the real message_id
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.message_id === streamMsgId
-                    ? { ...msg, message_id: event.message_id, tools_used: toolsUsed }
+                    ? { ...msg, message_id: event.message_id, tools_used: toolsUsed, isStreaming: false }
                     : msg
                 )
               );
@@ -166,7 +158,7 @@ export default function InvestigationPage() {
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.message_id === streamMsgId
-                    ? { ...msg, content: `**Error:** ${event.message}` }
+                    ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
                     : msg
                 )
               );
@@ -177,7 +169,7 @@ export default function InvestigationPage() {
         setMessages((prev) =>
           prev.map((msg) =>
             msg.message_id === streamMsgId
-              ? { ...msg, content: `**Error:** ${err.message}` }
+              ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
               : msg
           )
         );
@@ -218,10 +210,19 @@ export default function InvestigationPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <LoadingSpinner size="lg" className="mx-auto mb-3" />
-            <p className="text-sm text-surface-400">Loading investigation...</p>
+        <div id="investigation-panels" className="flex h-full">
+          {/* Skeleton left panel */}
+          <div style={{ width: `${leftWidth}%` }} className="border-r border-surface-200 dark:border-surface-700 flex flex-col p-6 gap-4 shrink-0 animate-fade-in">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-32 w-full mt-4" />
+          </div>
+          {/* Skeleton right panel */}
+          <div className="flex-1 flex flex-col p-5 gap-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <Skeleton className="h-16 w-3/4" />
+            <Skeleton className="h-12 w-1/2 ml-auto" />
+            <Skeleton className="h-16 w-2/3" />
           </div>
         </div>
       </AppLayout>
@@ -232,7 +233,7 @@ export default function InvestigationPage() {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-full">
-          <div className="bg-red-900/20 border border-red-800 rounded p-6 max-w-md text-sm text-red-400">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 max-w-md text-sm text-red-500 dark:text-red-400">
             {error}
           </div>
         </div>
@@ -248,7 +249,10 @@ export default function InvestigationPage() {
     >
       <div id="investigation-panels" className="flex h-full">
         {/* Left panel — Case Data */}
-        <div style={{ width: `${leftWidth}%` }} className="border-r border-surface-700 flex flex-col min-h-0 shrink-0">
+        <div
+          style={{ width: `${leftWidth}%` }}
+          className="border-r border-surface-200 dark:border-surface-700 flex flex-col min-h-0 shrink-0 animate-slide-in-left"
+        >
           <CaseHeader caseData={caseData} />
           <CaseDataTabs
             preprocessedData={preprocessedData}
@@ -257,17 +261,28 @@ export default function InvestigationPage() {
           />
           <CaseDataPanel
             content={activeTab ? preprocessedData[activeTab] : null}
+            activeTab={activeTab}
           />
         </div>
 
-        {/* Drag handle */}
+        {/* Gold drag handle */}
         <div
           onMouseDown={handleMouseDown}
-          className="w-1 hover:w-1.5 bg-surface-700 hover:bg-primary-600 cursor-col-resize transition-colors shrink-0"
-        />
+          className="w-4 flex items-center justify-center cursor-col-resize group shrink-0 animate-fade-in"
+          style={{ animationDelay: '300ms' }}
+        >
+          <div className="w-1 h-8 rounded-full bg-surface-300 dark:bg-surface-600 group-hover:bg-gold-500 group-hover:h-12 group-active:bg-gold-400 group-hover:shadow-[0_0_8px_rgba(240,185,11,0.3)] transition-all duration-200 flex flex-col items-center justify-center gap-0.5">
+            <div className="w-0.5 h-0.5 rounded-full bg-surface-400 dark:bg-surface-500 group-hover:bg-gold-300 transition-colors" />
+            <div className="w-0.5 h-0.5 rounded-full bg-surface-400 dark:bg-surface-500 group-hover:bg-gold-300 transition-colors" />
+            <div className="w-0.5 h-0.5 rounded-full bg-surface-400 dark:bg-surface-500 group-hover:bg-gold-300 transition-colors" />
+          </div>
+        </div>
 
         {/* Right panel — Chat */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div
+          className="flex-1 flex flex-col min-h-0 animate-slide-in-right"
+          style={{ animationDelay: '100ms' }}
+        >
           <ChatMessageList messages={messages} />
           {sending && <StreamingIndicator />}
           <ChatInput onSend={handleSendMessage} disabled={sending} />
