@@ -1,0 +1,107 @@
+const BASE_URL = '/api';
+
+function authHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+async function handleResponse(res) {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+export async function login(username) {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  return handleResponse(res);
+}
+
+export async function getMe(token) {
+  const res = await fetch(`${BASE_URL}/auth/me`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
+// Cases
+// ---------------------------------------------------------------------------
+
+export async function getCases(token) {
+  const res = await fetch(`${BASE_URL}/cases`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function getCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------
+
+export async function createConversation(token, caseId) {
+  const res = await fetch(`${BASE_URL}/conversations`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ case_id: caseId }),
+  });
+  return handleResponse(res);
+}
+
+export async function sendMessage(token, conversationId, content, images = [], stream = false) {
+  const body = { content, stream };
+  if (images.length > 0) {
+    body.images = images;
+  }
+
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+
+  // For streaming, return the raw Response so the caller can read the SSE stream
+  if (stream) {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Request failed: ${res.status}`);
+    }
+    return res;
+  }
+
+  return handleResponse(res);
+}
+
+export async function getConversationHistory(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/history`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
+// Utility
+// ---------------------------------------------------------------------------
+
+export async function getHealth() {
+  const res = await fetch(`${BASE_URL}/health`);
+  return handleResponse(res);
+}

@@ -1,0 +1,87 @@
+# Reference Document Index
+# Loaded on startup and included in the system prompt.
+# The AI uses this index to decide which documents to request via tool calls.
+
+reference_documents:
+
+  - id: scam-fraud-sop
+    title: "Scam & Fraud Investigation SOP"
+    filename: "scam-fraud-sop.md"
+    covers:
+      - First-party and third-party scam classification
+      - Victim vs willing participant determination
+      - Romance scam, investment scam, impersonation scam patterns
+      - Refund eligibility criteria and process
+      - Evidence thresholds for escalation to Level 3
+    token_estimate: 8000
+
+  - id: ftm-sop
+    title: "Fiat Transaction Monitoring SOP"
+    filename: "ftm-sop.md"
+    covers:
+      - Fiat deposit and withdrawal monitoring rules
+      - Failed fiat transaction investigation procedures
+      - Bank return and chargeback handling
+      - Suspicious fiat activity indicators
+    token_estimate: 7000
+
+  - id: ctm-on-chain-alerts-sop
+    title: "Crypto Transaction Monitoring — On-Chain Alerts SOP"
+    filename: "CTM-on-chain-alerts-sop.md"
+    covers:
+      - On-chain alert triage and investigation
+      - Wallet clustering and counterparty risk assessment
+      - Interaction with sanctioned or high-risk entities
+      - VASP-to-VASP transaction analysis
+    token_estimate: 7000
+
+  - id: block-unblock-guidelines
+    title: "Account Block & Unblock Guidelines"
+    filename: "block-unblock-guidelines.md"
+    covers:
+      - Grounds for full account block
+      - Grounds for partial restriction
+      - Offboarding criteria and process
+      - Unblock request evaluation criteria
+      - Block history interpretation
+    token_estimate: 5000
+
+  - id: fake-documents-guidelines
+    title: "Fake Documents Detection Guidelines"
+    filename: "fake-documents-guidelines.md"
+    covers:
+      - KYC document fraud indicators
+      - Photo manipulation detection
+      - Document consistency checks
+      - Escalation process for suspected fake documents
+    token_estimate: 4000
+
+  - id: gambling-legality-matrix
+    title: "Gambling Legality Matrix"
+    filename: "gambling-legality-matrix.md"
+    covers:
+      - Jurisdiction-specific gambling legality status
+      - Licensed vs unlicensed gambling platform identification
+      - Regulatory treatment by country
+      - Investigation approach for gambling-related cases
+    token_estimate: 6000
+
+  - id: mlro-escalation-decisions
+    title: "MLRO Escalation Decisions"
+    filename: "mlro-escalation-decisions.md"
+    covers:
+      - Criteria for MLRO escalation
+      - Historical MLRO decision outcomes
+      - SAR filing thresholds and considerations
+      - Escalation documentation requirements
+    token_estimate: 5000
+
+  - id: case-decision-archive
+    title: "Historical Case Decision Archive"
+    filename: "case-decision-archive.md"
+    covers:
+      - Past QC decisions and management rationale
+      - Edge case rulings by case type
+      - Precedent decisions for recurring scenarios
+      - Common QC failure patterns and corrections
+    token_estimate: 15000
