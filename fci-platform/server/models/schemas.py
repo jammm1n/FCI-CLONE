@@ -65,15 +65,22 @@ class CaseListResponse(BaseModel):
 
 
 class PreprocessedData(BaseModel):
-    """Pre-staged case data fields. All optional — not every case has every type."""
+    """Pre-staged case data fields matching the case package template.
+    All optional — not every case has every section."""
     model_config = ConfigDict(extra="allow")
 
-    c360_analysis: str | None = None
-    elliptic_analysis: str | None = None
-    previous_cases: str | None = None
-    chat_history_summary: str | None = None
-    kyc_summary: str | None = None
-    law_enforcement: str | None = None
+    l1_referral_narrative: str | None = None
+    hexa_dump: str | None = None
+    kyc_id_document: str | None = None
+    c360_transaction_summary: str | None = None
+    web_app_outputs: str | None = None
+    elliptic_screening: str | None = None
+    prior_icr_summary: str | None = None
+    le_kodex_extraction: str | None = None
+    rfi_user_communication: str | None = None
+    case_intake_extraction: str | None = None
+    osint_results: str | None = None
+    investigator_notes: str | None = None
 
 
 class CaseDetailResponse(BaseModel):

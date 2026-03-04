@@ -597,14 +597,20 @@ def _build_case_data_markdown(case: dict) -> str:
     if not preprocessed:
         return "(No preprocessed data available for this case.)"
 
-    # Map field names to display headers
+    # Map field names to display headers (matches case package template)
     section_map = {
-        "c360_analysis": "C360 Analysis",
-        "elliptic_analysis": "Elliptic Wallet Screening",
-        "previous_cases": "Previous Investigations",
-        "chat_history_summary": "L1 Customer Service Interactions",
-        "kyc_summary": "KYC Information",
-        "law_enforcement": "Law Enforcement Cases",
+        "l1_referral_narrative": "L1 Referral Narrative",
+        "hexa_dump": "HEXA Dump (Full)",
+        "kyc_id_document": "KYC / ID Document",
+        "c360_transaction_summary": "C360 Transaction Summary",
+        "web_app_outputs": "Web App Outputs",
+        "elliptic_screening": "Elliptic Screening",
+        "prior_icr_summary": "Prior ICR Summary",
+        "le_kodex_extraction": "LE / Kodex Extraction",
+        "rfi_user_communication": "RFI / User Communication",
+        "case_intake_extraction": "Case Intake Extraction",
+        "osint_results": "OSINT Results",
+        "investigator_notes": "Investigator Notes",
     }
 
     parts = [

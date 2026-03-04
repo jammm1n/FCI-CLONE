@@ -1,10 +1,16 @@
 const TAB_LABELS = {
-  c360_analysis: 'C360',
-  elliptic_analysis: 'Elliptic',
-  previous_cases: 'Previous Cases',
-  chat_history_summary: 'Chat History',
-  kyc_summary: 'KYC',
-  law_enforcement: 'Law Enforcement',
+  l1_referral_narrative: 'L1 Referral',
+  hexa_dump: 'HEXA Dump',
+  kyc_id_document: 'KYC / ID',
+  c360_transaction_summary: 'C360',
+  web_app_outputs: 'Web App',
+  elliptic_screening: 'Elliptic',
+  prior_icr_summary: 'Prior ICR',
+  le_kodex_extraction: 'LE / Kodex',
+  rfi_user_communication: 'RFI / Comms',
+  case_intake_extraction: 'Case Intake',
+  osint_results: 'OSINT',
+  investigator_notes: 'Notes',
 };
 
 export default function CaseDataTabs({ preprocessedData, activeTab, onTabChange }) {

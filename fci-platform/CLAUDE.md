@@ -39,27 +39,40 @@ fci-platform/
 
 ## Current State
 - Backend: fully working — auth, cases, conversations with streaming SSE
-- Frontend: fully functional but visually raw/unstyled
-- Seed data: 2 users (`ben.investigator`, `demo.investigator`), 3 cases (scam, CTM, fraud)
+- Frontend: fully styled with Binance Dark + Gold design (see `client/DESIGN_SPEC.md`)
+- Seed data: 2 users (`ben.investigator` = user_001, `demo.investigator` = user_002), 3 demo cases
 - Streaming chat works end-to-end
 - Resizable split-panel investigation view (drag handle between case data and chat)
+- Split loading: case data panel renders immediately, chat shows gold spinner during AI initial assessment
 
-## Active Task: Frontend Design Overhaul (Binance Dark + Gold)
-See `client/DESIGN_SPEC.md` for the complete design specification (v3). Binance-inspired dark-luxury aesthetic: dark surfaces, warm gold accents, Plus Jakarta Sans typography, atmospheric depth. Key areas:
+## Case Data Schema (preprocessed_data)
+Cases store a `preprocessed_data` dict with sections matching the real case package template.
+These keys map to UI tabs (left panel) and to markdown headers in the AI's `[CASE DATA]` injection.
 
-- **Light/dark mode** — ThemeContext with system detection + manual toggle + localStorage (dark default)
-- **Typography** — Plus Jakarta Sans (NOT Inter — banned as generic), JetBrains Mono for code
-- **Colour system** — `surface` scale (cool-neutral darks, #0B0E11 to #F5F6F7), `gold` scale centered on Binance #F0B90B
-- **Status colours** — Binance palette: #0ECB81 green, #F6465D red, #1E9CF4 blue
-- **Hero moment** — Gold shimmer sweep on AI streaming indicator ("Analyzing...")
-- **Animations** — orchestrated login sequence, staggered cards, gold-shimmer keyframes, panel slide-ins
-- **Polished components** — gold gradient buttons (dark text on gold), glass-effect header, gold hover glows, gold active tabs
-- **Atmospheric backgrounds** — radial gradient + dot-grid on login, grain texture on case data panel
-- **Badge system** — ring-based badges; "In Progress" uses gold accent, "Open" uses Binance emerald
-- **Shadows & depth** — stronger values for dark mode, `glow-gold` / `glow-gold-lg` accent shadows
-- **Two new files only:** ThemeContext.jsx and Skeleton.jsx. Everything else is styling updates.
+```
+l1_referral_narrative    → "L1 Referral Narrative"
+hexa_dump                → "HEXA Dump (Full)"
+kyc_id_document          → "KYC / ID Document"
+c360_transaction_summary → "C360 Transaction Summary"
+web_app_outputs          → "Web App Outputs"
+elliptic_screening       → "Elliptic Screening"
+prior_icr_summary        → "Prior ICR Summary"
+le_kodex_extraction      → "LE / Kodex Extraction"
+rfi_user_communication   → "RFI / User Communication"
+case_intake_extraction   → "Case Intake Extraction"
+osint_results            → "OSINT Results"
+investigator_notes       → "Investigator Notes"
+```
 
-Follow the implementation order in Section 14 of the spec for maximum impact at each step.
+All fields are optional (not every case has every section). The schema is defined in:
+- `server/models/schemas.py` → `PreprocessedData` model
+- `server/services/conversation_manager.py` → `section_map` in `_build_case_data_markdown()`
+- `client/src/components/investigation/CaseDataTabs.jsx` → `TAB_LABELS`
+
+To add a new demo case: see `scripts/seed_demo_data.py` for the structure, or insert directly
+into MongoDB `fci_platform.cases` collection. Cases are assigned to users via `assigned_to` field
+(e.g., `"user_001"` for ben.investigator). Two sanitised real-case templates are at `/demo-1.md`
+and `/demo-2.md` in the repo root — these need to be converted into the schema above.
 
 ## Future: Document Processing Pipeline
 See `DOCUMENT_PIPELINE_SPEC.md` for the full architecture spec. Key idea:
