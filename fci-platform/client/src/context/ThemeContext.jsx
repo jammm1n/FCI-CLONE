@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useLayoutEffect, useCallback } from 'react';
 
 const ThemeContext = createContext(null);
 
@@ -9,19 +9,19 @@ function getInitialTheme() {
   return 'dark';
 }
 
+function applyTheme(theme) {
+  const root = document.documentElement;
+  root.classList.remove('light', 'dark');
+  root.classList.add(theme);
+  localStorage.setItem('fci-theme', theme);
+}
+
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('fci-theme', theme);
+  // useLayoutEffect runs synchronously before browser paint
+  useLayoutEffect(() => {
+    applyTheme(theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
