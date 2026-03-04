@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
@@ -22,6 +22,8 @@ export default function InvestigationPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [leftWidth, setLeftWidth] = useState(35);
+  const dragging = useRef(false);
 
   // Load case data and conversation
   useEffect(() => {
@@ -186,6 +188,33 @@ export default function InvestigationPage() {
     [token, conversationId]
   );
 
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    dragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    function onMouseMove(e) {
+      if (!dragging.current) return;
+      const container = document.getElementById('investigation-panels');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setLeftWidth(Math.min(60, Math.max(20, pct)));
+    }
+
+    function onMouseUp() {
+      dragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    }
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
+
   if (loading) {
     return (
       <AppLayout>
@@ -217,9 +246,9 @@ export default function InvestigationPage() {
     <AppLayout
       caseInfo={caseData ? { case_id: caseData.case_id, case_type: caseData.case_type } : null}
     >
-      <div className="flex h-full">
-        {/* Left panel — Case Data (35%) */}
-        <div className="w-[35%] border-r border-surface-700 flex flex-col min-h-0">
+      <div id="investigation-panels" className="flex h-full">
+        {/* Left panel — Case Data */}
+        <div style={{ width: `${leftWidth}%` }} className="border-r border-surface-700 flex flex-col min-h-0 shrink-0">
           <CaseHeader caseData={caseData} />
           <CaseDataTabs
             preprocessedData={preprocessedData}
@@ -231,7 +260,13 @@ export default function InvestigationPage() {
           />
         </div>
 
-        {/* Right panel — Chat (65%) */}
+        {/* Drag handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="w-1 hover:w-1.5 bg-surface-700 hover:bg-primary-600 cursor-col-resize transition-colors shrink-0"
+        />
+
+        {/* Right panel — Chat */}
         <div className="flex-1 flex flex-col min-h-0">
           <ChatMessageList messages={messages} />
           {sending && <StreamingIndicator />}
