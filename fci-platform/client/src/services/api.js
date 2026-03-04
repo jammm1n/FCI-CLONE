@@ -155,6 +155,18 @@ export function imageUrl(conversationId, imageId) {
 }
 
 // ---------------------------------------------------------------------------
+// Admin (demo only)
+// ---------------------------------------------------------------------------
+
+export async function reseedDatabase(token) {
+  const res = await fetch(`${BASE_URL}/admin/reseed`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
 

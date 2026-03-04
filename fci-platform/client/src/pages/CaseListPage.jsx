@@ -6,6 +6,41 @@ import AppLayout from '../components/AppLayout';
 import CaseCard from '../components/cases/CaseCard';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
+function ResetDemoButton() {
+  const { token, logout } = useAuth();
+  const [resetting, setResetting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleReset() {
+    if (!window.confirm('Reset all data and reseed demo cases? You will be logged out.')) return;
+    setResetting(true);
+    setError('');
+    try {
+      await api.reseedDatabase(token);
+      logout();
+    } catch (err) {
+      setError(err.message);
+      setResetting(false);
+    }
+  }
+
+  return (
+    <div className="mt-10 flex flex-col items-center gap-1">
+      <button
+        onClick={handleReset}
+        disabled={resetting}
+        className="inline-flex items-center gap-1.5 text-xs text-surface-400 hover:text-gold-500 transition-colors disabled:opacity-50"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={`w-3.5 h-3.5 ${resetting ? 'animate-spin' : ''}`}>
+          <path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z" clipRule="evenodd" />
+        </svg>
+        {resetting ? 'Reseeding...' : 'Reset demo data'}
+      </button>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
+
 export default function CaseListPage() {
   const { token } = useAuth();
   const [cases, setCases] = useState([]);
@@ -76,6 +111,8 @@ export default function CaseListPage() {
             <CaseCard key={c.case_id} caseData={c} index={index} />
           ))}
         </div>
+
+        <ResetDemoButton />
       </div>
     </AppLayout>
   );
