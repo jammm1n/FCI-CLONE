@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import AppLayout from '../components/AppLayout';
@@ -29,13 +30,24 @@ export default function CaseListPage() {
     <AppLayout>
       <div className="max-w-4xl mx-auto px-6 py-6 animate-fade-in">
         {/* Page header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-100">Investigations</h2>
-          {!loading && !error && (
-            <p className="text-sm text-surface-500 mt-1">
-              {cases.length} active case{cases.length !== 1 ? 's' : ''}
-            </p>
-          )}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-100">Investigations</h2>
+            {!loading && !error && (
+              <p className="text-sm text-surface-500 mt-1">
+                {cases.length} active case{cases.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          <Link
+            to="/chat"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-gold-500/30 text-gold-600 dark:text-gold-400 hover:bg-gold-500/10 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M10 3c-4.31 0-8 3.033-8 7 0 2.024.978 3.825 2.499 5.085a3.478 3.478 0 01-.522 1.756.75.75 0 00.584 1.143 5.976 5.976 0 003.243-1.028c.659.103 1.357.169 2.196.169 4.31 0 8-3.033 8-7s-3.69-7-8-7z" clipRule="evenodd" />
+            </svg>
+            Free Chat
+          </Link>
         </div>
 
         {loading && (

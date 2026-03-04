@@ -99,23 +99,30 @@ class CaseDetailResponse(BaseModel):
 
 class CreateConversationRequest(BaseModel):
     """POST /api/conversations request body."""
-    case_id: str
-
-
-class InitialResponse(BaseModel):
-    """The AI's initial case assessment returned when a conversation is created."""
-    role: str = "assistant"
-    content: str
-    tools_used: list[ToolUsedInfo] = []
-    token_usage: TokenUsage
-    timestamp: datetime
+    case_id: str | None = None
+    mode: str = "case"
 
 
 class CreateConversationResponse(BaseModel):
     """POST /api/conversations response body."""
     conversation_id: str
-    case_id: str
-    initial_response: InitialResponse
+    case_id: str | None = None
+    mode: str = "case"
+
+
+class ConversationSummary(BaseModel):
+    """Single conversation entry in the conversation list."""
+    conversation_id: str
+    title: str
+    mode: str
+    case_id: str | None = None
+    updated_at: datetime
+    message_count: int
+
+
+class ConversationListResponse(BaseModel):
+    """GET /api/conversations response body."""
+    conversations: list[ConversationSummary]
 
 
 class ImageInput(BaseModel):
@@ -153,7 +160,9 @@ class MessageResponse(BaseModel):
 class ConversationHistoryResponse(BaseModel):
     """GET /api/conversations/{id}/history response body."""
     conversation_id: str
-    case_id: str
+    case_id: str | None = None
+    mode: str = "case"
+    title: str = ""
     messages: list[MessageResponse]
 
 

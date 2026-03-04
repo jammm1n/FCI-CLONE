@@ -65,152 +65,105 @@ def _now() -> datetime:
 # ---------------------------------------------------------------------------
 
 async def create_conversation(
-    case_id: str,
     user_id: str,
     knowledge_base: KnowledgeBase,
+    case_id: str | None = None,
+    mode: str = "case",
 ) -> dict:
     """
-    Create a new investigation conversation for a case.
+    Create a new conversation — lightweight, no AI call.
 
-    Steps:
-        1. Load the case from MongoDB (including preprocessed_data)
-        2. Build the case data markdown from preprocessed_data fields
-        3. Create a conversation document in MongoDB
-        4. Assemble the initial API payload (system prompt + case data)
-        5. Call the AI for the initial assessment
-        6. Store the hidden context message and AI response
-        7. Update the case status and conversation_id
+    For mode="case": loads case, builds case data, pre-stores system_injected
+    message, updates case status. AI assessment triggered separately via
+    send_message_streaming with is_initial_assessment=True.
+
+    For mode="free_chat": creates empty conversation doc, no case data.
 
     Returns:
-        dict with conversation_id, case_id, and initial_response.
+        dict with conversation_id, case_id (or None), mode.
     """
     db = get_database()
-
-    # 1. Load the case
-    case = await db.cases.find_one({"_id": case_id})
-    if case is None:
-        raise ValueError(f"Case not found: {case_id}")
-
-    if case.get("conversation_id"):
-        raise ValueError(
-            f"Case {case_id} already has a conversation: {case['conversation_id']}"
-        )
-
-    # 2. Build case data markdown
-    case_data_markdown = _build_case_data_markdown(case)
-
-    # 3. Create the conversation document
     conversation_id = _generate_id("conv")
-    conversation_doc = {
-        "_id": conversation_id,
-        "case_id": case_id,
-        "user_id": user_id,
-        "status": "active",
-        "messages": [],
-        "created_at": _now(),
-        "updated_at": _now(),
-    }
-    await db.conversations.insert_one(conversation_doc)
-
-    # 4. Assemble the initial API payload
-    # The case data is injected as the first user message, with an instruction
-    # for the AI to begin its initial assessment.
-    initial_user_content = (
-        f"[CASE DATA]\n\n{case_data_markdown}\n\n"
-        "Case data loaded. Provide a brief initial summary: case type classification, "
-        "top 3 risk indicators, and suggested investigation approach. "
-        "Do NOT use the get_reference_document tool for this initial assessment — "
-        "work only with the case data and your core knowledge. Keep it concise."
-    )
-
-    system_prompt = knowledge_base.get_system_prompt()
-    messages_for_api = [
-        {"role": "user", "content": initial_user_content}
-    ]
-
-    # 5. Call the AI
-    logger.info("Creating conversation %s for case %s", conversation_id, case_id)
-    ai_result = await get_ai_response(
-        system_prompt=system_prompt,
-        messages=messages_for_api,
-        knowledge_base=knowledge_base,
-    )
-
-    # 6. Store messages in MongoDB
     now = _now()
 
-    # Hidden case data injection
-    case_data_message = {
-        "message_id": _generate_id("msg"),
-        "role": "system_injected",
-        "content": initial_user_content,
-        "timestamp": now,
-        "visible": False,
-    }
+    if mode == "case":
+        if not case_id:
+            raise ValueError("case_id is required for case mode")
 
-    # Store any tool call intermediate messages (hidden)
-    tool_messages = []
-    for tc_msg in ai_result.get("tool_call_messages", []):
-        tool_messages.append({
+        # Load the case
+        case = await db.cases.find_one({"_id": case_id})
+        if case is None:
+            raise ValueError(f"Case not found: {case_id}")
+
+        if case.get("conversation_id"):
+            raise ValueError(
+                f"Case {case_id} already has a conversation: {case['conversation_id']}"
+            )
+
+        # Build case data markdown and pre-store the system_injected message
+        case_data_markdown = _build_case_data_markdown(case)
+        initial_user_content = (
+            f"[CASE DATA]\n\n{case_data_markdown}\n\n"
+            "Case data loaded. Provide a brief initial summary: case type classification, "
+            "top 3 risk indicators, and suggested investigation approach. "
+            "Do NOT use the get_reference_document tool for this initial assessment — "
+            "work only with the case data and your core knowledge. Keep it concise."
+        )
+
+        case_data_message = {
             "message_id": _generate_id("msg"),
-            "role": "tool_exchange",
-            "content": tc_msg["content"],
-            "original_role": tc_msg["role"],
+            "role": "system_injected",
+            "content": initial_user_content,
             "timestamp": now,
             "visible": False,
-        })
-
-    # AI's initial assessment (visible)
-    assistant_message = {
-        "message_id": _generate_id("msg"),
-        "role": "assistant",
-        "content": ai_result["content"],
-        "tools_used": ai_result["tools_used"],
-        "token_usage": ai_result["token_usage"],
-        "timestamp": now,
-        "visible": True,
-    }
-
-    # Append all messages to the conversation
-    all_new_messages = [case_data_message] + tool_messages + [assistant_message]
-    await db.conversations.update_one(
-        {"_id": conversation_id},
-        {
-            "$push": {"messages": {"$each": all_new_messages}},
-            "$set": {"updated_at": now},
         }
-    )
 
-    # 7. Update the case
-    await db.cases.update_one(
-        {"_id": case_id},
-        {
-            "$set": {
-                "conversation_id": conversation_id,
-                "status": "in_progress",
-                "updated_at": now,
+        conversation_doc = {
+            "_id": conversation_id,
+            "case_id": case_id,
+            "user_id": user_id,
+            "mode": "case",
+            "title": "",
+            "status": "active",
+            "messages": [case_data_message],
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.conversations.insert_one(conversation_doc)
+
+        # Update the case
+        await db.cases.update_one(
+            {"_id": case_id},
+            {
+                "$set": {
+                    "conversation_id": conversation_id,
+                    "status": "in_progress",
+                    "updated_at": now,
+                }
             }
-        }
-    )
+        )
 
-    logger.info(
-        "Conversation %s created. Initial assessment: %d chars, tools: %s",
-        conversation_id,
-        len(ai_result["content"]),
-        [t["document_id"] for t in ai_result["tools_used"]],
-    )
+        logger.info("Created case conversation %s for case %s", conversation_id, case_id)
+
+    else:  # free_chat
+        conversation_doc = {
+            "_id": conversation_id,
+            "case_id": None,
+            "user_id": user_id,
+            "mode": "free_chat",
+            "title": "",
+            "status": "active",
+            "messages": [],
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.conversations.insert_one(conversation_doc)
+        logger.info("Created free_chat conversation %s", conversation_id)
 
     return {
         "conversation_id": conversation_id,
         "case_id": case_id,
-        "initial_response": {
-            "message_id": assistant_message["message_id"],
-            "role": "assistant",
-            "content": ai_result["content"],
-            "tools_used": ai_result["tools_used"],
-            "token_usage": ai_result["token_usage"],
-            "timestamp": now.isoformat(),
-        },
+        "mode": mode,
     }
 
 
@@ -342,16 +295,18 @@ async def send_message_streaming(
     content: str,
     knowledge_base: KnowledgeBase,
     images: list[dict] | None = None,
+    is_initial_assessment: bool = False,
 ):
     """
     Send a message and stream the response.
 
+    When is_initial_assessment=True, the system_injected message is already
+    stored — just rebuild API messages from history and stream (no new user
+    message appended).
+
     Yields the same event dicts as ai_client.get_ai_response_streaming().
     After the stream completes (the "done" event), the caller should call
     store_streamed_response() to persist everything to MongoDB.
-
-    This two-step pattern (stream → store) keeps the streaming generator
-    clean and avoids DB writes during iteration.
 
     Yields:
         {"type": "content_delta", "text": "..."}
@@ -365,16 +320,17 @@ async def send_message_streaming(
     if conversation is None:
         raise ValueError(f"Conversation not found: {conversation_id}")
 
-    # Rebuild API messages
+    # Rebuild API messages from stored history
     api_messages = _rebuild_api_messages(conversation["messages"])
 
-    # Store images if present
-    if images:
-        await _store_images(conversation_id, images)
+    if not is_initial_assessment:
+        # Store images if present
+        if images:
+            await _store_images(conversation_id, images)
 
-    # Build and append user message
-    user_content = build_user_message_content(content, images)
-    api_messages.append({"role": "user", "content": user_content})
+        # Build and append user message
+        user_content = build_user_message_content(content, images)
+        api_messages.append({"role": "user", "content": user_content})
 
     # Stream the AI response
     system_prompt = knowledge_base.get_system_prompt()
@@ -394,9 +350,14 @@ async def store_streamed_response(
     tools_used: list[dict],
     token_usage: dict,
     tool_call_messages: list[dict],
+    is_initial_assessment: bool = False,
 ) -> dict:
     """
     Store a streamed conversation turn in MongoDB.
+
+    When is_initial_assessment=True, skip storing a user message (the
+    system_injected message was already stored at creation time). Only
+    store tool exchanges + assistant message.
 
     Called by the router after the streaming generator is fully consumed.
     Returns the assistant message metadata.
@@ -404,25 +365,28 @@ async def store_streamed_response(
     db = get_database()
     now = _now()
 
-    # Store images references
-    stored_images = []
-    if user_images:
-        stored_images = await _store_images(conversation_id, user_images)
+    all_new_messages = []
 
-    # User message
-    user_message = {
-        "message_id": _generate_id("msg"),
-        "role": "user",
-        "content": user_content,
-        "images": stored_images,
-        "timestamp": now,
-        "visible": True,
-    }
+    if not is_initial_assessment:
+        # Store images references
+        stored_images = []
+        if user_images:
+            stored_images = await _store_images(conversation_id, user_images)
+
+        # User message
+        user_message = {
+            "message_id": _generate_id("msg"),
+            "role": "user",
+            "content": user_content,
+            "images": stored_images,
+            "timestamp": now,
+            "visible": True,
+        }
+        all_new_messages.append(user_message)
 
     # Tool exchanges (hidden)
-    tool_messages = []
     for tc_msg in tool_call_messages:
-        tool_messages.append({
+        all_new_messages.append({
             "message_id": _generate_id("msg"),
             "role": "tool_exchange",
             "content": tc_msg["content"],
@@ -442,8 +406,8 @@ async def store_streamed_response(
         "timestamp": now,
         "visible": True,
     }
+    all_new_messages.append(assistant_message)
 
-    all_new_messages = [user_message] + tool_messages + [assistant_message]
     await db.conversations.update_one(
         {"_id": conversation_id},
         {
@@ -452,10 +416,38 @@ async def store_streamed_response(
         }
     )
 
+    # Auto-generate title for free_chat conversations on first user message
+    if not is_initial_assessment and user_content:
+        conversation = await db.conversations.find_one(
+            {"_id": conversation_id},
+            {"mode": 1, "title": 1},
+        )
+        if conversation and conversation.get("mode") == "free_chat" and not conversation.get("title"):
+            title = _generate_title(user_content)
+            await db.conversations.update_one(
+                {"_id": conversation_id},
+                {"$set": {"title": title}},
+            )
+
     return {
         "message_id": assistant_msg_id,
         "timestamp": now.isoformat(),
     }
+
+
+def _generate_title(content: str) -> str:
+    """Generate a conversation title from the first user message (heuristic)."""
+    # Take first sentence or first 50 chars
+    text = content.strip()
+    # Try to find first sentence end
+    for sep in [". ", "? ", "! ", "\n"]:
+        idx = text.find(sep)
+        if 0 < idx < 60:
+            return text[:idx + 1]
+    # Fallback: first 50 chars
+    if len(text) > 50:
+        return text[:50].rstrip() + "..."
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -497,9 +489,70 @@ async def get_history(conversation_id: str) -> dict:
 
     return {
         "conversation_id": conversation_id,
-        "case_id": conversation["case_id"],
+        "case_id": conversation.get("case_id"),
+        "mode": conversation.get("mode", "case"),
+        "title": conversation.get("title", ""),
         "messages": visible_messages,
     }
+
+
+# ---------------------------------------------------------------------------
+# List & delete conversations
+# ---------------------------------------------------------------------------
+
+async def list_conversations(
+    user_id: str,
+    mode: str | None = None,
+) -> list[dict]:
+    """
+    List conversations for a user, optionally filtered by mode.
+    Returns summaries sorted by updated_at descending.
+    """
+    db = get_database()
+
+    query = {"user_id": user_id}
+    if mode:
+        query["mode"] = mode
+
+    cursor = db.conversations.find(
+        query,
+        {"_id": 1, "case_id": 1, "mode": 1, "title": 1, "updated_at": 1, "messages": 1},
+    ).sort("updated_at", -1)
+
+    results = []
+    async for doc in cursor:
+        # Count only visible messages
+        visible_count = sum(
+            1 for m in doc.get("messages", []) if m.get("visible", True)
+        )
+        results.append({
+            "conversation_id": doc["_id"],
+            "title": doc.get("title", ""),
+            "mode": doc.get("mode", "case"),
+            "case_id": doc.get("case_id"),
+            "updated_at": doc["updated_at"].isoformat() if isinstance(doc["updated_at"], datetime) else doc["updated_at"],
+            "message_count": visible_count,
+        })
+
+    return results
+
+
+async def delete_conversation(
+    conversation_id: str,
+    user_id: str,
+) -> None:
+    """Delete a conversation, verifying ownership."""
+    db = get_database()
+
+    result = await db.conversations.delete_one({
+        "_id": conversation_id,
+        "user_id": user_id,
+    })
+
+    if result.deleted_count == 0:
+        raise ValueError(f"Conversation not found or not owned by user: {conversation_id}")
+
+    logger.info("Deleted conversation %s for user %s", conversation_id, user_id)
 
 
 # ---------------------------------------------------------------------------

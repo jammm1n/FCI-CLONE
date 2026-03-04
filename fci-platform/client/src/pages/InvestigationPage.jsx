@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
+import useStreamingChat from '../hooks/useStreamingChat';
 import AppLayout from '../components/AppLayout';
 import CaseHeader from '../components/investigation/CaseHeader';
 import CaseDataTabs from '../components/investigation/CaseDataTabs';
@@ -16,15 +17,22 @@ export default function InvestigationPage() {
   const { token } = useAuth();
 
   const [caseData, setCaseData] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [conversationId, setConversationId] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
   const [caseLoading, setCaseLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [leftWidth, setLeftWidth] = useState(35);
   const dragging = useRef(false);
+
+  const {
+    messages,
+    conversationId,
+    setConversationId,
+    sending,
+    aiLoading,
+    loadHistory,
+    sendMessage,
+    triggerInitialAssessment,
+  } = useStreamingChat(token);
 
   // Load case data and conversation
   useEffect(() => {
@@ -41,31 +49,19 @@ export default function InvestigationPage() {
         setCaseLoading(false);
 
         if (caseDetail.conversation_id) {
+          // Existing conversation — load history
           setConversationId(caseDetail.conversation_id);
-          const history = await api.getConversationHistory(
-            token,
-            caseDetail.conversation_id
-          );
-          setMessages(history.messages || []);
+          await loadHistory(caseDetail.conversation_id);
         } else {
-          setAiLoading(true);
-          const result = await api.createConversation(token, caseId);
+          // New conversation — two-step: create (instant) then stream assessment
+          const result = await api.createConversation(token, caseId, 'case');
           setConversationId(result.conversation_id);
           setCaseData((prev) => ({
             ...prev,
             conversation_id: result.conversation_id,
             status: 'in_progress',
           }));
-          setMessages([
-            {
-              message_id: result.initial_response.message_id,
-              role: 'assistant',
-              content: result.initial_response.content,
-              tools_used: result.initial_response.tools_used || [],
-              timestamp: result.initial_response.timestamp,
-            },
-          ]);
-          setAiLoading(false);
+          await triggerInitialAssessment(result.conversation_id);
         }
       } catch (err) {
         setError(err.message);
@@ -74,116 +70,6 @@ export default function InvestigationPage() {
     }
     init();
   }, [token, caseId]);
-
-  // Send a message with streaming
-  const handleSendMessage = useCallback(
-    async (content, images) => {
-      if (!conversationId || (!content.trim() && images.length === 0)) return;
-
-      const userMsg = {
-        message_id: `temp_${Date.now()}`,
-        role: 'user',
-        content,
-        images: images.length > 0 ? images.map((img) => ({ media_type: img.media_type, preview: img.preview })) : [],
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setSending(true);
-
-      const streamMsgId = `stream_${Date.now()}`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          message_id: streamMsgId,
-          role: 'assistant',
-          content: '',
-          tools_used: [],
-          timestamp: new Date().toISOString(),
-          isStreaming: true,
-        },
-      ]);
-
-      try {
-        const response = await api.sendMessage(
-          token,
-          conversationId,
-          content,
-          images.map((img) => ({ base64: img.base64, media_type: img.media_type })),
-          true
-        );
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let toolsUsed = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop();
-
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue;
-            const jsonStr = line.slice(5).trim();
-            if (!jsonStr) continue;
-
-            let event;
-            try {
-              event = JSON.parse(jsonStr);
-            } catch {
-              continue;
-            }
-
-            if (event.type === 'content_delta') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.message_id === streamMsgId
-                    ? { ...msg, content: msg.content + event.text }
-                    : msg
-                )
-              );
-            } else if (event.type === 'tool_use') {
-              toolsUsed.push({
-                tool: event.tool,
-                document_id: event.document_id,
-                document_title: event.document_title,
-              });
-            } else if (event.type === 'stored') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.message_id === streamMsgId
-                    ? { ...msg, message_id: event.message_id, tools_used: toolsUsed, isStreaming: false }
-                    : msg
-                )
-              );
-            } else if (event.type === 'error') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.message_id === streamMsgId
-                    ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
-                    : msg
-                )
-              );
-            }
-          }
-        }
-      } catch (err) {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.message_id === streamMsgId
-              ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
-              : msg
-          )
-        );
-      } finally {
-        setSending(false);
-      }
-    },
-    [token, conversationId]
-  );
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -290,7 +176,7 @@ export default function InvestigationPage() {
         >
           <ChatMessageList messages={messages} aiLoading={aiLoading} />
           {sending && <StreamingIndicator />}
-          <ChatInput onSend={handleSendMessage} disabled={sending} />
+          <ChatInput onSend={sendMessage} disabled={sending} />
         </div>
       </div>
     </AppLayout>

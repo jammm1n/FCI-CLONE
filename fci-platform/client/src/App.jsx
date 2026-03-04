@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CaseListPage from './pages/CaseListPage';
 import InvestigationPage from './pages/InvestigationPage';
+import FreeChatPage from './pages/FreeChatPage';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -24,6 +25,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <InvestigationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <FreeChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat/:conversationId"
+        element={
+          <ProtectedRoute>
+            <FreeChatPage />
           </ProtectedRoute>
         }
       />

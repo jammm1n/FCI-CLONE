@@ -43,33 +43,31 @@ async def create_conversation(
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Create a new investigation conversation for a case.
+    Create a new conversation — lightweight, no AI call.
 
-    Triggers the initial case data injection and AI assessment.
-    Returns the conversation_id and the AI's initial response.
+    For case mode: pre-stores case data, returns immediately.
+    For free_chat mode: creates empty conversation.
 
-    Request body: {"case_id": "CASE-2026-0451"}
+    Request body: {"case_id": "CASE-2026-0451", "mode": "case"}
+                  or {"mode": "free_chat"}
     """
+    mode = body.get("mode", "case")
     case_id = body.get("case_id")
-    if not case_id:
-        raise HTTPException(status_code=400, detail="case_id is required")
+
+    if mode == "case" and not case_id:
+        raise HTTPException(status_code=400, detail="case_id is required for case mode")
 
     kb = _get_knowledge_base(request)
 
     try:
         result = await conversation_manager.create_conversation(
-            case_id=case_id,
             user_id=current_user["user_id"],
             knowledge_base=kb,
+            case_id=case_id,
+            mode=mode,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except RateLimitError as e:
-        logger.warning("Anthropic rate limit hit during create_conversation: %s", e)
-        raise HTTPException(
-            status_code=429,
-            detail="AI service is rate-limited. Please wait a moment and try again.",
-        )
 
     return result
 
@@ -110,7 +108,8 @@ async def send_message(
     """
     content = body.get("content", "")
     images = body.get("images")
-    if not content and not images:
+    initial_assessment = body.get("initial_assessment", False)
+    if not initial_assessment and not content and not images:
         raise HTTPException(status_code=400, detail="content or images required")
     stream = body.get("stream", True)
     kb = _get_knowledge_base(request)
@@ -149,6 +148,7 @@ async def send_message(
                 content=content,
                 knowledge_base=kb,
                 images=images,
+                is_initial_assessment=initial_assessment,
             ):
                 if event["type"] == "done":
                     # Capture the done event for storage, then yield it
@@ -188,6 +188,7 @@ async def send_message(
                     tools_used=done_event.get("tools_used", []),
                     token_usage=done_event.get("token_usage", {}),
                     tool_call_messages=done_event.get("tool_call_messages", []),
+                    is_initial_assessment=initial_assessment,
                 )
                 # Yield a final storage confirmation event
                 yield {
@@ -232,3 +233,46 @@ async def get_history(
         raise HTTPException(status_code=404, detail=str(e))
 
     return history
+
+
+# ---------------------------------------------------------------------------
+# List conversations
+# ---------------------------------------------------------------------------
+
+@router.get("")
+async def list_conversations(
+    request: Request,
+    mode: str | None = None,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    List conversations for the current user.
+
+    Optional query param `mode` to filter (e.g., "free_chat", "case").
+    """
+    conversations = await conversation_manager.list_conversations(
+        user_id=current_user["user_id"],
+        mode=mode,
+    )
+    return {"conversations": conversations}
+
+
+# ---------------------------------------------------------------------------
+# Delete conversation
+# ---------------------------------------------------------------------------
+
+@router.delete("/{conversation_id}")
+async def delete_conversation(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Delete a conversation owned by the current user."""
+    try:
+        await conversation_manager.delete_conversation(
+            conversation_id=conversation_id,
+            user_id=current_user["user_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return {"status": "deleted"}

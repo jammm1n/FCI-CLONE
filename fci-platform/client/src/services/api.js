@@ -57,19 +57,24 @@ export async function getCase(token, caseId) {
 // Conversations
 // ---------------------------------------------------------------------------
 
-export async function createConversation(token, caseId) {
+export async function createConversation(token, caseId = null, mode = 'case') {
+  const body = { mode };
+  if (caseId) body.case_id = caseId;
   const res = await fetch(`${BASE_URL}/conversations`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ case_id: caseId }),
+    body: JSON.stringify(body),
   });
   return handleResponse(res);
 }
 
-export async function sendMessage(token, conversationId, content, images = [], stream = false) {
+export async function sendMessage(token, conversationId, content, images = [], stream = false, initialAssessment = false) {
   const body = { content, stream };
   if (images.length > 0) {
     body.images = images;
+  }
+  if (initialAssessment) {
+    body.initial_assessment = true;
   }
 
   const res = await fetch(`${BASE_URL}/conversations/${conversationId}/messages`, {
@@ -92,6 +97,22 @@ export async function sendMessage(token, conversationId, content, images = [], s
 
 export async function getConversationHistory(token, conversationId) {
   const res = await fetch(`${BASE_URL}/conversations/${conversationId}/history`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function getConversations(token, mode = null) {
+  const params = mode ? `?mode=${mode}` : '';
+  const res = await fetch(`${BASE_URL}/conversations${params}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteConversation(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}`, {
+    method: 'DELETE',
     headers: authHeaders(token),
   });
   return handleResponse(res);

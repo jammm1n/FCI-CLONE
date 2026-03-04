@@ -38,6 +38,17 @@ export default function AppLayout({ children, caseInfo }) {
         )}
 
         <div className="flex items-center gap-2">
+          {/* Free chat link */}
+          <Link
+            to="/chat"
+            className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center text-surface-500 hover:text-gold-500"
+            title="Free Chat"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M10 3c-4.31 0-8 3.033-8 7 0 2.024.978 3.825 2.499 5.085a3.478 3.478 0 01-.522 1.756.75.75 0 00.584 1.143 5.976 5.976 0 003.243-1.028c.659.103 1.357.169 2.196.169 4.31 0 8-3.033 8-7s-3.69-7-8-7z" clipRule="evenodd" />
+            </svg>
+          </Link>
+
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
