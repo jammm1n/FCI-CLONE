@@ -4,7 +4,9 @@ import ImageUpload from '../shared/ImageUpload';
 export default function ChatInput({ onSend, disabled }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
+  const [dragOver, setDragOver] = useState(false);
   const textareaRef = useRef(null);
+  const dropRef = useRef(null);
 
   const handleSend = useCallback(() => {
     if (!text.trim() && images.length === 0) return;
@@ -54,8 +56,44 @@ export default function ChatInput({ onSend, disabled }) {
     return () => textarea.removeEventListener('paste', handlePaste);
   }, []);
 
+  // Handle drag and drop for images
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith('image/')
+    );
+    if (files.length > 0) {
+      Promise.all(files.map(fileToBase64)).then((newImages) => {
+        setImages((prev) => [...prev, ...newImages]);
+      });
+    }
+  }, []);
+
   return (
-    <div className="border-t border-surface-700 bg-surface-800 px-4 py-3 shrink-0">
+    <div
+      ref={dropRef}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`border-t bg-surface-800 px-4 py-3 shrink-0 transition-colors ${
+        dragOver ? 'border-primary-500 bg-primary-900/20' : 'border-surface-700'
+      }`}
+    >
       <div className="flex items-end gap-2">
         <ImageUpload images={images} onImagesChange={setImages} />
 

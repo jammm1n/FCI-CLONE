@@ -108,11 +108,10 @@ async def send_message(
     Non-streaming response (JSON):
         {"message_id": "...", "role": "assistant", "content": "...", ...}
     """
-    content = body.get("content")
-    if not content:
-        raise HTTPException(status_code=400, detail="content is required")
-
+    content = body.get("content", "")
     images = body.get("images")
+    if not content and not images:
+        raise HTTPException(status_code=400, detail="content or images required")
     stream = body.get("stream", True)
     kb = _get_knowledge_base(request)
 

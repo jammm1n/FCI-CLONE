@@ -24,6 +24,21 @@ export default function ChatMessage({ message }) {
           </span>
         </div>
 
+        {/* Image thumbnails */}
+        {isUser && message.images && message.images.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {message.images.map((img, i) => (
+              <div key={i} className="w-20 h-20 rounded border border-surface-600 overflow-hidden bg-surface-900">
+                {img.preview ? (
+                  <img src={img.preview} alt={`Attachment ${i + 1}`} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-surface-500">Image</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Content */}
         {isUser ? (
           <p className="text-sm text-surface-200 whitespace-pre-wrap">{message.content}</p>

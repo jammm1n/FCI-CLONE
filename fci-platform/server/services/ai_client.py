@@ -554,6 +554,6 @@ def build_user_message_content(
             base64_data=img["base64"],
             media_type=img["media_type"],
         ))
-    content.append({"type": "text", "text": text})
+    content.append({"type": "text", "text": text or "Describe this image."})
 
     return content

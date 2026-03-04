@@ -77,14 +77,14 @@ export default function InvestigationPage() {
   // Send a message with streaming
   const handleSendMessage = useCallback(
     async (content, images) => {
-      if (!conversationId || !content.trim()) return;
+      if (!conversationId || (!content.trim() && images.length === 0)) return;
 
       // Optimistically add user message
       const userMsg = {
         message_id: `temp_${Date.now()}`,
         role: 'user',
         content,
-        images: images.length > 0 ? images.map((img) => ({ media_type: img.media_type })) : [],
+        images: images.length > 0 ? images.map((img) => ({ media_type: img.media_type, preview: img.preview })) : [],
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
