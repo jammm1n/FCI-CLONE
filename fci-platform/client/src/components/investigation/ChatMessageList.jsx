@@ -23,7 +23,7 @@ export default function ChatMessageList({ messages }) {
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 bg-surface-100 dark:bg-surface-900 scroll-smooth">
-      <div className="max-w-4xl mx-auto space-y-5">
+      <div className="max-w-5xl mx-auto space-y-5">
         {messages.map((msg) => (
           <ChatMessage key={msg.message_id} message={msg} />
         ))}

@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 
-export default function ImageUpload({ images, onImagesChange }) {
+export default function ImageUpload({ images, onImagesChange, showButton = true, showThumbnails = true }) {
   const fileInputRef = useRef(null);
 
   const addFiles = useCallback(
@@ -50,30 +50,31 @@ export default function ImageUpload({ images, onImagesChange }) {
         className="hidden"
         onChange={handleFileSelect}
       />
-      {/* Attachment button */}
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="w-9 h-9 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-400 hover:text-gold-500"
-        title="Attach image"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
-          />
-        </svg>
-      </button>
 
-      {/* Thumbnails */}
-      {images.map((img, i) => (
+      {showButton && (
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-400 hover:text-gold-500"
+          title="Attach image"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"
+            />
+          </svg>
+        </button>
+      )}
+
+      {showThumbnails && images.map((img, i) => (
         <div key={i} className="relative group">
           <img
             src={img.preview}
             alt=""
-            className="w-16 h-16 rounded-xl object-cover border-2 border-surface-200 dark:border-surface-700"
+            className="w-14 h-14 rounded-lg object-cover border border-surface-200 dark:border-surface-700"
           />
           <button
             type="button"

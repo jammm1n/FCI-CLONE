@@ -25,7 +25,6 @@ export default function ChatInput({ onSend, disabled }) {
     [handleSend]
   );
 
-  // Handle paste for images
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -54,7 +53,6 @@ export default function ChatInput({ onSend, disabled }) {
     return () => textarea.removeEventListener('paste', handlePaste);
   }, []);
 
-  // Handle drag and drop
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -82,48 +80,61 @@ export default function ChatInput({ onSend, disabled }) {
     }
   }, []);
 
+  const hasContent = text.trim() || images.length > 0;
+
   return (
     <div
       ref={dropRef}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`border-t bg-surface-50 dark:bg-surface-800 px-5 py-4 shrink-0 ${
-        dragOver
-          ? 'border-2 border-dashed border-gold-400 bg-gold-500/5'
-          : 'border-surface-200 dark:border-surface-700'
+      className={`bg-surface-100 dark:bg-surface-900 px-5 pb-5 pt-2 shrink-0 ${
+        dragOver ? 'ring-2 ring-inset ring-gold-400 bg-gold-500/5' : ''
       }`}
     >
-      <div className="max-w-4xl mx-auto">
-      {/* Drag overlay text */}
-      {dragOver && (
-        <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
-          Drop image here
+      <div className="max-w-5xl mx-auto">
+        {dragOver && (
+          <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
+            Drop image here
+          </div>
+        )}
+
+        {/* Image thumbnails above the input */}
+        {images.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2 px-1">
+            <ImageUpload images={images} onImagesChange={setImages} showButton={false} />
+          </div>
+        )}
+
+        {/* Unified input container */}
+        <div className="relative rounded-2xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 focus-within:ring-2 focus-within:ring-gold-500/30 focus-within:border-gold-500">
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={disabled}
+            placeholder="Type a message... (Shift+Enter for new line)"
+            rows={2}
+            className="w-full px-4 pt-3 pb-12 text-base bg-transparent text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none resize-none disabled:opacity-50"
+          />
+
+          {/* Bottom toolbar inside the input */}
+          <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
+            <ImageUpload images={images} onImagesChange={setImages} showButton={true} showThumbnails={false} />
+
+            <button
+              onClick={handleSend}
+              disabled={disabled || !hasContent}
+              className="w-8 h-8 rounded-lg bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 flex items-center justify-center active:scale-[0.95] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 shrink-0"
+              title="Send message"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+              </svg>
+            </button>
+          </div>
         </div>
-      )}
-
-      <div className="flex items-end gap-2">
-        <ImageUpload images={images} onImagesChange={setImages} />
-
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={disabled}
-          placeholder="Type a message... (Shift+Enter for new line)"
-          rows={3}
-          className="flex-1 px-4 py-3 text-base rounded-xl bg-surface-100 dark:bg-surface-900 border border-surface-200 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500 resize-none disabled:opacity-50"
-        />
-
-        <button
-          onClick={handleSend}
-          disabled={disabled || (!text.trim() && images.length === 0)}
-          className="px-5 py-2.5 text-base font-medium rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 shadow-md shadow-gold-500/20 active:scale-[0.97] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 disabled:shadow-none shrink-0"
-        >
-          Send
-        </button>
-      </div>
       </div>
     </div>
   );
