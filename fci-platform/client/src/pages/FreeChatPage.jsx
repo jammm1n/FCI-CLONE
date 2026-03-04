@@ -223,6 +223,7 @@ export default function FreeChatPage() {
             aiLoading={aiLoading}
             emptyStateText="Ask anything about financial crime investigation..."
             maxWidth="w-[85%]"
+            conversationId={conversationId}
           />
           {sending && <StreamingIndicator />}
           <ChatInput onSend={handleSend} disabled={sending} maxWidth="w-[85%]" />

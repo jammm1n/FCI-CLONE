@@ -1,7 +1,8 @@
 import MarkdownRenderer from '../shared/MarkdownRenderer';
 import { formatTimestamp } from '../../utils/formatters';
+import { imageUrl } from '../../services/api';
 
-export default function ChatMessage({ message }) {
+export default function ChatMessage({ message, conversationId }) {
   const isUser = message.role === 'user';
   const toolsUsed = message.tools_used || [];
   const isStreaming = message.isStreaming;
@@ -30,15 +31,18 @@ export default function ChatMessage({ message }) {
         {/* Image thumbnails (user messages) */}
         {isUser && message.images && message.images.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
-            {message.images.map((img, i) => (
-              <div key={i} className="w-24 h-24 rounded-xl border-2 border-gold-200 dark:border-gold-800 overflow-hidden bg-surface-100 dark:bg-surface-900 hover:scale-105 transition-transform cursor-pointer">
-                {img.preview ? (
-                  <img src={img.preview} alt={`Attachment ${i + 1}`} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-surface-500">Image</div>
-                )}
-              </div>
-            ))}
+            {message.images.map((img, i) => {
+              const src = img.preview || (img.image_id && conversationId ? imageUrl(conversationId, img.image_id) : null);
+              return (
+                <div key={img.image_id || i} className="w-24 h-24 rounded-xl border-2 border-gold-200 dark:border-gold-800 overflow-hidden bg-surface-100 dark:bg-surface-900 hover:scale-105 transition-transform cursor-pointer">
+                  {src ? (
+                    <img src={src} alt={`Attachment ${i + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-surface-500">Image</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -206,7 +206,7 @@ export default function InvestigationPage() {
               disabled={sending || aiLoading}
             />
           </div>
-          <ChatMessageList messages={messages} aiLoading={aiLoading} />
+          <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
           {sending && <StreamingIndicator />}
           <ChatInput onSend={sendMessage} disabled={sending} />
         </div>

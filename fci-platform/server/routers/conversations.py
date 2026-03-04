@@ -13,14 +13,17 @@ Streaming flow:
 
 import json
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
 from sse_starlette.sse import EventSourceResponse
 from anthropic import RateLimitError
 
 from server.routers.auth import get_current_user
 from server.services import conversation_manager
 from server.services.knowledge_base import KnowledgeBase
+from server.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -255,6 +258,32 @@ async def list_conversations(
         mode=mode,
     )
     return {"conversations": conversations}
+
+
+# ---------------------------------------------------------------------------
+# Serve stored image
+# ---------------------------------------------------------------------------
+
+@router.get("/{conversation_id}/images/{image_id}")
+async def get_image(
+    conversation_id: str,
+    image_id: str,
+):
+    """Serve a stored image file by conversation and image ID."""
+    image_dir = Path(settings.IMAGES_DIR) / conversation_id
+    if not image_dir.is_dir():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Find the file matching this image_id (any extension)
+    matches = list(image_dir.glob(f"{image_id}.*"))
+    if not matches:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    filepath = matches[0]
+    ext_to_mime = {".jpg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+    media_type = ext_to_mime.get(filepath.suffix, "application/octet-stream")
+
+    return FileResponse(filepath, media_type=media_type)
 
 
 # ---------------------------------------------------------------------------

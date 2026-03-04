@@ -119,6 +119,14 @@ export async function deleteConversation(token, conversationId) {
 }
 
 // ---------------------------------------------------------------------------
+// Images
+// ---------------------------------------------------------------------------
+
+export function imageUrl(conversationId, imageId) {
+  return `${BASE_URL}/conversations/${conversationId}/images/${imageId}`;
+}
+
+// ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
 
