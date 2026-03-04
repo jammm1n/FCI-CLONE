@@ -1,10 +1,14 @@
-# FCI Investigation Platform — Frontend Design Spec v2
+# FCI Investigation Platform — Frontend Design Spec v3 (Binance Dark + Gold)
 
 ## Design Vision
 
-A polished, modern compliance investigation dashboard that looks like a premium SaaS product. Think: Linear, Vercel Dashboard, or Arc browser — clean, purposeful, with subtle depth and smooth motion. This is a tool investigators spend hours in, so it must be visually comfortable, fast-feeling, and impressive in demos.
+A premium, authoritative financial crime investigation dashboard inspired by Binance's dark-luxury aesthetic. Think Bloomberg Terminal meets modern SaaS — **dark surfaces, warm gold accents, atmospheric depth, and distinctive typography**. This is a tool investigators spend hours in, so it must be visually comfortable, fast-feeling, and impressive in demos.
 
-**Light and dark modes** with system preference detection and manual toggle.
+**Aesthetic tone:** Professional, dark-luxury fintech. Restrained use of gold (borders, active states, primary CTAs) so it feels premium, not gaudy.
+
+**Memorable element:** The AI streaming indicator — a gold shimmer sweep that looks like intelligence scanning through documents.
+
+**Light and dark modes** with system preference detection and manual toggle. Dark mode is the default.
 
 ---
 
@@ -15,66 +19,77 @@ A polished, modern compliance investigation dashboard that looks like a premium 
 - Create a `ThemeContext` (similar to AuthContext) that:
   - Reads system preference via `window.matchMedia('(prefers-color-scheme: dark)')`
   - Stores user override in `localStorage` (only theme pref — not auth data)
-  - Toggles `.dark` class on `<html>` element
+  - Toggles `.dark` or `.light` class on `<html>` element (dark is default)
   - Provides `theme`, `toggleTheme`, and `isDark` to components
 - Add a theme toggle button in the AppLayout header (sun/moon icon)
+- `<body>` uses `bg-surface-950 text-surface-100` (dark) / `bg-surface-50 text-surface-950` (light)
 
-### Colour tokens
-Extend `tailwind.config.js` with CSS custom properties so both modes share semantic names:
+### Colour tokens — CSS Custom Properties (semantic)
 
-```
-Light mode:
-  --bg-primary:    #ffffff       (white)
-  --bg-secondary:  #f8fafc       (slate-50)
-  --bg-tertiary:   #f1f5f9       (slate-100)
-  --bg-elevated:   #ffffff       (white, with shadow for depth)
-  --text-primary:  #0f172a       (slate-900)
-  --text-secondary:#475569       (slate-600)
-  --text-muted:    #94a3b8       (slate-400)
-  --border:        #e2e8f0       (slate-200)
-  --border-subtle: #f1f5f9       (slate-100)
+```css
+:root {
+  /* Dark mode (default) */
+  --bg-primary:     #0B0E11;
+  --bg-secondary:   #12161C;
+  --bg-tertiary:    #181C23;
+  --bg-elevated:    #1E2329;
+  --bg-surface:     #252A31;
+  --text-primary:   #EAECEF;
+  --text-secondary: #8B95A5;
+  --text-muted:     #6A7282;
+  --border:         #2E3440;
+  --border-subtle:  #252A31;
 
-Dark mode (current, refined):
-  --bg-primary:    #0f172a       (slate-900)
-  --bg-secondary:  #1e293b       (slate-800)
-  --bg-tertiary:   #334155       (slate-700)
-  --bg-elevated:   #1e293b       (slate-800, with shadow)
-  --text-primary:  #f1f5f9       (slate-100)
-  --text-secondary:#94a3b8       (slate-400)
-  --text-muted:    #64748b       (slate-500)
-  --border:        #334155       (slate-700)
-  --border-subtle: #1e293b       (slate-800)
+  /* Gold accent */
+  --accent:         #F0B90B;
+  --accent-hover:   #F5C842;
+  --accent-muted:   rgba(240, 185, 11, 0.15);
+  --accent-subtle:  rgba(240, 185, 11, 0.07);
+  --accent-glow:    rgba(240, 185, 11, 0.25);
 
-Accent (both modes):
-  --accent:        #0ea5e9       (sky-500)
-  --accent-hover:  #38bdf8       (sky-400)
-  --accent-muted:  #0ea5e9/10    (sky-500 at 10% opacity)
-  --accent-subtle: #0ea5e9/5     (sky-500 at 5% opacity)
+  /* Status (same both modes) */
+  --status-success: #0ECB81;   /* Binance green */
+  --status-warning: #F0B90B;   /* Gold (same as accent) */
+  --status-error:   #F6465D;   /* Binance red */
+  --status-info:    #1E9CF4;   /* Binance blue */
+}
 
-Status colours (both modes):
-  --status-success:  #22c55e     (green-500)
-  --status-warning:  #f59e0b     (amber-500)
-  --status-error:    #ef4444     (red-500)
-  --status-info:     #3b82f6     (blue-500)
+.light {
+  --bg-primary:     #F5F6F7;
+  --bg-secondary:   #EAECEF;
+  --bg-tertiary:    #E0E3E8;
+  --bg-elevated:    #FFFFFF;
+  --bg-surface:     #F5F6F7;
+  --text-primary:   #12161C;
+  --text-secondary: #6A7282;
+  --text-muted:     #8B95A5;
+  --border:         #D1D6DD;
+  --border-subtle:  #EAECEF;
+}
 ```
 
 All component classes should use the `dark:` prefix pattern. Example:
-`bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100`
+`bg-surface-50 dark:bg-surface-800 text-surface-950 dark:text-surface-100`
 
 ---
 
 ## 2. Typography
 
 ### Font stack
-Add Inter (or Geist) as the primary font. Add to `index.html`:
+**Inter is banned** — it's an overused AI aesthetic default.
+
+**Primary font: Plus Jakarta Sans** — modern geometric sans-serif with subtle personality, excellent weight range (200–800), highly readable at all sizes.
+
+Add to `index.html`:
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 ```
 
 And in `tailwind.config.js`:
 ```js
 fontFamily: {
-  sans: ['Inter', 'system-ui', 'sans-serif'],
+  sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
   mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
 }
 ```
@@ -96,14 +111,66 @@ Ensure body text uses `leading-relaxed` (1.625) for readability. Chat messages e
 
 ---
 
-## 3. Global CSS & Animations
+## 3. Tailwind Config — Colour Scales
+
+### Surface scale (replaces `surface` in tailwind.config.js)
+
+Inspired by Binance's #1E2329 dark base. Cool-neutral dark tones.
+
+```js
+surface: {
+  950: '#0B0E11',   // Deepest — page background (dark mode)
+  900: '#12161C',   // Main background
+  850: '#181C23',   // Slightly elevated
+  800: '#1E2329',   // Cards, panels (≈ Binance main dark)
+  750: '#252A31',   // Elevated surfaces
+  700: '#2E3440',   // Borders, dividers
+  600: '#474D57',   // Muted icons, subtle text
+  500: '#6A7282',   // Secondary text
+  400: '#8B95A5',   // Placeholder text
+  300: '#AEB7C4',   // (rarely used in dark mode)
+  200: '#D1D6DD',   // (light mode secondary text)
+  100: '#EAECEF',   // Primary text on dark / (light mode borders)
+  50:  '#F5F6F7',   // Primary background (light mode)
+}
+```
+
+### Gold accent scale (replaces `primary`)
+
+Centered on Binance's #F0B90B.
+
+```js
+gold: {
+  950: '#2D2305',
+  900: '#4A3A08',
+  800: '#6B540C',
+  700: '#8C6E10',
+  600: '#B08B14',
+  500: '#F0B90B',   // ← Binance primary gold (main accent)
+  400: '#F5C842',
+  300: '#F8D66F',
+  200: '#FBE59D',
+  100: '#FDF2CE',
+  50:  '#FFFBEB',
+}
+```
+
+### Status colours
+
+Use Binance's actual UI colours rather than Tailwind defaults:
+- Success: `#0ECB81` (Binance green)
+- Warning: `#F0B90B` (Gold, same as accent)
+- Error: `#F6465D` (Binance red)
+- Info: `#1E9CF4` (Binance blue)
+
+---
+
+## 4. Global CSS & Animations
 
 Add to `index.css` (via `@layer utilities` or plain CSS):
 
 ### Transitions (default for all interactive elements)
 ```css
-/* Apply via Tailwind: transition-all duration-200 ease-out */
-/* Or as a base layer: */
 @layer base {
   button, a, input, textarea, [role="tab"] {
     @apply transition-all duration-200 ease-out;
@@ -148,6 +215,11 @@ Add to `index.css` (via `@layer utilities` or plain CSS):
   100% { background-position: 200% 0; }
 }
 
+@keyframes gold-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 @keyframes pulse-subtle {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
@@ -172,6 +244,11 @@ Add to `index.css` (via `@layer utilities` or plain CSS):
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(240, 185, 11, 0.08) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: gold-shimmer 2s infinite;
+}
 .animate-pulse-subtle { animation: pulse-subtle 2s ease-in-out infinite; }
 .animate-blink { animation: blink 1s step-end infinite; }
 ```
@@ -186,348 +263,407 @@ Add to `index.css` (via `@layer utilities` or plain CSS):
 
 ---
 
-## 4. Component-by-Component Spec
-
-### 4.1 AppLayout (`components/AppLayout.jsx`)
-
-**Header bar:**
-- Height: `h-14` (56px) — gives room to breathe
-- Background: `bg-white/80 dark:bg-slate-900/80 glass` — frosted glass effect
-- Border: `border-b border-slate-200 dark:border-slate-700/50`
-- Shadow: `shadow-sm`
-- Sticky: `sticky top-0 z-50`
-- App title: `text-base font-semibold tracking-tight`
-- Back arrow: `w-5 h-5`, wrapped in a `w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center` button for a proper hit area
-- Case info pills: `text-sm` with refined badge styling (see Badge spec below)
-- User name: `text-sm font-medium`
-- Logout: `text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-200`
-- **Theme toggle:** Sun/moon icon button, `w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800`, placed next to user name
-- **Animation:** Header fades in on mount: `animate-fade-in-down`
-
-### 4.2 LoginPage (`pages/LoginPage.jsx`)
-
-This is the first thing people see — it should feel premium.
-
-- **Background:** Subtle gradient: `bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900`
-- Optional: very subtle grid pattern or dot pattern overlay using CSS background-image
-- **Card:** `max-w-md w-full bg-white dark:bg-slate-800 rounded-2xl shadow-2xl dark:shadow-none dark:border dark:border-slate-700 p-8`
-- **Card top accent:** A subtle gradient bar at the top: `h-1 bg-gradient-to-r from-sky-500 to-blue-600 rounded-t-2xl` (placed above the card or as a pseudo-element)
-- **App title:** `text-2xl font-bold bg-gradient-to-r from-sky-500 to-blue-600 bg-clip-text text-transparent` — gradient text effect
-- **Subtitle:** `text-sm text-slate-500 dark:text-slate-400 mt-1`
-- **Input field:** `h-11 text-base rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500`
-- **Button:** `h-11 text-base font-medium rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 active:scale-[0.98]`
-- **Error message:** `animate-fade-in-up` when appearing
-- **Card animation:** `animate-scale-in` on mount
-- **Loading state on button:** Replace text with a small spinner, button stays the same size
-
-### 4.3 CaseListPage (`pages/CaseListPage.jsx`)
-
-- **Page header area:** Add a proper header section with:
-  - Title: `text-2xl font-bold` — "Investigations"
-  - Subtitle: `text-sm text-slate-500` — "{n} active cases" (derive from data)
-  - This header should have `px-6 py-6` or similar generous spacing
-- **Card grid:** Use `grid grid-cols-1 gap-4 px-6` (single column is fine for case cards)
-- **Cards animate in:** Each card gets `animate-fade-in-up` with staggered delay: `style={{ animationDelay: '${index * 80}ms' }}`
-- **Empty state:** If no cases, show a nice centered illustration or icon with "No cases assigned" text
-- **Page animation:** Content area fades in: `animate-fade-in`
-
-### 4.4 CaseCard (`components/cases/CaseCard.jsx`)
-
-- **Card:** `bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6 hover:border-sky-300 dark:hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/5 transition-all duration-200 cursor-pointer group`
-- Make the **entire card** clickable (wrap in a div with onClick), not just the button
-- **Case ID:** `text-lg font-semibold font-mono`
-- **Badges:** See Badge spec below — `text-sm`
-- **Summary:** `text-base text-slate-600 dark:text-slate-300 leading-relaxed mt-3`
-- **Meta row:** `text-sm text-slate-500 dark:text-slate-400 mt-4 flex items-center gap-4`
-- Add subtle icons next to meta items (user icon for subject, calendar icon for date)
-- **Action button:** `px-5 py-2.5 text-sm font-medium rounded-xl` — styled like a secondary button: `border border-sky-500 text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 group-hover:bg-sky-500 group-hover:text-white` (fills on card hover)
-- **Card hover:** The whole card subtly lifts: `hover:-translate-y-0.5`
-
-### 4.5 InvestigationPage — Layout (`pages/InvestigationPage.jsx`)
-
-- **Drag handle:**
-  - Outer container: `w-4 flex items-center justify-center cursor-col-resize group` (16px hit area)
-  - Visible bar: `w-1 h-8 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-sky-500 group-hover:h-12 group-active:bg-sky-400 transition-all duration-200`
-  - On hover, show a subtle glow: `group-hover:shadow-[0_0_8px_rgba(14,165,233,0.3)]`
-  - Add three small dots/lines centered on the bar as a grip indicator
-- **Panel transition:** When resizing, panels should NOT show text selection or jitter. The `user-select: none` is already handled during drag, but ensure `will-change: width` is set during resize for smooth rendering
-- **Loading state:** Replace spinner with skeleton loading — see Skeleton Loader spec below
-
-### 4.6 CaseHeader (`components/investigation/CaseHeader.jsx`)
-
-- Padding: `px-6 py-5`
-- Background: `bg-white dark:bg-slate-800`
-- Subject ID: `text-lg font-bold font-mono`
-- Badges: See Badge spec
-- Summary: `text-sm text-slate-500 dark:text-slate-400 leading-relaxed mt-2`
-- Bottom border: `border-b border-slate-200 dark:border-slate-700`
-- **Animation:** `animate-fade-in` on mount
-
-### 4.7 CaseDataTabs (`components/investigation/CaseDataTabs.jsx`)
-
-- Tab text: `text-sm font-medium`
-- Tab padding: `px-4 py-3`
-- Container: `bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4`
-- **Active tab:** `border-b-2 border-sky-500 text-sky-600 dark:text-sky-400` — make the border `border-b-[3px]` for more presence
-- **Inactive tab:** `text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-t-lg`
-- **Tab transition:** Add a sliding underline indicator (animated `transform` on a pseudo-element that moves to the active tab) — OR keep it simple with just the border approach but ensure transitions are smooth
-- **Animation:** Tab content panel should `animate-fade-in` when switching tabs
-
-### 4.8 CaseDataPanel (`components/investigation/CaseDataPanel.jsx`)
-
-- Padding: `p-6`
-- Background: `bg-slate-50 dark:bg-slate-900`
-- **Scroll behaviour:** Smooth scroll with `scroll-behavior: smooth`
-- **Content animation:** `animate-fade-in` when tab content changes (key the wrapper on activeTab)
-- Empty state: Centered, with a subtle icon and `text-sm text-slate-400`
-
-### 4.9 MarkdownRenderer (`components/shared/MarkdownRenderer.jsx`)
-
-- Use `prose-base` not `prose-sm`
-- **Tables:**
-  - Wrap in `rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700`
-  - Header row: `bg-slate-100 dark:bg-slate-800 font-semibold`
-  - Cells: `py-2.5 px-4 text-sm` — comfortable padding
-  - Alternating rows: `even:bg-slate-50 dark:even:bg-slate-800/50`
-  - Hover row: `hover:bg-slate-100 dark:hover:bg-slate-700/50`
-- **Code blocks:** `rounded-lg` with slightly more padding
-- **Headings:** Ensure clear visual hierarchy — `##` should be `text-lg font-semibold`, `###` should be `text-base font-semibold`
-- **Light mode prose:** Override prose colours for light mode (default prose is light-friendly, prose-invert for dark)
-
-### 4.10 ChatMessageList (`components/investigation/ChatMessageList.jsx`)
-
-- Spacing: `space-y-5 p-5`
-- Background: `bg-slate-50 dark:bg-slate-900`
-- **Smooth scroll:** Use `scroll-smooth` on the container
-- **Empty state:** Replace "Starting investigation..." with something nicer — a subtle icon and styled text
-
-### 4.11 ChatMessage (`components/investigation/ChatMessage.jsx`)
-
-**User messages:**
-- Bubble: `bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800/50 rounded-2xl rounded-br-md px-5 py-4`
-- Text: `text-base text-slate-800 dark:text-slate-200 leading-relaxed`
-- Role label: `text-sm font-semibold text-sky-700 dark:text-sky-400`
-- Timestamp: `text-xs text-slate-400`
-- **Animation:** `animate-fade-in-up` — appears to slide up into view
-- **Image thumbnails:** `w-24 h-24 rounded-xl border-2 border-sky-200 dark:border-sky-800 hover:scale-105 transition-transform cursor-pointer` — clicking could open a lightbox (future enhancement, optional)
-
-**Assistant messages:**
-- Bubble: `bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl rounded-bl-md px-5 py-4 shadow-sm`
-- Role label: `text-sm font-semibold text-slate-600 dark:text-slate-400`
-- Timestamp: `text-xs text-slate-400`
-- **Animation:** `animate-fade-in-up` with a slightly longer duration (0.4s)
-- **Tools used footer:** `text-sm mt-3 pt-3 border-t border-slate-100 dark:border-slate-700`
-  - Document titles: `text-sky-600 dark:text-sky-400 font-medium` with a small document icon before each
-
-**Max width:** Keep `max-w-[85%]` but consider `max-w-[80%]` for cleaner look.
-
-### 4.12 ChatInput (`components/investigation/ChatInput.jsx`)
-
-- Container: `bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-5 py-4`
-- **Textarea:**
-  - `text-base rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-600`
-  - `focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500`
-  - `rows={3}` for more comfortable input area
-  - **Auto-grow:** Consider making the textarea auto-grow to fit content (up to a max of ~6 rows), then scroll. This makes typing long messages much nicer.
-  - Placeholder: `text-base text-slate-400`
-- **Send button:** `px-5 py-2.5 text-base font-medium rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-md shadow-sky-500/20 active:scale-[0.97] disabled:from-slate-300 disabled:to-slate-400 dark:disabled:from-slate-700 dark:disabled:to-slate-600 disabled:shadow-none`
-- **Drag-over state:** `border-2 border-dashed border-sky-400 bg-sky-50/50 dark:bg-sky-900/20` with a subtle "Drop image here" overlay text
-- **Image preview thumbnails:** `w-16 h-16 rounded-xl` with a nice remove button (small X in a circle, `hover:bg-red-500 hover:text-white`)
-
-### 4.13 StreamingIndicator (`components/investigation/StreamingIndicator.jsx`)
-
-Replace the simple bouncing dots with something more polished:
-
-- Container: `px-5 py-3`
-- **Option A (recommended):** A message-shaped container that matches assistant bubble styling but smaller, containing an animated shimmer bar:
-  ```
-  <div class="max-w-[200px] bg-white dark:bg-slate-800 rounded-2xl rounded-bl-md px-5 py-4 border border-slate-200 dark:border-slate-700 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="flex gap-1.5">
-        <!-- Three dots with stagger -->
-      </div>
-      <span class="text-sm text-slate-400">Thinking...</span>
-    </div>
-    <div class="mt-2 h-2 rounded-full animate-shimmer bg-slate-100 dark:bg-slate-700" />
-  </div>
-  ```
-- Dots: `w-2 h-2 rounded-full bg-sky-500`
-- **Animation:** The whole indicator should `animate-fade-in-up`
-
-### 4.14 StreamingText — Blinking Cursor
-
-When assistant messages are streaming, append a blinking cursor to the end of the content:
-- In ChatMessage, if the message is currently streaming (e.g., `message.isStreaming`), append `<span class="animate-blink text-sky-500">|</span>` after the content
-- Pass `isStreaming` from InvestigationPage by marking the streaming message
-
-### 4.15 LoadingSpinner → Skeleton Loader (`components/shared/LoadingSpinner.jsx`)
-
-Keep the spinner for button states, but add a **Skeleton** component for page/section loading:
-
-```jsx
-function Skeleton({ className }) {
-  return <div className={`rounded-lg bg-slate-200 dark:bg-slate-700 animate-shimmer ${className}`} />;
-}
-```
-
-Use in InvestigationPage loading state:
-- Left panel: 3-4 skeleton bars of varying widths
-- Right panel: 2-3 skeleton message bubbles
-- This looks much more professional than a centred spinner
-
-### 4.16 ImageUpload (`components/shared/ImageUpload.jsx`)
-
-- Thumbnails: `w-16 h-16 rounded-xl border-2 border-slate-200 dark:border-slate-700 object-cover`
-- Remove button: `absolute -top-1.5 -right-1.5 w-5 h-5 bg-slate-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-xs transition-colors`
-- **Upload button icon:** Use a proper paperclip or attachment icon, `w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-sky-500`
-
----
-
-## 5. Badge System
-
-Consistent badge styling throughout (case type, status, etc.):
-
-### Case type badges
-| Type | Light | Dark |
-|------|-------|------|
-| Scam | `bg-red-50 text-red-700 ring-1 ring-red-200` | `bg-red-500/10 text-red-400 ring-1 ring-red-500/20` |
-| CTM | `bg-amber-50 text-amber-700 ring-1 ring-amber-200` | `bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20` |
-| Fraud | `bg-purple-50 text-purple-700 ring-1 ring-purple-200` | `bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20` |
-| FTM | `bg-blue-50 text-blue-700 ring-1 ring-blue-200` | `bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20` |
-
-### Status badges
-| Status | Light | Dark |
-|--------|-------|------|
-| Open | `bg-green-50 text-green-700 ring-1 ring-green-200` | `bg-green-500/10 text-green-400 ring-1 ring-green-500/20` |
-| In Progress | `bg-sky-50 text-sky-700 ring-1 ring-sky-200` | `bg-sky-500/10 text-sky-400 ring-1 ring-sky-500/20` |
-| Closed | `bg-slate-100 text-slate-600 ring-1 ring-slate-200` | `bg-slate-500/10 text-slate-400 ring-1 ring-slate-500/20` |
-| Escalated | `bg-red-50 text-red-700 ring-1 ring-red-200` | `bg-red-500/10 text-red-400 ring-1 ring-red-500/20` |
-
-### Badge base
-All badges: `inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium`
-
-Update `formatters.js` to export badge colour functions that return the full class strings above, using a `dark:` prefix pattern or by accepting an `isDark` param.
-
----
-
-## 6. Shadows & Depth
+## 5. Shadows & Depth
 
 ### Shadow scale (extend tailwind.config.js)
+
+Dark backgrounds need stronger shadow values than light-optimized defaults.
+
 ```js
 boxShadow: {
-  'soft-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 0 rgba(0, 0, 0, 0.06)',
-  'soft': '0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 12px -4px rgba(0, 0, 0, 0.05)',
-  'soft-lg': '0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 8px 24px -8px rgba(0, 0, 0, 0.06)',
-  'soft-xl': '0 8px 32px -8px rgba(0, 0, 0, 0.12), 0 16px 48px -16px rgba(0, 0, 0, 0.08)',
-  'glow-sky': '0 0 16px -4px rgba(14, 165, 233, 0.3)',
+  'soft-sm':  '0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15)',
+  'soft':     '0 2px 8px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15)',
+  'soft-lg':  '0 4px 16px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.18)',
+  'soft-xl':  '0 8px 32px rgba(0, 0, 0, 0.35), 0 16px 48px rgba(0, 0, 0, 0.2)',
+  'glow-gold': '0 0 20px -4px rgba(240, 185, 11, 0.3)',
+  'glow-gold-lg': '0 0 32px -4px rgba(240, 185, 11, 0.4)',
 }
 ```
 
-**In dark mode**, shadows are less visible, so supplement with **subtle border glows** or lighter borders on hover instead.
+**Light mode:** Shadows work naturally; supplement with gold glow on interactive elements.
+**Dark mode:** Subtle gold border glow on hover for cards/elevated elements (more visible than box shadows on dark).
 
 ### Where to apply
 | Element | Shadow |
 |---------|--------|
 | Header | `shadow-soft-sm` |
-| Case cards | `shadow-soft hover:shadow-soft-lg` |
+| Case cards | `shadow-soft hover:shadow-glow-gold` |
 | Login card | `shadow-soft-xl` (light), `shadow-none border` (dark) |
 | Chat message bubbles (assistant) | `shadow-soft-sm` |
-| Buttons (primary) | `shadow-md shadow-sky-500/20` |
+| Buttons (primary) | `shadow-md shadow-gold-500/20` |
 | Dropdowns/popovers (future) | `shadow-soft-lg` |
 
 ---
 
-## 7. Page Transitions
+## 6. Backgrounds & Atmosphere
 
-For smooth route transitions, wrap the `<Routes>` in App.jsx with a simple CSS fade:
+These create atmospheric depth beyond flat solid colors.
 
-**Simple approach (no extra library):**
-- Wrap page content in each page component with `<div className="animate-fade-in">...</div>`
-- This gives a subtle fade-in on route change that's cheap and effective
+### Login page
+- **Dark mode:** Radial gradient from `surface-900` center to `surface-950` edges (vignette). Overlay a very subtle dot-grid pattern at 3–5% gold opacity. Creates depth without being distracting.
+- **Light mode:** Soft warm gradient from white center to `surface-100` edges. Same subtle pattern at 2% opacity.
 
-**Better approach (optional, heavier):**
-- Use `framer-motion` with `AnimatePresence` and `motion.div` for enter/exit animations
-- Only add this if we want route exit animations (content fading out before new page fades in)
-- For demo purposes the simple approach is likely sufficient
+### Investigation page panels
+- **Case data panel background:** Very faint noise/grain texture (CSS-only using a tiny base64 noise PNG or SVG filter) at ~2% opacity over `surface-850`. Adds subtle depth.
+- **Chat panel:** Clean solid `surface-900` (dark) / `surface-50` (light) — no texture. Chat needs max readability.
+
+### Implementation
+Grain texture as a CSS pseudo-element or background-image. Small base64 noise PNG (~1KB) tiled. Very subtle — it should feel like the surface has "material" rather than being a flat digital color.
 
 ---
 
-## 8. Scrollbar Styling (Both Modes)
+## 7. Hero Moment: AI Streaming Indicator (Gold Shimmer)
 
-Update `index.css` scrollbar styles for both themes:
+This is the one thing someone will remember about the UI.
+
+**The gold scanning shimmer.** When the AI is thinking/streaming:
+- Assistant-bubble-shaped container on dark surface
+- A gold shimmer sweep across the bubble (gradient moving left to right, repeating)
+- Three dots pulsing in gold
+- "Analyzing..." text in muted gold
+- The shimmer uses the gold accent at low opacity: `linear-gradient(90deg, transparent 25%, rgba(240,185,11,0.08) 50%, transparent 75%)`
+- Whole indicator fades in with `animate-fade-in-up`
+
+This makes the AI feel like it's actively scanning through evidence — domain-appropriate, memorable, and distinctly "Binance gold."
+
+See Section 9.13 for exact component spec.
+
+---
+
+## 8. Animation Choreography
+
+### Login page (first impression — orchestrated sequence)
+1. Background gradient fades in (300ms)
+2. Card scales in from 0.95 (350ms, 100ms delay)
+3. Title + subtitle fade in (300ms, 250ms delay)
+4. Input fields fade in up (300ms, 350ms delay)
+5. Button fades in up (300ms, 450ms delay)
+
+→ Implemented via `animation-delay` CSS on each element. Total sequence: ~750ms.
+
+### Case list page
+1. Page header fades in (300ms)
+2. Cards stagger in: each card `animation-delay: ${index * 100}ms` with `fadeInUp`
+
+→ 100ms stagger between cards. Slightly more deliberate than instant.
+
+### Investigation page load
+1. Left panel slides in from left (300ms)
+2. Right panel slides in from right (300ms, 100ms delay)
+3. Drag handle fades in (200ms, 300ms delay)
+
+→ Orchestrated entrance instead of everything popping in at once.
+
+### Chat messages
+- Each new message: `animate-fade-in-up`
+- Streaming indicator: `animate-fade-in-up` then continuous gold shimmer
+
+---
+
+## 9. Component-by-Component Spec
+
+### 9.1 AppLayout (`components/AppLayout.jsx`)
+
+**Header bar:**
+- Height: `h-14` (56px)
+- Background: `bg-surface-50/80 dark:bg-surface-900/80 glass` — frosted glass effect
+- Border: `border-b border-surface-200 dark:border-surface-700/50`
+- Shadow: `shadow-soft-sm`
+- Sticky: `sticky top-0 z-50`
+- App title: `text-base font-semibold tracking-tight`
+- Back arrow: `w-5 h-5`, wrapped in a `w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center` button
+- Case info pills: `text-sm` with badge styling (see Section 10)
+- User name: `text-sm font-medium`
+- Logout: `text-sm text-surface-500 hover:text-surface-900 dark:hover:text-surface-200`
+- **Theme toggle:** Sun/moon icon button, `w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800`, placed next to user name
+- **Animation:** Header fades in on mount: `animate-fade-in-down`
+
+### 9.2 LoginPage (`pages/LoginPage.jsx`)
+
+First impression — must feel premium.
+
+- **Background:** Dark mode: radial gradient from `surface-900` center to `surface-950` edges + subtle dot-grid pattern at 3–5% gold opacity. Light mode: soft warm gradient from white center to `surface-100` edges + pattern at 2%.
+- **Card:** `max-w-md w-full bg-surface-50 dark:bg-surface-800 rounded-2xl shadow-soft-xl dark:shadow-none dark:border dark:border-surface-700 p-8`
+- **Card top accent:** `h-1 bg-gradient-to-r from-gold-600 to-gold-400 rounded-t-2xl`
+- **App title:** `text-2xl font-bold bg-gradient-to-r from-gold-500 to-gold-400 bg-clip-text text-transparent` — gold gradient text
+- **Subtitle:** `text-sm text-surface-500 dark:text-surface-400 mt-1`
+- **Input field:** `h-11 text-base rounded-xl bg-surface-100 dark:bg-surface-900 border-surface-200 dark:border-surface-600 focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500`
+- **Button:** `h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 active:scale-[0.98]` — **dark text on gold button** (Binance pattern)
+- **Error message:** `animate-fade-in-up` when appearing
+- **Card animation:** Orchestrated sequence per Section 8
+- **Loading state on button:** Replace text with a small spinner, button stays the same size
+
+### 9.3 CaseListPage (`pages/CaseListPage.jsx`)
+
+- **Page header area:**
+  - Title: `text-2xl font-bold` — "Investigations"
+  - Subtitle: `text-sm text-surface-500` — "{n} active cases"
+  - Generous spacing: `px-6 py-6`
+- **Card grid:** `grid grid-cols-1 gap-4 px-6`
+- **Cards animate in:** Each card gets `animate-fade-in-up` with staggered delay: `style={{ animationDelay: '${index * 100}ms' }}`
+- **Empty state:** Centered icon with "No cases assigned" text
+- **Page animation:** Content area fades in: `animate-fade-in`
+
+### 9.4 CaseCard (`components/cases/CaseCard.jsx`)
+
+- **Card:** `bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 border-l-2 border-l-gold-500/30 p-6 hover:border-gold-300 dark:hover:border-gold-500/50 hover:shadow-glow-gold transition-all duration-200 cursor-pointer group`
+- **Left accent:** `border-l-2 border-l-gold-500/30` for brand identity
+- Make the **entire card** clickable (wrap in a div with onClick)
+- **Case ID:** `text-lg font-semibold font-mono`
+- **Badges:** See Section 10 — `text-sm`
+- **Summary:** `text-base text-surface-600 dark:text-surface-300 leading-relaxed mt-3`
+- **Meta row:** `text-sm text-surface-500 dark:text-surface-400 mt-4 flex items-center gap-4`
+- Add subtle icons next to meta items (user icon for subject, calendar icon for date)
+- **Action button:** `px-5 py-2.5 text-sm font-medium rounded-xl border border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-surface-950 group-hover:bg-gold-500 group-hover:text-surface-950` — fills to gold with dark text on card hover
+- **Card hover:** Subtle lift: `hover:-translate-y-0.5`
+
+### 9.5 InvestigationPage — Layout (`pages/InvestigationPage.jsx`)
+
+- **Drag handle:**
+  - Outer container: `w-4 flex items-center justify-center cursor-col-resize group` (16px hit area)
+  - Visible bar: `w-1 h-8 rounded-full bg-surface-300 dark:bg-surface-600 group-hover:bg-gold-500 group-hover:h-12 group-active:bg-gold-400 transition-all duration-200`
+  - On hover, show a subtle glow: `group-hover:shadow-[0_0_8px_rgba(240,185,11,0.3)]`
+  - Add three small dots/lines centered on the bar as a grip indicator
+- **Panel transition:** When resizing, panels should NOT show text selection or jitter. `user-select: none` during drag, `will-change: width` for smooth rendering
+- **Loading state:** Replace spinner with skeleton loading — see Skeleton Loader spec (Section 9.15)
+
+### 9.6 CaseHeader (`components/investigation/CaseHeader.jsx`)
+
+- Padding: `px-6 py-5`
+- Background: `bg-surface-50 dark:bg-surface-800`
+- Subject ID: `text-lg font-bold font-mono`
+- Badges: See Section 10
+- Summary: `text-sm text-surface-500 dark:text-surface-400 leading-relaxed mt-2`
+- Bottom border: `border-b border-surface-200 dark:border-surface-700`
+- **Animation:** `animate-fade-in` on mount
+
+### 9.7 CaseDataTabs (`components/investigation/CaseDataTabs.jsx`)
+
+- Tab text: `text-sm font-medium`
+- Tab padding: `px-4 py-3`
+- Container: `bg-surface-50 dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700 px-4`
+- **Active tab:** `border-b-[3px] border-gold-500 text-gold-600 dark:text-gold-500`
+- **Inactive tab:** `text-surface-500 dark:text-surface-400 hover:text-gold-400 hover:bg-surface-100 dark:hover:bg-surface-700/50 rounded-t-lg`
+- **Tab transition:** Smooth border/colour transitions via `transition-all duration-200`
+- **Animation:** Tab content panel should `animate-fade-in` when switching tabs
+
+### 9.8 CaseDataPanel (`components/investigation/CaseDataPanel.jsx`)
+
+- Padding: `p-6`
+- Background: `bg-surface-100 dark:bg-surface-850` with optional faint grain texture (see Section 6)
+- **Scroll behaviour:** Smooth scroll with `scroll-behavior: smooth`
+- **Content animation:** `animate-fade-in` when tab content changes (key the wrapper on activeTab)
+- Empty state: Centered, with a subtle icon and `text-sm text-surface-400`
+
+### 9.9 MarkdownRenderer (`components/shared/MarkdownRenderer.jsx`)
+
+- Use `prose-base` not `prose-sm`
+- **Tables:**
+  - Wrap in `rounded-lg overflow-hidden border border-surface-200 dark:border-surface-700`
+  - Header row: `bg-surface-100 dark:bg-surface-800 font-semibold`
+  - Cells: `py-2.5 px-4 text-sm` — comfortable padding
+  - Alternating rows: `even:bg-surface-50 dark:even:bg-surface-800/50`
+  - Hover row: `hover:bg-surface-100 dark:hover:bg-surface-700/50`
+- **Code blocks:** `rounded-lg` with slightly more padding
+- **Headings:** `##` → `text-lg font-semibold`, `###` → `text-base font-semibold`
+- **Light mode prose:** Override prose colours for light mode (default prose is light-friendly, prose-invert for dark)
+
+### 9.10 ChatMessageList (`components/investigation/ChatMessageList.jsx`)
+
+- Spacing: `space-y-5 p-5`
+- Background: `bg-surface-100 dark:bg-surface-900`
+- **Smooth scroll:** `scroll-smooth` on the container
+- **Empty state:** Subtle icon with styled text (not raw "Starting investigation...")
+
+### 9.11 ChatMessage (`components/investigation/ChatMessage.jsx`)
+
+**User messages:**
+- Bubble: `bg-gold-500/10 border border-gold-500/20 rounded-2xl rounded-br-md px-5 py-4`
+- Text: `text-base text-surface-800 dark:text-surface-200 leading-relaxed`
+- Role label: `text-sm font-semibold text-gold-600 dark:text-gold-500`
+- Timestamp: `text-xs text-surface-400`
+- **Animation:** `animate-fade-in-up`
+- **Image thumbnails:** `w-24 h-24 rounded-xl border-2 border-gold-200 dark:border-gold-800 hover:scale-105 transition-transform cursor-pointer`
+
+**Assistant messages:**
+- Bubble: `bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl rounded-bl-md px-5 py-4 shadow-soft-sm`
+- Role label: `text-sm font-semibold text-surface-600 dark:text-surface-400`
+- Timestamp: `text-xs text-surface-400`
+- **Animation:** `animate-fade-in-up` with slightly longer duration (0.4s)
+- **Tools used footer:** `text-sm mt-3 pt-3 border-t border-surface-100 dark:border-surface-700`
+  - Document titles: `text-gold-600 dark:text-gold-400 font-medium` with a small document icon
+
+**Streaming cursor:**
+- When message is streaming, append `<span class="animate-blink text-gold-500">▎</span>` after content
+
+**Max width:** `max-w-[80%]`
+
+### 9.12 ChatInput (`components/investigation/ChatInput.jsx`)
+
+- Container: `bg-surface-50 dark:bg-surface-800 border-t border-surface-200 dark:border-surface-700 px-5 py-4`
+- **Textarea:**
+  - `text-base rounded-xl bg-surface-100 dark:bg-surface-900 border-surface-200 dark:border-surface-600`
+  - `focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500`
+  - `rows={3}`, auto-grow up to ~6 rows then scroll
+  - Placeholder: `text-base text-surface-400`
+- **Send button:** `px-5 py-2.5 text-base font-medium rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 shadow-md shadow-gold-500/20 active:scale-[0.97] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:shadow-none`
+- **Drag-over state:** `border-2 border-dashed border-gold-400 bg-gold-500/5` with "Drop image here" overlay
+- **Image preview thumbnails:** `w-16 h-16 rounded-xl` with remove button (`hover:bg-red-500 hover:text-white`)
+
+### 9.13 StreamingIndicator (`components/investigation/StreamingIndicator.jsx`)
+
+Major redesign — the "hero moment" of the UI.
+
+```
+<div class="max-w-[200px] bg-surface-50 dark:bg-surface-800 rounded-2xl rounded-bl-md px-5 py-4 border border-surface-200 dark:border-surface-700 shadow-soft-sm animate-fade-in-up relative overflow-hidden">
+  <!-- Gold shimmer overlay -->
+  <div class="absolute inset-0 animate-gold-shimmer pointer-events-none" />
+
+  <div class="relative flex items-center gap-3">
+    <div class="flex gap-1.5">
+      <!-- Three dots pulsing in gold -->
+      <div class="w-2 h-2 rounded-full bg-gold-500 animate-pulse-subtle" style="animation-delay: 0ms" />
+      <div class="w-2 h-2 rounded-full bg-gold-500 animate-pulse-subtle" style="animation-delay: 200ms" />
+      <div class="w-2 h-2 rounded-full bg-gold-500 animate-pulse-subtle" style="animation-delay: 400ms" />
+    </div>
+    <span class="text-sm text-gold-500/70">Analyzing...</span>
+  </div>
+</div>
+```
+
+### 9.14 ImageUpload (`components/shared/ImageUpload.jsx`)
+
+- Thumbnails: `w-16 h-16 rounded-xl border-2 border-surface-200 dark:border-surface-700 object-cover`
+- Remove button: `absolute -top-1.5 -right-1.5 w-5 h-5 bg-surface-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center text-xs transition-colors`
+- **Upload button icon:** Paperclip/attachment icon, `w-9 h-9 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-400 hover:text-gold-500`
+
+### 9.15 Skeleton Loader (`components/shared/Skeleton.jsx`)
+
+**New component.** Keep the existing spinner for button states, but use skeletons for page/section loading.
+
+```jsx
+function Skeleton({ className }) {
+  return <div className={`rounded-lg bg-surface-200 dark:bg-surface-700 animate-shimmer ${className}`} />;
+}
+```
+
+Use in InvestigationPage loading state:
+- Left panel: 3–4 skeleton bars of varying widths
+- Right panel: 2–3 skeleton message bubbles
+
+---
+
+## 10. Badge System
+
+Consistent badge styling throughout (case type, status).
+
+### Badge base
+All badges: `inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium`
+
+### Case type badges
+| Type | Dark Mode | Light Mode |
+|------|-----------|------------|
+| Scam | `bg-red-500/10 text-red-400 ring-1 ring-red-500/20` | `bg-red-50 text-red-700 ring-1 ring-red-200` |
+| CTM | `bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20` | `bg-amber-50 text-amber-700 ring-1 ring-amber-200` |
+| Fraud | `bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20` | `bg-purple-50 text-purple-700 ring-1 ring-purple-200` |
+| FTM | `bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20` | `bg-blue-50 text-blue-700 ring-1 ring-blue-200` |
+
+### Status badges
+| Status | Dark Mode | Light Mode |
+|--------|-----------|------------|
+| Open | `bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20` | `bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200` |
+| In Progress | `bg-gold-500/10 text-gold-500 ring-1 ring-gold-500/20` | `bg-gold-50 text-gold-700 ring-1 ring-gold-200` |
+| Closed | `bg-surface-500/10 text-surface-400 ring-1 ring-surface-500/20` | `bg-surface-100 text-surface-600 ring-1 ring-surface-200` |
+| Escalated | `bg-red-500/10 text-red-400 ring-1 ring-red-500/20` | `bg-red-50 text-red-700 ring-1 ring-red-200` |
+
+**Note:** "In Progress" uses gold (the brand accent) instead of generic sky. Open uses emerald (#0ECB81 Binance green).
+
+Update `formatters.js` to export badge colour functions that return the full class strings above, using a `dark:` prefix pattern or by accepting an `isDark` param.
+
+---
+
+## 11. Scrollbar Styling (Both Modes)
 
 ```css
 /* Light mode scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #AEB7C4; border-radius: 3px; } /* surface-300 */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #8B95A5; } /* surface-400 */
 
 /* Dark mode scrollbar */
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #474D57; } /* surface-600 */
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6A7282; } /* surface-500, visible on hover */
 ```
 
 ---
 
-## 9. Responsive Considerations
+## 12. Page Transitions
 
-Not a full responsive overhaul (this is a desktop investigation tool), but:
+Wrap page content in each page component with `<div className="animate-fade-in">...</div>` for a subtle fade-in on route change.
+
+**Optional heavier approach:** `framer-motion` with `AnimatePresence` — only if exit animations are needed. Simple approach is sufficient for demo.
+
+---
+
+## 13. Responsive Considerations
+
+Desktop investigation tool — not a full responsive overhaul:
 - Minimum supported width: 1024px
-- Below 1280px, the investigation panel split should default to 40/60 instead of 35/65
+- Below 1280px, investigation panel split defaults to 40/60 instead of 35/65
 - Tab labels could truncate or scroll horizontally on narrow panels
 - Font sizes should NOT scale down on smaller viewports — readability is paramount
 
 ---
 
-## 10. Implementation Order
+## 14. Implementation Order
 
 Work through in this order for maximum visual impact at each step:
 
-1. **Theme system** — ThemeContext, tailwind dark mode config, CSS variables, toggle button. This unlocks all `dark:` classes.
-2. **Global CSS** — Fonts (Inter), animations, utility classes, scrollbar styles, shadow config
-3. **LoginPage** — Biggest first impression. Gradient background, polished card, animated button.
+1. **Theme system** — ThemeContext, tailwind dark mode config, CSS variables, toggle button, surface + gold colour scales
+2. **Global CSS** — Plus Jakarta Sans font, animations, utility classes, scrollbar styles, shadow config
+3. **LoginPage** — Biggest first impression. Radial gradient + dot-grid background, gold gradient card, orchestrated animation
 4. **AppLayout** — Header with glass effect, theme toggle, proper sizing
-5. **CaseListPage + CaseCard** — Cards with hover effects, staggered animation, badges
-6. **InvestigationPage layout** — Drag handle, skeleton loading
-7. **CaseHeader + CaseDataTabs + CaseDataPanel** — Left panel polish
-8. **ChatMessage** — Bubble styling, animations, image thumbnails
-9. **ChatInput** — Rounded input, gradient send button, drag-drop state
-10. **StreamingIndicator** — Shimmer bar, blinking cursor
+5. **CaseListPage + CaseCard** — Gold-accented cards with hover glow, staggered animation, badges
+6. **InvestigationPage layout** — Gold drag handle, skeleton loading, panel slide-in
+7. **CaseHeader + CaseDataTabs + CaseDataPanel** — Left panel polish with gold active tabs, grain texture
+8. **ChatMessage** — Gold-tinted user bubbles, animations, image thumbnails, streaming cursor
+9. **ChatInput** — Rounded input, gold gradient send button, drag-drop state
+10. **StreamingIndicator** — Gold shimmer sweep hero moment
 11. **MarkdownRenderer** — Table styling, prose sizing
-12. **Badge system** — Update formatters.js with full badge classes
-13. **Final pass** — Check both light/dark modes, fix any inconsistencies
+12. **Badge system** — Update formatters.js with full badge classes (gold "In Progress", Binance status colours)
+13. **Final pass** — Check both light/dark modes, verify colour consistency, test all animations
 
 ---
 
-## 11. Files Changed
+## 15. Files Changed
 
 | File | Changes |
 |------|---------|
-| `tailwind.config.js` | Dark mode config, fonts, shadows, colours |
-| `index.html` | Inter font link |
-| `index.css` | Animations, utilities, scrollbar themes, base transitions |
+| `tailwind.config.js` | Dark mode config, Plus Jakarta Sans font, gold + surface colour scales, shadows |
+| `index.html` | Plus Jakarta Sans + JetBrains Mono font links |
+| `index.css` | Animations (incl. gold-shimmer), utilities, scrollbar themes, base transitions, grain texture, CSS custom properties |
 | `App.jsx` | Page transition wrapper |
-| **New:** `context/ThemeContext.jsx` | Theme provider, toggle, localStorage, system detection |
+| **New:** `context/ThemeContext.jsx` | Theme provider, toggle, localStorage, system detection (dark default) |
 | `context/AuthContext.jsx` | No changes |
 | `services/api.js` | No changes |
-| `utils/formatters.js` | Updated badge colour functions for light/dark mode |
-| `AppLayout.jsx` | Glass header, theme toggle, sizing |
+| `utils/formatters.js` | Updated badge colour functions for light/dark mode with gold + Binance colours |
+| `AppLayout.jsx` | Glass header, theme toggle, surface colour classes |
 | `ProtectedRoute.jsx` | No changes |
-| `LoginPage.jsx` | Complete visual overhaul |
-| `CaseListPage.jsx` | Page header, card animations |
-| `CaseCard.jsx` | Card styling, hover effects, full-card click |
-| `InvestigationPage.jsx` | Drag handle, skeleton loading, streaming cursor flag |
-| `CaseHeader.jsx` | Sizing, spacing |
-| `CaseDataTabs.jsx` | Tab styling, hover states |
-| `CaseDataPanel.jsx` | Background, animation on tab switch |
-| `ChatMessageList.jsx` | Spacing, background |
-| `ChatMessage.jsx` | Bubble redesign, animations, image thumbnails, streaming cursor |
-| `ChatInput.jsx` | Input styling, auto-grow, drag-drop visual |
-| `StreamingIndicator.jsx` | Shimmer redesign |
-| `MarkdownRenderer.jsx` | Prose sizing, table polish |
-| `LoadingSpinner.jsx` | Keep spinner, add Skeleton component |
-| `ImageUpload.jsx` | Thumbnail and button styling |
-| **New:** `components/shared/Skeleton.jsx` | Skeleton loading component |
+| `LoginPage.jsx` | Complete visual overhaul — radial gradient bg, gold accents, orchestrated animation |
+| `CaseListPage.jsx` | Page header, staggered card animations |
+| `CaseCard.jsx` | Gold hover glow, gold left accent, gold action button, full-card click |
+| `InvestigationPage.jsx` | Gold drag handle, skeleton loading, streaming cursor flag, panel slide-in |
+| `CaseHeader.jsx` | Surface colour classes, sizing |
+| `CaseDataTabs.jsx` | Gold active tab underline, gold hover |
+| `CaseDataPanel.jsx` | Surface-850 background, grain texture, animation on tab switch |
+| `ChatMessageList.jsx` | Surface background, spacing |
+| `ChatMessage.jsx` | Gold user bubbles, gold streaming cursor, animations, thumbnails |
+| `ChatInput.jsx` | Gold gradient send button, gold focus ring, drag-drop visual |
+| `StreamingIndicator.jsx` | Gold shimmer sweep redesign (hero moment) |
+| `MarkdownRenderer.jsx` | Prose sizing, table polish with surface colours |
+| `LoadingSpinner.jsx` | Keep spinner for buttons |
+| `ImageUpload.jsx` | Thumbnail and button styling with gold hover |
+| **New:** `components/shared/Skeleton.jsx` | Skeleton loading component with surface colours |
 
 **One new context file, one new component. Everything else is styling updates to existing files.**

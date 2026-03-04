@@ -8,7 +8,7 @@ AI-assisted financial crime investigation platform (Phase 1 MVP). Investigators 
 - **Frontend:** React 18 + Vite (`client/`) — functional, running on port 5173
 - **Database:** MongoDB (local, port 27017)
 - **AI:** Anthropic Claude API with tool use and SSE streaming
-- **Styling:** Tailwind CSS 3 with custom `primary` (blue) and `surface` (slate) color scales
+- **Styling:** Tailwind CSS 3 with custom `gold` (Binance #F0B90B) and `surface` (dark neutral) color scales
 
 ## Project Structure
 ```
@@ -44,19 +44,22 @@ fci-platform/
 - Streaming chat works end-to-end
 - Resizable split-panel investigation view (drag handle between case data and chat)
 
-## Active Task: Frontend Design Overhaul
-See `client/DESIGN_SPEC.md` for the complete design specification. This is a comprehensive visual overhaul to make the dashboard look like a premium SaaS product. Key areas:
+## Active Task: Frontend Design Overhaul (Binance Dark + Gold)
+See `client/DESIGN_SPEC.md` for the complete design specification (v3). Binance-inspired dark-luxury aesthetic: dark surfaces, warm gold accents, Plus Jakarta Sans typography, atmospheric depth. Key areas:
 
-- **Light/dark mode** — ThemeContext with system detection + manual toggle + localStorage persistence
-- **Typography** — Inter font, bump all font sizes (text-xs/text-sm → text-base for body)
-- **Animations** — fade-in-up on messages, staggered card animations, shimmer loading, blinking streaming cursor, smooth page transitions
-- **Polished components** — gradient buttons, glass-effect header, rounded-2xl bubbles, auto-growing textarea, proper drag handle with grip indicator
-- **Badge system** — consistent ring-based badges for case types and statuses in both themes
-- **Shadows & depth** — custom soft shadow scale, glow effects on hover
-- **Skeleton loading** — replace spinners with skeleton placeholders
+- **Light/dark mode** — ThemeContext with system detection + manual toggle + localStorage (dark default)
+- **Typography** — Plus Jakarta Sans (NOT Inter — banned as generic), JetBrains Mono for code
+- **Colour system** — `surface` scale (cool-neutral darks, #0B0E11 to #F5F6F7), `gold` scale centered on Binance #F0B90B
+- **Status colours** — Binance palette: #0ECB81 green, #F6465D red, #1E9CF4 blue
+- **Hero moment** — Gold shimmer sweep on AI streaming indicator ("Analyzing...")
+- **Animations** — orchestrated login sequence, staggered cards, gold-shimmer keyframes, panel slide-ins
+- **Polished components** — gold gradient buttons (dark text on gold), glass-effect header, gold hover glows, gold active tabs
+- **Atmospheric backgrounds** — radial gradient + dot-grid on login, grain texture on case data panel
+- **Badge system** — ring-based badges; "In Progress" uses gold accent, "Open" uses Binance emerald
+- **Shadows & depth** — stronger values for dark mode, `glow-gold` / `glow-gold-lg` accent shadows
 - **Two new files only:** ThemeContext.jsx and Skeleton.jsx. Everything else is styling updates.
 
-Follow the implementation order in Section 10 of the spec for maximum impact at each step.
+Follow the implementation order in Section 14 of the spec for maximum impact at each step.
 
 ## Future: Document Processing Pipeline
 See `DOCUMENT_PIPELINE_SPEC.md` for the full architecture spec. Key idea:
