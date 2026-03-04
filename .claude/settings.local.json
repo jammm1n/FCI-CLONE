@@ -12,7 +12,8 @@
       "WebSearch",
       "Bash(grep:*)",
       "Bash(strings:*)",
-      "Bash(sc query:*)"
+      "Bash(sc query:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

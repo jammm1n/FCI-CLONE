@@ -11,10 +11,11 @@ import ChatMessageList from '../components/investigation/ChatMessageList';
 import ChatInput from '../components/investigation/ChatInput';
 import StreamingIndicator from '../components/investigation/StreamingIndicator';
 import Skeleton from '../components/shared/Skeleton';
+import DownloadPdfButton from '../components/shared/DownloadPdfButton';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [caseData, setCaseData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
@@ -191,6 +192,20 @@ export default function InvestigationPage() {
           className="flex-1 flex flex-col min-h-0 animate-slide-in-right"
           style={{ animationDelay: '100ms' }}
         >
+          <div className="flex items-center justify-end px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
+            <DownloadPdfButton
+              messages={messages}
+              metadata={{
+                caseId: caseData?.case_id,
+                caseType: caseData?.case_type,
+                subjectUserId: caseData?.subject_user_id,
+                status: caseData?.status,
+                investigator: user?.display_name || user?.username,
+              }}
+              conversationId={conversationId}
+              disabled={sending || aiLoading}
+            />
+          </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} />
           {sending && <StreamingIndicator />}
           <ChatInput onSend={sendMessage} disabled={sending} />
