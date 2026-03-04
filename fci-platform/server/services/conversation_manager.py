@@ -536,21 +536,26 @@ def _rebuild_api_messages(stored_messages: list[dict]) -> list[dict]:
         elif role == "user":
             # Regular user message — reconstruct with images if present
             if msg.get("images"):
-                # Rebuild content blocks with image references
-                # For the API call, we'd need the base64 data, but for
-                # messages already in history, the model has already seen
-                # the images. We include a text reference instead.
-                # NOTE: For a production system, you'd reload the base64
-                # from disk. For MVP, after the first turn the image
-                # content is already in the model's context from the
-                # previous API call's response.
-                content = msg["content"]
-                if msg.get("images"):
-                    # Include a note that images were attached
-                    content = f"{msg['content']}\n\n[{len(msg['images'])} image(s) attached to this message — already processed above]"
+                # Reload images from disk and build proper content blocks
+                content_blocks = []
+                for img_ref in msg["images"]:
+                    try:
+                        img_bytes = Path(img_ref["stored_path"]).read_bytes()
+                        img_b64 = base64.b64encode(img_bytes).decode("ascii")
+                        content_blocks.append({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": img_ref["media_type"],
+                                "data": img_b64,
+                            }
+                        })
+                    except Exception as e:
+                        logger.warning("Could not reload image %s: %s", img_ref.get("stored_path"), e)
+                content_blocks.append({"type": "text", "text": msg["content"]})
                 api_messages.append({
                     "role": "user",
-                    "content": content,
+                    "content": content_blocks,
                 })
             else:
                 api_messages.append({

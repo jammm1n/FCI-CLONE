@@ -1,0 +1,72 @@
+# FCI Investigation Platform
+
+## Project Overview
+AI-assisted financial crime investigation platform (Phase 1 MVP). Investigators log in, view assigned cases, and conduct AI-powered investigations via a chat interface with access to case data and a knowledge base.
+
+## Architecture
+- **Backend:** FastAPI (`server/`) — fully implemented, running on port 8000
+- **Frontend:** React 18 + Vite (`client/`) — functional, running on port 5173
+- **Database:** MongoDB (local, port 27017)
+- **AI:** Anthropic Claude API with tool use and SSE streaming
+- **Styling:** Tailwind CSS 3 with custom `primary` (blue) and `surface` (slate) color scales
+
+## Project Structure
+```
+fci-platform/
+  server/             # FastAPI backend (complete)
+    config.py         # Pydantic settings from .env
+    database.py       # PyMongo 4.16+ async (NOT Motor)
+    main.py           # App entry, lifespan, CORS
+    routers/          # auth.py, cases.py, conversations.py
+    services/         # ai_client.py, conversation_manager.py, case_service.py, knowledge_base.py
+    models/schemas.py # Pydantic v2 models
+  client/             # React frontend
+    src/
+      main.jsx, App.jsx
+      context/AuthContext.jsx
+      services/api.js
+      utils/formatters.js
+      pages/            # LoginPage, CaseListPage, InvestigationPage
+      components/
+        AppLayout.jsx, ProtectedRoute.jsx
+        shared/         # LoadingSpinner, MarkdownRenderer, ImageUpload
+        cases/          # CaseCard
+        investigation/  # CaseHeader, CaseDataTabs, CaseDataPanel,
+                        # ChatMessageList, ChatMessage, ChatInput, StreamingIndicator
+  knowledge_base/     # core/ (10 .md files) + reference/ (8 .md files)
+  scripts/seed_demo_data.py
+```
+
+## Current State
+- Backend: fully working — auth, cases, conversations with streaming SSE
+- Frontend: fully functional but visually raw/unstyled
+- Seed data: 2 users (`ben.investigator`, `demo.investigator`), 3 cases (scam, CTM, fraud)
+- Streaming chat works end-to-end
+- Resizable split-panel investigation view (drag handle between case data and chat)
+
+## Active Task: Frontend Design Polish
+See `client/DESIGN_SPEC.md` for the complete design specification. The task is:
+- Apply the design spec to all frontend components
+- Pure Tailwind class adjustments — no logic changes, no new components, no restructuring
+- Focus: increase font sizes (most things are text-xs/text-sm, need text-base), add spacing/padding, add depth (shadows), improve drag handle usability
+- Work through components systematically per the spec's file-by-file table
+
+## Key Conventions
+- Dark theme throughout — `bg-surface-900` body, `bg-surface-800` panels
+- No state management library — React Context for auth only
+- No localStorage — session state lives in memory
+- Enter sends messages, Shift+Enter for newline
+- Backend uses `KNOWLEDGE_BASE_PATH` in config (not `KNOWLEDGE_BASE_DIR`)
+- PyMongo 4.16+ native async — NOT Motor
+
+## Running the App
+```bash
+# Terminal 1: Backend
+cd server && uvicorn main:app --reload --port 8000
+
+# Terminal 2: Frontend
+cd client && npm run dev
+
+# Seed data (once, requires MongoDB running)
+python scripts/seed_demo_data.py
+```
