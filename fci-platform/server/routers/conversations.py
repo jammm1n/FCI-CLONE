@@ -16,13 +16,15 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sse_starlette.sse import EventSourceResponse
 from anthropic import RateLimitError
 
 from server.routers.auth import get_current_user
 from server.services import conversation_manager
 from server.services.knowledge_base import KnowledgeBase
+from server.services.pdf_export import generate_conversation_pdf, build_pdf_filename
+from server.database import get_database
 from server.config import settings
 
 logger = logging.getLogger(__name__)
@@ -258,6 +260,55 @@ async def list_conversations(
         mode=mode,
     )
     return {"conversations": conversations}
+
+
+# ---------------------------------------------------------------------------
+# Export conversation as PDF
+# ---------------------------------------------------------------------------
+
+@router.get("/{conversation_id}/export/pdf")
+async def export_pdf(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Export a conversation transcript as a PDF file."""
+    db = get_database()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if conversation.get("user_id") != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    # Check for visible messages
+    visible = [m for m in conversation.get("messages", []) if m.get("visible", True)]
+    if not visible:
+        raise HTTPException(status_code=400, detail="No messages to export")
+
+    # Fetch case doc if this is a case conversation
+    case_doc = None
+    case_id = conversation.get("case_id")
+    if case_id:
+        case_doc = await db.cases.find_one({"case_id": case_id})
+
+    try:
+        pdf_bytes = generate_conversation_pdf(
+            conversation=conversation,
+            case_doc=case_doc,
+            images_dir=settings.IMAGES_DIR,
+        )
+    except Exception as e:
+        logger.exception("Failed to generate PDF for conversation %s", conversation_id)
+        raise HTTPException(status_code=500, detail="Failed to generate PDF")
+
+    filename = build_pdf_filename(conversation, case_doc)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ---------------------------------------------------------------------------

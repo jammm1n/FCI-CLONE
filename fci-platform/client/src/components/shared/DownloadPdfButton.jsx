@@ -1,40 +1,30 @@
 import { useState, useCallback } from 'react';
-import generateChatPdf, { buildPdfFilename } from '../../utils/generateChatPdf';
+import { useAuth } from '../../context/AuthContext';
+import { exportPdf } from '../../services/api';
 
 const ICON_CLASS =
   'w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200';
 
-export default function DownloadPdfButton({
-  messages,
-  metadata,
-  conversationId,
-  disabled,
-  investigator,
-}) {
+export default function DownloadPdfButton({ conversationId, disabled }) {
   // 'idle' | 'generating' | 'done' | 'error'
   const [state, setState] = useState('idle');
-
-  const noMessages =
-    !messages || messages.filter((m) => !m.isStreaming && m.content?.trim()).length === 0;
+  const { token } = useAuth();
 
   const handleClick = useCallback(async () => {
-    if (state === 'generating') return;
+    if (state === 'generating' || !conversationId) return;
     setState('generating');
 
     try {
-      // For free chat (metadata=null), pass investigator name in a minimal metadata object
-      const effectiveMetadata = metadata ?? (investigator ? { investigator } : null);
-      const filename = buildPdfFilename(metadata, conversationId);
-      await generateChatPdf({ messages, metadata: effectiveMetadata, filename });
+      await exportPdf(token, conversationId);
       setState('done');
       setTimeout(() => setState('idle'), 2000);
     } catch {
       setState('error');
       setTimeout(() => setState('idle'), 3000);
     }
-  }, [messages, metadata, conversationId, state]);
+  }, [token, conversationId, state]);
 
-  const isDisabled = disabled || noMessages || state === 'generating';
+  const isDisabled = disabled || !conversationId || state === 'generating';
 
   const title =
     state === 'generating'

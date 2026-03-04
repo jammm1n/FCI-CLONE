@@ -15,7 +15,7 @@ import DownloadPdfButton from '../components/shared/DownloadPdfButton';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   const [caseData, setCaseData] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
@@ -194,14 +194,6 @@ export default function InvestigationPage() {
         >
           <div className="flex items-center justify-end px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
             <DownloadPdfButton
-              messages={messages}
-              metadata={{
-                caseId: caseData?.case_id,
-                caseType: caseData?.case_type,
-                subjectUserId: caseData?.subject_user_id,
-                status: caseData?.status,
-                investigator: user?.display_name || user?.username,
-              }}
               conversationId={conversationId}
               disabled={sending || aiLoading}
             />

@@ -119,6 +119,34 @@ export async function deleteConversation(token, conversationId) {
 }
 
 // ---------------------------------------------------------------------------
+// PDF Export
+// ---------------------------------------------------------------------------
+
+export async function exportPdf(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/export/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `PDF export failed: ${res.status}`);
+  }
+  // Extract filename from Content-Disposition header
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : 'transcript.pdf';
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 
