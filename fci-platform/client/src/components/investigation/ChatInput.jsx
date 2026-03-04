@@ -94,6 +94,7 @@ export default function ChatInput({ onSend, disabled }) {
           : 'border-surface-200 dark:border-surface-700'
       }`}
     >
+      <div className="max-w-4xl mx-auto">
       {/* Drag overlay text */}
       {dragOver && (
         <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
@@ -122,6 +123,7 @@ export default function ChatInput({ onSend, disabled }) {
         >
           Send
         </button>
+      </div>
       </div>
     </div>
   );

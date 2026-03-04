@@ -7,11 +7,11 @@ export default function ChatMessage({ message }) {
   const isStreaming = message.isStreaming;
 
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
+    <div className={`${isUser ? 'flex justify-end' : ''} animate-fade-in-up`}>
       <div
-        className={`max-w-[80%] px-5 py-4 ${
+        className={`px-5 py-4 ${
           isUser
-            ? 'bg-gold-500/10 border border-gold-500/20 rounded-2xl rounded-br-md'
+            ? 'max-w-[75%] bg-gold-500/10 border border-gold-500/20 rounded-2xl rounded-br-md'
             : 'bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-2xl rounded-bl-md shadow-soft-sm'
         }`}
       >
