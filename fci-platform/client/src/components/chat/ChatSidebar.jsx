@@ -9,7 +9,7 @@ export default function ChatSidebar({
   const navigate = useNavigate();
 
   return (
-    <div className="w-64 shrink-0 flex flex-col border-r border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 h-full">
+    <div className="w-72 shrink-0 flex flex-col border-r border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 h-full">
       {/* New chat button */}
       <div className="p-3">
         <button

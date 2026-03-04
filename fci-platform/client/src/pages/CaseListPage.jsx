@@ -41,9 +41,9 @@ export default function CaseListPage() {
           </div>
           <Link
             to="/chat"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-gold-500/30 text-gold-600 dark:text-gold-400 hover:bg-gold-500/10 transition-colors"
+            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-base font-semibold border border-gold-500/40 text-gold-600 dark:text-gold-400 hover:bg-gold-500/10 hover:border-gold-500/60 transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
               <path fillRule="evenodd" d="M10 3c-4.31 0-8 3.033-8 7 0 2.024.978 3.825 2.499 5.085a3.478 3.478 0 01-.522 1.756.75.75 0 00.584 1.143 5.976 5.976 0 003.243-1.028c.659.103 1.357.169 2.196.169 4.31 0 8-3.033 8-7s-3.69-7-8-7z" clipRule="evenodd" />
             </svg>
             Free Chat

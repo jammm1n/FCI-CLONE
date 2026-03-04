@@ -96,9 +96,14 @@ async def create_conversation(
             raise ValueError(f"Case not found: {case_id}")
 
         if case.get("conversation_id"):
-            raise ValueError(
-                f"Case {case_id} already has a conversation: {case['conversation_id']}"
-            )
+            # Already has a conversation — return it instead of erroring
+            existing_id = case["conversation_id"]
+            logger.info("Case %s already has conversation %s — returning existing", case_id, existing_id)
+            return {
+                "conversation_id": existing_id,
+                "case_id": case_id,
+                "mode": "case",
+            }
 
         # Build case data markdown and pre-store the system_injected message
         case_data_markdown = _build_case_data_markdown(case)

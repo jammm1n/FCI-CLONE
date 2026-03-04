@@ -25,6 +25,7 @@ export default function InvestigationPage() {
 
   const {
     messages,
+    setMessages,
     conversationId,
     setConversationId,
     sending,
@@ -36,9 +37,12 @@ export default function InvestigationPage() {
 
   // Load case data and conversation
   useEffect(() => {
+    let cancelled = false; // guard against StrictMode double-fire
+
     async function init() {
       try {
         const caseDetail = await api.getCase(token, caseId);
+        if (cancelled) return;
         setCaseData(caseDetail);
 
         const ppd = caseDetail.preprocessed_data || {};
@@ -55,20 +59,33 @@ export default function InvestigationPage() {
         } else {
           // New conversation — two-step: create (instant) then stream assessment
           const result = await api.createConversation(token, caseId, 'case');
+          if (cancelled) return;
           setConversationId(result.conversation_id);
           setCaseData((prev) => ({
             ...prev,
             conversation_id: result.conversation_id,
             status: 'in_progress',
           }));
-          await triggerInitialAssessment(result.conversation_id);
+
+          // Check if this conversation already has messages (e.g. race condition)
+          const history = await api.getConversationHistory(token, result.conversation_id);
+          if (cancelled) return;
+          if (history.messages && history.messages.length > 0) {
+            setMessages(history.messages);
+          } else {
+            await triggerInitialAssessment(result.conversation_id);
+          }
         }
       } catch (err) {
-        setError(err.message);
-        setCaseLoading(false);
+        if (!cancelled) {
+          setError(err.message);
+          setCaseLoading(false);
+        }
       }
     }
     init();
+
+    return () => { cancelled = true; };
   }, [token, caseId]);
 
   const handleMouseDown = useCallback((e) => {

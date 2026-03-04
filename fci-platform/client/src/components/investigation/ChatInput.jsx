@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '' }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -93,7 +93,7 @@ export default function ChatInput({ onSend, disabled }) {
       }`}
       style={{ paddingLeft: '5%', paddingRight: '5%' }}
     >
-      <div>
+      <div className={maxWidth ? `${maxWidth} mx-auto` : ''}>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here
