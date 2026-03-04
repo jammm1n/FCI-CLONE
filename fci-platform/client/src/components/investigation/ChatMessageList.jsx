@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 
-export default function ChatMessageList({ messages }) {
+export default function ChatMessageList({ messages, aiLoading = false }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -11,12 +11,36 @@ export default function ChatMessageList({ messages }) {
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-surface-100 dark:bg-surface-850">
-        <div className="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 mx-auto mb-2 text-surface-300 dark:text-surface-600 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-          </svg>
-          <p className="text-sm text-surface-400">Starting investigation...</p>
-        </div>
+        {aiLoading ? (
+          <div className="animate-fade-in flex flex-col items-center gap-5">
+            {/* Gold-ringed spinner */}
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-2 border-gold-500/20" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold-500 animate-spin" />
+              <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-gold-400/60 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+              {/* Center gold dot */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse-subtle" />
+              </div>
+            </div>
+            {/* Pulsing dots + label */}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse-subtle" style={{ animationDelay: '0ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse-subtle" style={{ animationDelay: '200ms' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse-subtle" style={{ animationDelay: '400ms' }} />
+              </div>
+              <span className="text-sm font-medium text-gold-500/80">Analyzing case data</span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center animate-fade-in">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 mx-auto mb-2 text-surface-300 dark:text-surface-600 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+            </svg>
+            <p className="text-sm text-surface-400">Starting investigation...</p>
+          </div>
+        )}
       </div>
     );
   }

@@ -19,7 +19,8 @@ export default function InvestigationPage() {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [activeTab, setActiveTab] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [caseLoading, setCaseLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [leftWidth, setLeftWidth] = useState(35);
@@ -36,6 +37,9 @@ export default function InvestigationPage() {
         const firstKey = Object.keys(ppd).find((k) => ppd[k]);
         if (firstKey) setActiveTab(firstKey);
 
+        // Case data is ready — render left panel immediately
+        setCaseLoading(false);
+
         if (caseDetail.conversation_id) {
           setConversationId(caseDetail.conversation_id);
           const history = await api.getConversationHistory(
@@ -44,6 +48,7 @@ export default function InvestigationPage() {
           );
           setMessages(history.messages || []);
         } else {
+          setAiLoading(true);
           const result = await api.createConversation(token, caseId);
           setConversationId(result.conversation_id);
           setCaseData((prev) => ({
@@ -60,11 +65,11 @@ export default function InvestigationPage() {
               timestamp: result.initial_response.timestamp,
             },
           ]);
+          setAiLoading(false);
         }
       } catch (err) {
         setError(err.message);
-      } finally {
-        setLoading(false);
+        setCaseLoading(false);
       }
     }
     init();
@@ -207,7 +212,7 @@ export default function InvestigationPage() {
     window.addEventListener('mouseup', onMouseUp);
   }, []);
 
-  if (loading) {
+  if (caseLoading) {
     return (
       <AppLayout>
         <div id="investigation-panels" className="flex h-full">
@@ -283,7 +288,7 @@ export default function InvestigationPage() {
           className="flex-1 flex flex-col min-h-0 animate-slide-in-right"
           style={{ animationDelay: '100ms' }}
         >
-          <ChatMessageList messages={messages} />
+          <ChatMessageList messages={messages} aiLoading={aiLoading} />
           {sending && <StreamingIndicator />}
           <ChatInput onSend={handleSendMessage} disabled={sending} />
         </div>

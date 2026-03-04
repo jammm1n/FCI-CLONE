@@ -11,7 +11,8 @@
       "Bash(npm run:*)",
       "WebSearch",
       "Bash(grep:*)",
-      "Bash(strings:*)"
+      "Bash(strings:*)",
+      "Bash(sc query:*)"
     ]
   }
 }
