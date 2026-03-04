@@ -8,7 +8,7 @@ export default function AppLayout({ children, caseInfo }) {
   const { isDark, toggleTheme } = useTheme();
 
   return (
-    <div className="flex flex-col h-screen bg-surface-50 dark:bg-surface-950">
+    <div className="flex flex-col h-screen bg-surface-50 dark:bg-surface-900">
       {/* Frosted glass header */}
       <header className="flex items-center justify-between px-4 h-14 bg-surface-50/80 dark:bg-surface-900/80 glass border-b border-surface-200 dark:border-surface-700/50 shadow-soft-sm sticky top-0 z-50 shrink-0 animate-fade-in-down">
         <div className="flex items-center gap-3">

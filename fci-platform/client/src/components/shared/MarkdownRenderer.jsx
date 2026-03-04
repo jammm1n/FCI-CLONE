@@ -42,7 +42,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
             return <code className={className} {...props}>{children}</code>;
           },
           pre: ({ children }) => (
-            <pre className="bg-surface-50 dark:bg-surface-950 rounded-lg p-4 overflow-x-auto text-sm my-3">
+            <pre className="bg-surface-50 dark:bg-surface-900 rounded-lg p-4 overflow-x-auto text-sm my-3">
               {children}
             </pre>
           ),

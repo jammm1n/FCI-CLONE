@@ -4,9 +4,9 @@
 
 /* === CSS Custom Properties (semantic tokens) === */
 :root {
-  --bg-primary:     #0B0E11;
-  --bg-secondary:   #12161C;
-  --bg-tertiary:    #181C23;
+  --bg-primary:     #12161C;
+  --bg-secondary:   #181C23;
+  --bg-tertiary:    #1E2329;
   --bg-elevated:    #1E2329;
   --bg-surface:     #252A31;
   --text-primary:   #EAECEF;

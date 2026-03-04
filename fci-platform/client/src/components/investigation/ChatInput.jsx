@@ -88,7 +88,7 @@ export default function ChatInput({ onSend, disabled }) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`bg-surface-100 dark:bg-surface-900 pb-5 pt-2 shrink-0 ${
+      className={`bg-surface-100 dark:bg-surface-850 pb-5 pt-2 shrink-0 ${
         dragOver ? 'ring-2 ring-inset ring-gold-400 bg-gold-500/5' : ''
       }`}
       style={{ paddingLeft: '5%', paddingRight: '5%' }}
