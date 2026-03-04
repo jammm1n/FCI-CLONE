@@ -5,7 +5,7 @@ export default function MarkdownRenderer({ content, className = '' }) {
   if (!content) return null;
 
   return (
-    <div className={`prose-invert text-base leading-relaxed ${className}`}>
+    <div className={`dark:prose-invert text-base leading-relaxed ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
