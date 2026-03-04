@@ -72,7 +72,7 @@ export default function InvestigationPage() {
     init();
   }, [token, caseId]);
 
-  // Send a message (non-streaming for now)
+  // Send a message with streaming
   const handleSendMessage = useCallback(
     async (content, images) => {
       if (!conversationId || !content.trim()) return;
@@ -88,36 +88,97 @@ export default function InvestigationPage() {
       setMessages((prev) => [...prev, userMsg]);
       setSending(true);
 
+      // Add a placeholder assistant message that we'll stream into
+      const streamMsgId = `stream_${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          message_id: streamMsgId,
+          role: 'assistant',
+          content: '',
+          tools_used: [],
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+
       try {
-        const result = await api.sendMessage(
+        const response = await api.sendMessage(
           token,
           conversationId,
           content,
           images.map((img) => ({ base64: img.base64, media_type: img.media_type })),
-          false // non-streaming
+          true // streaming
         );
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            message_id: result.message_id,
-            role: 'assistant',
-            content: result.content,
-            tools_used: result.tools_used || [],
-            timestamp: result.timestamp,
-          },
-        ]);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let toolsUsed = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE lines from buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue;
+            const jsonStr = line.slice(5).trim();
+            if (!jsonStr) continue;
+
+            let event;
+            try {
+              event = JSON.parse(jsonStr);
+            } catch {
+              continue;
+            }
+
+            if (event.type === 'content_delta') {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, content: msg.content + event.text }
+                    : msg
+                )
+              );
+            } else if (event.type === 'tool_use') {
+              toolsUsed.push({
+                tool: event.tool,
+                document_id: event.document_id,
+                document_title: event.document_title,
+              });
+            } else if (event.type === 'stored') {
+              // Update the placeholder message with the real message_id
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, message_id: event.message_id, tools_used: toolsUsed }
+                    : msg
+                )
+              );
+            } else if (event.type === 'error') {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, content: `**Error:** ${event.message}` }
+                    : msg
+                )
+              );
+            }
+          }
+        }
       } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            message_id: `err_${Date.now()}`,
-            role: 'assistant',
-            content: `**Error:** ${err.message}`,
-            tools_used: [],
-            timestamp: new Date().toISOString(),
-          },
-        ]);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === streamMsgId
+              ? { ...msg, content: `**Error:** ${err.message}` }
+              : msg
+          )
+        );
       } finally {
         setSending(false);
       }
