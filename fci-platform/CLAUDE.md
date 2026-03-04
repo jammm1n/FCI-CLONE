@@ -51,6 +51,14 @@ See `client/DESIGN_SPEC.md` for the complete design specification. The task is:
 - Focus: increase font sizes (most things are text-xs/text-sm, need text-base), add spacing/padding, add depth (shadows), improve drag handle usability
 - Work through components systematically per the spec's file-by-file table
 
+## Future: Document Processing Pipeline
+See `DOCUMENT_PIPELINE_SPEC.md` for the full architecture spec. Key idea:
+- Separate extraction prompts (data processing) from investigation prompts (main chat)
+- Documents/images/PDFs processed via standalone API calls, condensed to text summaries
+- Only summaries injected into main chat context — saves massive token overhead
+- Multi-stage PDF flow for LE cases: individual summaries → consolidated summary
+- NOT for the current demo sprint — current demo uses direct image passing in chat
+
 ## Key Conventions
 - Dark theme throughout — `bg-surface-900` body, `bg-surface-800` panels
 - No state management library — React Context for auth only
