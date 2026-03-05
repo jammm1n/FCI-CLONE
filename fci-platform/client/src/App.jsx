@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import CaseListPage from './pages/CaseListPage';
 import InvestigationPage from './pages/InvestigationPage';
 import FreeChatPage from './pages/FreeChatPage';
+import IngestionPage from './pages/IngestionPage';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
@@ -25,6 +26,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <InvestigationPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ingest"
+        element={
+          <ProtectedRoute>
+            <IngestionPage />
           </ProtectedRoute>
         }
       />
