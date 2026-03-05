@@ -101,3 +101,117 @@ cd client && npm run dev
 # Seed data (once, requires MongoDB running)
 python scripts/seed_demo_data.py
 ```
+
+
+
+# Codebase Audit and Documentation
+
+## Task
+
+Perform a comprehensive audit of this entire codebase and produce a single detailed report document. This is an AI-assisted financial crime investigation platform with a Python/FastAPI backend and React/Vite frontend. The codebase has been built iteratively and needs to be fully documented so that development can continue with full context.
+
+## Instructions
+
+1. **Map the entire project directory tree** — every file, every folder, no exceptions. Use `find . -type f` excluding `node_modules`, `.git`, `__pycache__`, and other generated directories.
+
+2. **Read every source file** in the project. Use subagents to parallelise if the codebase is large. Every `.py`, `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.yaml`, `.yml`, `.json` (except `package-lock.json`), `.md`, `.env`, and config file must be read and documented.
+
+3. **Produce a single markdown report** saved to the project root as `CODEBASE-AUDIT.md` with the sections specified below.
+
+## Report Structure
+
+The report must contain ALL of the following sections:
+
+### 1. Directory Tree
+Full file tree of the project with brief inline annotations for non-obvious files.
+
+### 2. Architecture Overview
+- High-level system diagram (text/ASCII) showing frontend, backend, database, AI API, and how they connect
+- Request/response flow for the primary user journey: login → case selection → investigation chat
+- How conversation state is managed end-to-end
+
+### 3. Backend Documentation
+
+For EVERY Python file in the backend:
+
+- **File path and purpose** — one-line summary of what this file does
+- **Key classes and functions** — name, parameters, return type, what it does
+- **Dependencies** — what it imports from other project files
+- **External dependencies** — third-party packages used
+- **API endpoints** (for router files) — method, path, request body, response shape, auth required
+- **Database interactions** — which MongoDB collections it reads/writes, what queries it runs
+- **Anthropic API interactions** (if applicable) — how it calls the API, what parameters it sends, how it handles responses, tool call loop logic, streaming logic, caching
+
+### 4. Frontend Documentation
+
+For EVERY JSX/JS file in the frontend:
+
+- **File path and purpose** — one-line summary
+- **Component name and props** — what it accepts
+- **State management** — what state it holds locally, what it gets from context
+- **API calls** — which api.js functions it calls and when
+- **User interactions** — what the user can do in this component
+- **Child components** — what it renders
+- **Routing** — which routes map to which pages
+
+### 5. API Contract (As-Built)
+
+Document every API endpoint that actually exists in the backend, not what was planned but what is actually implemented:
+
+- Method and path
+- Request headers required
+- Request body schema
+- Response body schema
+- Error responses
+- Auth requirements
+
+### 6. Data Models
+
+- MongoDB collections: name, document schema (as actually stored, not as planned), indexes if any
+- In-memory data structures: session stores, caches, any global state
+
+### 7. Knowledge Base Architecture
+
+- How the knowledge base files are structured on disk
+- Which files are loaded on startup (Tier 1) vs available via tool call (Tier 2)
+- The tool definition sent to the Anthropic API
+- How the YAML reference index works
+- Total token counts if logged on startup
+
+### 8. Configuration and Environment
+
+- All environment variables and their defaults
+- Config file locations and formats
+- How to set up and run the project from scratch (both backend and frontend)
+- Database setup and seeding
+- Required API keys
+
+### 9. Features Inventory
+
+A complete list of what the application actually does right now:
+
+- **Working features** — things that are fully functional
+- **Partially implemented** — things that exist but aren't fully wired up
+- **Stubbed/placeholder** — things that have UI or code but no real functionality yet
+- **Known bugs or issues** — anything you observe that looks broken or incomplete
+
+### 10. Dependencies Manifest
+
+- Backend: list every package in requirements.txt or equivalent, with version
+- Frontend: list every package in package.json dependencies and devDependencies, with version
+- System dependencies: MongoDB version, Python version, Node version expected
+
+### 11. File-by-File Reference
+
+A flat table of every source file with:
+
+| File Path | Type | Lines | Purpose |
+|-----------|------|-------|---------|
+
+This gives a quick-scan reference for the entire codebase.
+
+## Output
+
+Save the complete report as `CODEBASE-AUDIT.md` in the project root. The report should be thorough enough that a developer with no prior context can understand the entire system, how every piece connects, and how to continue building on it.
+
+Do not skip files. Do not summarise groups of files as "similar to above". Document every file individually. Use subagents to read files in parallel if needed — thoroughness matters more than speed.
