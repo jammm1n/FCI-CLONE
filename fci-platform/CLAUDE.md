@@ -1,7 +1,13 @@
 # FCI Investigation Platform
 
 ## Project Overview
-AI-assisted financial crime investigation platform (Phase 1 MVP). Investigators log in, view assigned cases, and conduct AI-powered investigations via a chat interface with access to case data and a knowledge base.
+AI-assisted financial crime investigation platform. Investigators log in, view assigned cases, and conduct AI-powered investigations via a chat interface with access to case data and a knowledge base.
+
+There are two active workstreams:
+1. **Existing platform (Phase 1 MVP)** — fully working. Do not modify existing files unless the task explicitly requires it.
+2. **Data Ingestion Dashboard (active build)** — new feature slice being added to this codebase. See PRD below.
+
+---
 
 ## Architecture
 - **Backend:** FastAPI (`server/`) — fully implemented, running on port 8000
@@ -10,44 +16,146 @@ AI-assisted financial crime investigation platform (Phase 1 MVP). Investigators 
 - **AI:** Anthropic Claude API with tool use and SSE streaming
 - **Styling:** Tailwind CSS 3 with custom `gold` (Binance #F0B90B) and `surface` (dark neutral) color scales
 
+---
+
 ## Project Structure
+
 ```
 fci-platform/
-  server/             # FastAPI backend (complete)
-    config.py         # Pydantic settings from .env
-    database.py       # PyMongo 4.16+ async (NOT Motor)
-    main.py           # App entry, lifespan, CORS
-    routers/          # auth.py, cases.py, conversations.py
-    services/         # ai_client.py, conversation_manager.py, case_service.py, knowledge_base.py
-    models/schemas.py # Pydantic v2 models
-  client/             # React frontend
+  server/
+    config.py                    # Pydantic settings from .env
+    database.py                  # PyMongo 4.16+ async (NOT Motor)
+    main.py                      # App entry, lifespan, CORS, router registration
+    routers/
+      auth.py                    # POST /api/auth/login, GET /api/auth/me
+      cases.py                   # GET /api/cases, GET /api/cases/{id}
+      conversations.py           # Conversation CRUD, streaming, PDF export, images
+      admin.py                   # POST /api/admin/reseed
+      ingestion.py               # [TO BUILD] All ingestion endpoints
+    services/
+      ai_client.py               # Anthropic API wrapper (streaming + tool loop)
+      conversation_manager.py    # Conversation lifecycle orchestration
+      case_service.py            # Case CRUD
+      knowledge_base.py          # Two-tier KB loader
+      pdf_export.py              # PDF transcript generation
+      icr/                       # [COPIED FROM TOOLKIT] C360 processing engine
+        __init__.py
+        address_manager.py
+        constants.py
+        elliptic_api.py
+        file_detector.py
+        health_check.py
+        parser.py
+        processor_registry.py
+        uid_search.py
+        utils.py
+        validation.py
+        processors/
+          __init__.py, base.py, blocks.py, counterparty.py
+          ctm_alerts.py, device.py, elliptic.py, failed_fiat.py
+          ftm_alerts.py, privacy_coin.py, transaction_summary.py
+          user_info_extended.py
+      ingestion/                 # [TO BUILD] Ingestion service layer
+        __init__.py
+        ingestion_service.py     # Case CRUD + status management
+        c360_processor.py        # Toolkit pipeline async wrapper
+        elliptic_processor.py    # Elliptic API async wrapper
+    models/
+      schemas.py                 # Existing Pydantic models (do not modify)
+      ingestion_schemas.py       # [TO BUILD] Ingestion Pydantic models
+
+  client/
     src/
       main.jsx, App.jsx
       context/AuthContext.jsx
-      services/api.js
+      services/
+        api.js                   # Existing API calls (do not modify)
+        ingestion_api.js         # [TO BUILD] All ingestion API calls
+      hooks/
+        useStreamingChat.js      # Existing hook
+        useIngestionStatus.js    # [TO BUILD] Polling hook
       utils/formatters.js
-      pages/            # LoginPage, CaseListPage, InvestigationPage
+      pages/
+        LoginPage.jsx
+        CaseListPage.jsx
+        InvestigationPage.jsx
+        FreeChatPage.jsx
+        IngestionPage.jsx        # [TO BUILD]
       components/
-        AppLayout.jsx, ProtectedRoute.jsx
-        shared/         # LoadingSpinner, MarkdownRenderer, ImageUpload
-        cases/          # CaseCard
-        investigation/  # CaseHeader, CaseDataTabs, CaseDataPanel,
-                        # ChatMessageList, ChatMessage, ChatInput, StreamingIndicator
-  knowledge_base/     # core/ (10 .md files) + reference/ (8 .md files)
-  scripts/seed_demo_data.py
+        AppLayout.jsx            # Needs nav link added (one line)
+        ProtectedRoute.jsx
+        shared/                  # LoadingSpinner, MarkdownRenderer, ImageUpload, etc.
+        cases/CaseCard.jsx
+        investigation/           # All existing investigation components
+        ingestion/               # [TO BUILD]
+          CaseCreationForm.jsx
+          IngestionHeader.jsx
+          IngestionSection.jsx
+          C360Section.jsx
+          EllipticSection.jsx
+          NotesSection.jsx
+          AssembledOutputModal.jsx
+
+  knowledge_base/
+    core/                        # Tier 1 — loaded on startup
+    reference/                   # Tier 2 — loaded on demand via tool calls
+    preprocessing/               # [TO BUILD in Phase 2] Extraction prompts
+
+  reference/toolkit/
+    icr_router_reference.py      # READ-ONLY. Source of auto-population logic to port.
+
+  scripts/
+    seed_demo_data.py
+    test_anthropic_api.py
+    test_icr_import.py           # [TO BUILD] Toolkit validation script
+
+  FCI-Ingestion-Dashboard-PRD.md  # Primary requirements document for ingestion work
 ```
 
-## Current State
-- Backend: fully working — auth, cases, conversations with streaming SSE
-- Frontend: fully styled with Binance Dark + Gold design (see `client/DESIGN_SPEC.md`)
-- Seed data: 2 users (`ben.investigator` = user_001, `demo.investigator` = user_002), 3 demo cases
-- Streaming chat works end-to-end
-- Resizable split-panel investigation view (drag handle between case data and chat)
-- Split loading: case data panel renders immediately, chat shows gold spinner during AI initial assessment
+---
+
+## Data Ingestion Dashboard — Active Build
+
+**Read `FCI-Ingestion-Dashboard-PRD.md` before doing any ingestion work.**
+
+The PRD is the authoritative source for everything ingestion-related:
+- Phase definitions and build order (Section 3 and 6.2)
+- Database schema for `ingestion_cases` collection (Section 4)
+- Full API contract with request/response shapes (Section 5)
+- Detailed implementation specs including code patterns (Section 6)
+
+**Current phase:** Phase 1 — Infrastructure + Toolkit Port
+
+**Key rules for ingestion work:**
+- The toolkit code in `server/services/icr/` is already copied and must not be modified
+- `reference/toolkit/icr_router_reference.py` is read-only reference material — port logic from it, do not modify it
+- `session_store.py` was intentionally excluded from the copied toolkit code — do not recreate it
+- All processing state goes to MongoDB (`ingestion_cases` collection), not in-memory
+- The toolkit pipeline is synchronous CPU-bound code — always wrap it with `asyncio.to_thread()` when calling from async FastAPI handlers
+- Always read file bytes from `UploadFile` objects in the endpoint handler, before spawning any background task
+
+---
+
+## Existing Platform — Do Not Break
+
+The existing investigation platform is fully working. The blast radius of the ingestion build on existing files is deliberately minimal:
+
+| File | Allowed Change |
+|------|---------------|
+| `server/main.py` | Register ingestion router (one line) |
+| `server/config.py` | Add `ELLIPTIC_API_KEY: str = ""` |
+| `client/src/App.jsx` | Add `/ingest` route (one line) |
+| `client/src/components/AppLayout.jsx` | Add "Ingest" nav link |
+| `requirements.txt` | Add `openpyxl>=3.1.0` if not present |
+| `.env.example` | Add `ELLIPTIC_API_KEY=` placeholder |
+
+**No other existing files should be modified.**
+
+---
 
 ## Case Data Schema (preprocessed_data)
-Cases store a `preprocessed_data` dict with sections matching the real case package template.
-These keys map to UI tabs (left panel) and to markdown headers in the AI's `[CASE DATA]` injection.
+
+Cases store a `preprocessed_data` dict. These keys map to UI tabs and markdown headers in the AI's `[CASE DATA]` injection.
 
 ```
 l1_referral_narrative    → "L1 Referral Narrative"
@@ -64,33 +172,27 @@ osint_results            → "OSINT Results"
 investigator_notes       → "Investigator Notes"
 ```
 
-All fields are optional (not every case has every section). The schema is defined in:
-- `server/models/schemas.py` → `PreprocessedData` model
-- `server/services/conversation_manager.py` → `section_map` in `_build_case_data_markdown()`
-- `client/src/components/investigation/CaseDataTabs.jsx` → `TAB_LABELS`
+Defined in: `server/models/schemas.py` → `PreprocessedData`, `server/services/conversation_manager.py` → `_build_case_data_markdown()`, `client/src/components/investigation/CaseDataTabs.jsx` → `TAB_LABELS`
 
-To add a new demo case: see `scripts/seed_demo_data.py` for the structure, or insert directly
-into MongoDB `fci_platform.cases` collection. Cases are assigned to users via `assigned_to` field
-(e.g., `"user_001"` for ben.investigator). Two sanitised real-case templates are at `/demo-1.md`
-and `/demo-2.md` in the repo root — these need to be converted into the schema above.
+The ingestion dashboard assembles and writes these fields when Phase 5 integration is built. See PRD Section 4.6 for the field mapping from `ingestion_cases` to `preprocessed_data`.
 
-## Future: Document Processing Pipeline
-See `DOCUMENT_PIPELINE_SPEC.md` for the full architecture spec. Key idea:
-- Separate extraction prompts (data processing) from investigation prompts (main chat)
-- Documents/images/PDFs processed via standalone API calls, condensed to text summaries
-- Only summaries injected into main chat context — saves massive token overhead
-- Multi-stage PDF flow for LE cases: individual summaries → consolidated summary
-- NOT for the current demo sprint — current demo uses direct image passing in chat
+---
 
 ## Key Conventions
-- Dark theme throughout — `bg-surface-900` body, `bg-surface-800` panels
+
+- Dark theme throughout — `bg-surface-900` body, `bg-surface-800` panels, `gold-400` accents
 - No state management library — React Context for auth only
-- No localStorage — session state lives in memory
-- Enter sends messages, Shift+Enter for newline
+- No localStorage — session state lives in memory only
+- Enter sends messages in chat, Shift+Enter for newline
 - Backend uses `KNOWLEDGE_BASE_PATH` in config (not `KNOWLEDGE_BASE_DIR`)
 - PyMongo 4.16+ native async — NOT Motor
+- All new Pydantic models use v2 syntax — `model_config = ConfigDict(...)`, not `class Config`
+- Background tasks use `fastapi.BackgroundTasks`, not `asyncio.create_task`
+
+---
 
 ## Running the App
+
 ```bash
 # Terminal 1: Backend
 cd server && uvicorn main:app --reload --port 8000
@@ -102,116 +204,10 @@ cd client && npm run dev
 python scripts/seed_demo_data.py
 ```
 
+---
 
+## Seed Data
 
-# Codebase Audit and Documentation
-
-## Task
-
-Perform a comprehensive audit of this entire codebase and produce a single detailed report document. This is an AI-assisted financial crime investigation platform with a Python/FastAPI backend and React/Vite frontend. The codebase has been built iteratively and needs to be fully documented so that development can continue with full context.
-
-## Instructions
-
-1. **Map the entire project directory tree** — every file, every folder, no exceptions. Use `find . -type f` excluding `node_modules`, `.git`, `__pycache__`, and other generated directories.
-
-2. **Read every source file** in the project. Use subagents to parallelise if the codebase is large. Every `.py`, `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.yaml`, `.yml`, `.json` (except `package-lock.json`), `.md`, `.env`, and config file must be read and documented.
-
-3. **Produce a single markdown report** saved to the project root as `CODEBASE-AUDIT.md` with the sections specified below.
-
-## Report Structure
-
-The report must contain ALL of the following sections:
-
-### 1. Directory Tree
-Full file tree of the project with brief inline annotations for non-obvious files.
-
-### 2. Architecture Overview
-- High-level system diagram (text/ASCII) showing frontend, backend, database, AI API, and how they connect
-- Request/response flow for the primary user journey: login → case selection → investigation chat
-- How conversation state is managed end-to-end
-
-### 3. Backend Documentation
-
-For EVERY Python file in the backend:
-
-- **File path and purpose** — one-line summary of what this file does
-- **Key classes and functions** — name, parameters, return type, what it does
-- **Dependencies** — what it imports from other project files
-- **External dependencies** — third-party packages used
-- **API endpoints** (for router files) — method, path, request body, response shape, auth required
-- **Database interactions** — which MongoDB collections it reads/writes, what queries it runs
-- **Anthropic API interactions** (if applicable) — how it calls the API, what parameters it sends, how it handles responses, tool call loop logic, streaming logic, caching
-
-### 4. Frontend Documentation
-
-For EVERY JSX/JS file in the frontend:
-
-- **File path and purpose** — one-line summary
-- **Component name and props** — what it accepts
-- **State management** — what state it holds locally, what it gets from context
-- **API calls** — which api.js functions it calls and when
-- **User interactions** — what the user can do in this component
-- **Child components** — what it renders
-- **Routing** — which routes map to which pages
-
-### 5. API Contract (As-Built)
-
-Document every API endpoint that actually exists in the backend, not what was planned but what is actually implemented:
-
-- Method and path
-- Request headers required
-- Request body schema
-- Response body schema
-- Error responses
-- Auth requirements
-
-### 6. Data Models
-
-- MongoDB collections: name, document schema (as actually stored, not as planned), indexes if any
-- In-memory data structures: session stores, caches, any global state
-
-### 7. Knowledge Base Architecture
-
-- How the knowledge base files are structured on disk
-- Which files are loaded on startup (Tier 1) vs available via tool call (Tier 2)
-- The tool definition sent to the Anthropic API
-- How the YAML reference index works
-- Total token counts if logged on startup
-
-### 8. Configuration and Environment
-
-- All environment variables and their defaults
-- Config file locations and formats
-- How to set up and run the project from scratch (both backend and frontend)
-- Database setup and seeding
-- Required API keys
-
-### 9. Features Inventory
-
-A complete list of what the application actually does right now:
-
-- **Working features** — things that are fully functional
-- **Partially implemented** — things that exist but aren't fully wired up
-- **Stubbed/placeholder** — things that have UI or code but no real functionality yet
-- **Known bugs or issues** — anything you observe that looks broken or incomplete
-
-### 10. Dependencies Manifest
-
-- Backend: list every package in requirements.txt or equivalent, with version
-- Frontend: list every package in package.json dependencies and devDependencies, with version
-- System dependencies: MongoDB version, Python version, Node version expected
-
-### 11. File-by-File Reference
-
-A flat table of every source file with:
-
-| File Path | Type | Lines | Purpose |
-|-----------|------|-------|---------|
-
-This gives a quick-scan reference for the entire codebase.
-
-## Output
-
-Save the complete report as `CODEBASE-AUDIT.md` in the project root. The report should be thorough enough that a developer with no prior context can understand the entire system, how every piece connects, and how to continue building on it.
-
-Do not skip files. Do not summarise groups of files as "similar to above". Document every file individually. Use subagents to read files in parallel if needed — thoroughness matters more than speed.
+- 2 users: `ben.investigator` (user_001), `demo.investigator` (user_002)
+- 3 demo cases assigned to user_001
+- To add cases: see `scripts/seed_demo_data.py` or insert directly into MongoDB `fci_platform.cases`

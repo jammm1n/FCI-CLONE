@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     MONGODB_URI: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "fci_platform"
 
+    # Elliptic API
+    ELLIPTIC_API_KEY: str = ""
+
     # Anthropic API
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_MODEL: str = "claude-sonnet-4-6"  # Sonnet for dev, Opus for demo
