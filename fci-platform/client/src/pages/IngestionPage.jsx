@@ -122,11 +122,18 @@ function C360Section({ caseData, onProcessingStarted }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
 
   const c360 = caseData.sections?.c360 || {};
   const status = c360.status || 'empty';
-  const isLocked = status === 'processing' || status === 'complete';
+
+  function filterValidFiles(fileList) {
+    return Array.from(fileList).filter((f) => {
+      const name = f.name.toLowerCase();
+      return name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
+    });
+  }
 
   async function handleUpload() {
     if (!files.length) return;
@@ -145,12 +152,24 @@ function C360Section({ caseData, onProcessingStarted }) {
   }
 
   function handleFileChange(e) {
-    const selected = Array.from(e.target.files || []);
-    const valid = selected.filter((f) => {
-      const name = f.name.toLowerCase();
-      return name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv');
-    });
-    setFiles(valid);
+    setFiles(filterValidFiles(e.target.files || []));
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = filterValidFiles(e.dataTransfer.files || []);
+    if (dropped.length > 0) setFiles(dropped);
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    setDragging(true);
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    setDragging(false);
   }
 
   return (
@@ -164,14 +183,34 @@ function C360Section({ caseData, onProcessingStarted }) {
 
       {status === 'empty' && (
         <>
-          <div className="flex items-center gap-3 mb-3">
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            className={`
+              flex flex-col items-center justify-center gap-2 p-6 mb-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors
+              ${dragging
+                ? 'border-gold-500 bg-gold-500/10'
+                : 'border-surface-300 dark:border-surface-600 hover:border-gold-500/50 hover:bg-surface-200/50 dark:hover:bg-surface-700/50'
+              }
+            `}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-8 h-8 text-surface-400">
+              <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
+              <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+            </svg>
+            <p className="text-sm text-surface-500">
+              {dragging ? 'Drop files here' : 'Drag & drop C360 spreadsheets here, or click to browse'}
+            </p>
+            <p className="text-xs text-surface-400">.xlsx, .xls, .csv</p>
             <input
               ref={fileInputRef}
               type="file"
               multiple
               accept=".xlsx,.xls,.csv"
               onChange={handleFileChange}
-              className="text-sm text-surface-500 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-surface-200 dark:file:bg-surface-700 file:text-surface-700 dark:file:text-surface-300 file:font-medium file:text-sm file:cursor-pointer hover:file:bg-surface-300 dark:hover:file:bg-surface-600"
+              className="hidden"
             />
           </div>
           {files.length > 0 && (
@@ -209,9 +248,7 @@ function C360Section({ caseData, onProcessingStarted }) {
               ))}
             </div>
           )}
-          {c360.csv_content && (
-            <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
-          )}
+          <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
         </div>
       )}
 
@@ -266,34 +303,154 @@ function CsvDownloadButton({ caseId, filename }) {
   );
 }
 
+// ── Additional Inputs Section ─────────────────────────────────────
+
+function AdditionalInputsSection({ caseData, onSaved }) {
+  const { token } = useAuth();
+
+  const existingUids = caseData.coconspirator_uids || [];
+  const existingWallets = caseData.sections?.elliptic?.manual_addresses || [];
+  const hasSavedData = existingUids.length > 0 || existingWallets.length > 0;
+
+  const [editing, setEditing] = useState(!hasSavedData);
+  const [extraUids, setExtraUids] = useState(existingUids.join('\n'));
+  const [extraWallets, setExtraWallets] = useState(existingWallets.join('\n'));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const c360Complete = caseData.sections?.c360?.status === 'complete';
+  if (!c360Complete) return null;
+
+  async function handleSave() {
+    setSaving(true);
+    setError('');
+    try {
+      // Save extra UIDs
+      const uids = extraUids.split('\n').map((u) => u.trim()).filter(Boolean);
+      await fetch(`/api/ingestion/cases/${caseData.case_id}/uids`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ coconspirator_uids: uids }),
+      });
+
+      // Save extra wallets
+      const wallets = extraWallets.split('\n').map((w) => w.trim()).filter(Boolean);
+      await ingestionApi.addManualAddresses(token, caseData.case_id, wallets);
+
+      setEditing(false);
+      if (onSaved) onSaved();
+    } catch (err) {
+      setError(err.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleSkip() {
+    setEditing(false);
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+          Additional Inputs
+        </h4>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="text-xs text-gold-500 hover:text-gold-400 transition-colors"
+          >
+            Edit
+          </button>
+        )}
+      </div>
+
+      {!editing && (
+        <div className="text-xs text-surface-400 space-y-1">
+          <p>
+            UIDs: {existingUids.length > 0 ? existingUids.join(', ') : 'None'}
+          </p>
+          <p>
+            Extra wallets: {existingWallets.length > 0 ? `${existingWallets.length} address${existingWallets.length !== 1 ? 'es' : ''}` : 'None'}
+          </p>
+        </div>
+      )}
+
+      {editing && (
+        <>
+          <p className="text-xs text-surface-400 mb-4">
+            Optional. Add any additional UIDs of interest (victims, co-suspects) and extra wallet addresses not in the C360 data.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+                Additional UIDs (one per line)
+              </label>
+              <textarea
+                value={extraUids}
+                onChange={(e) => setExtraUids(e.target.value)}
+                placeholder="e.g. BIN-12345678"
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+                Additional Wallets (one per line)
+              </label>
+              <textarea
+                value={extraWallets}
+                onChange={(e) => setExtraWallets(e.target.value)}
+                placeholder="e.g. bc1qxy2k..."
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={handleSkip}
+              className="px-4 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 text-sm transition-colors"
+            >
+              Skip
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Elliptic Section ─────────────────────────────────────────────
 
 function EllipticSection({ caseData, onProcessingStarted }) {
   const { token } = useAuth();
-  const [manualAddresses, setManualAddresses] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const c360 = caseData.sections?.c360 || {};
   const elliptic = caseData.sections?.elliptic || {};
   const ellStatus = elliptic.status || 'empty';
   const c360Complete = c360.status === 'complete';
+  const walletCount = (c360.wallet_addresses || []).length + (elliptic.manual_addresses || []).length;
 
   async function handleSubmit() {
     setSubmitting(true);
     setError('');
     try {
-      // Save manual addresses first if any
-      const extras = manualAddresses
-        .split('\n')
-        .map((a) => a.trim())
-        .filter(Boolean);
-      if (extras.length > 0) {
-        await ingestionApi.addManualAddresses(token, caseData.case_id, extras);
-      }
-      // Submit to Elliptic
       await ingestionApi.submitElliptic(token, caseData.case_id);
-      setManualAddresses('');
       onProcessingStarted();
     } catch (err) {
       setError(err.message);
@@ -305,7 +462,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
   async function handleMarkNone() {
     try {
       await ingestionApi.markSectionNone(token, caseData.case_id, 'elliptic');
-      onProcessingStarted(); // trigger a refresh
+      onProcessingStarted();
     } catch (err) {
       setError(err.message);
     }
@@ -329,21 +486,13 @@ function EllipticSection({ caseData, onProcessingStarted }) {
       {c360Complete && ellStatus === 'empty' && (
         <>
           <p className="text-xs text-surface-400 mb-3">
-            {(c360.wallet_addresses || []).length} addresses extracted from C360 data.
-            Add any additional wallet addresses below (one per line), or submit directly.
+            {walletCount} wallet address{walletCount !== 1 ? 'es' : ''} ready for screening.
           </p>
-          <textarea
-            value={manualAddresses}
-            onChange={(e) => setManualAddresses(e.target.value)}
-            placeholder="Additional wallet addresses (one per line)..."
-            rows={3}
-            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
-          />
           {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || walletCount === 0}
               className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting...' : 'Submit to Elliptic'}
@@ -662,6 +811,12 @@ export default function IngestionPage() {
             <C360Section
               caseData={caseData}
               onProcessingStarted={handleProcessingStarted}
+            />
+
+            {/* Additional UIDs + Wallets (appears after C360 completes) */}
+            <AdditionalInputsSection
+              caseData={caseData}
+              onSaved={handleProcessingStarted}
             />
 
             {/* Elliptic */}
