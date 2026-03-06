@@ -1037,6 +1037,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
 
   const status = section.status || 'empty';
   const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
 
   async function handleSave() {
     setSaving(true);
@@ -1050,6 +1051,16 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
       console.error(`Failed to save ${sectionKey}:`, err);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, '');
+      setText('');
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to reset ${sectionKey}:`, err);
     }
   }
 
@@ -1085,31 +1096,47 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
           <StatusDot status={status} />
         </div>
       </div>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder}
-        rows={6}
-        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
-      />
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Saving & Processing...' : 'Save & Process'}
-        </button>
-        {status === 'complete' && (
+
+      {/* Input area (hidden when complete) */}
+      {!isComplete && (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={placeholder}
+            rows={6}
+            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving & Processing...' : 'Save & Process'}
+            </button>
+            {saved && <span className="text-xs text-emerald-500">Saved</span>}
+          </div>
+        </>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
           <button
             onClick={handlePreview}
             className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
           >
             Preview
           </button>
-        )}
-        {saved && <span className="text-xs text-emerald-500">Saved</span>}
-      </div>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
 
       {showPreview && previewData && (
         <TextPreviewModal
@@ -1203,6 +1230,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
   const entries = section.entries || [];
   const status = section.status || 'empty';
   const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
 
   async function handleAddEntry() {
     if (!text.trim()) return;
@@ -1230,12 +1258,29 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
   async function handleProcess() {
     setProcessing(true);
     try {
+      if (text.trim()) {
+        await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text);
+      }
       await ingestionApi.processEntries(token, caseData.case_id, sectionKey);
+      setText('');
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to process ${sectionKey}:`, err);
     } finally {
       setProcessing(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      // Remove all entries by clearing the section
+      for (const entry of entries) {
+        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id);
+      }
+      setText('');
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to reset ${sectionKey}:`, err);
     }
   }
 
@@ -1274,7 +1319,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
 
       {/* Existing entries */}
       {entries.length > 0 && (
-        <div className="space-y-2 mb-3">
+        <div className={`space-y-2 mb-3 ${isComplete ? 'opacity-60' : ''}`}>
           {entries.map((entry, idx) => (
             <div
               key={entry.id}
@@ -1284,52 +1329,68 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
               <p className="text-sm text-surface-700 dark:text-surface-300 flex-1 line-clamp-3">
                 {entry.text}
               </p>
-              <button
-                onClick={() => handleRemoveEntry(entry.id)}
-                className="text-surface-400 hover:text-red-400 text-xs shrink-0 transition-colors"
-                title="Remove entry"
-              >
-                &times;
-              </button>
+              {!isComplete && (
+                <button
+                  onClick={() => handleRemoveEntry(entry.id)}
+                  className="text-surface-400 hover:text-red-400 text-xs shrink-0 transition-colors"
+                  title="Remove entry"
+                >
+                  &times;
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Add new entry */}
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder}
-        rows={4}
-        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
-      />
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleAddEntry}
-          disabled={adding || !text.trim()}
-          className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
-        >
-          {adding ? 'Adding...' : 'Add Entry'}
-        </button>
-        {entries.length > 0 && (
-          <button
-            onClick={handleProcess}
-            disabled={processing}
-            className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
-          >
-            {processing ? 'Processing...' : `Process All (${entries.length})`}
-          </button>
-        )}
-        {status === 'complete' && (
+      {/* Add new entry (hidden when complete) */}
+      {!isComplete && (
+        <>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={placeholder}
+            rows={4}
+            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleAddEntry}
+              disabled={adding || !text.trim()}
+              className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {adding ? 'Adding...' : 'Add Another'}
+            </button>
+            {(entries.length > 0 || text.trim()) && (
+              <button
+                onClick={handleProcess}
+                disabled={processing || (entries.length === 0 && !text.trim())}
+                className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Processing...' : `Done — Process All (${entries.length + (text.trim() ? 1 : 0)})`}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
           <button
             onClick={handlePreview}
             className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
           >
             Preview
           </button>
-        )}
-      </div>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
 
       {showPreview && previewData && (
         <TextPreviewModal
