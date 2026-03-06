@@ -664,6 +664,23 @@ async def save_notes(
     return result
 
 
+# ── Raw Hex Dump ─────────────────────────────────────────────────
+
+
+@router.put('/cases/{case_id}/hex-dump')
+async def save_hex_dump(
+    case_id: str,
+    body: NotesRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Save raw hex dump text. Same pattern as investigator notes."""
+    await _get_case_or_404(case_id)
+    result = await ingestion_service.save_text_section(
+        case_id, 'raw_hex_dump', body.notes,
+    )
+    return result
+
+
 # ── Reset ─────────────────────────────────────────────────────────
 
 

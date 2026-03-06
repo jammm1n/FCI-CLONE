@@ -14,21 +14,21 @@ from typing import Optional
 
 # All section keys in the ingestion case document.
 ALL_SECTION_KEYS = [
-    'c360', 'elliptic', 'hexa_dump', 'previous_icrs', 'rfis',
-    'kyc', 'l1_victim', 'l1_suspect', 'kodex', 'investigator_notes',
+    'c360', 'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs',
+    'rfis', 'kyc', 'l1_victim', 'l1_suspect', 'kodex', 'investigator_notes',
 ]
 
 # Sections that can be marked "none" (not applicable).
 NONEABLE_SECTION_KEYS = [
-    'elliptic', 'hexa_dump', 'previous_icrs', 'rfis',
+    'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs', 'rfis',
     'kyc', 'l1_victim', 'l1_suspect', 'kodex',
 ]
 
 # Sections that must be terminal (complete/none) before case is "ready".
 # investigator_notes is always optional and never blocks readiness.
 REQUIRED_TERMINAL_KEYS = [
-    'c360', 'elliptic', 'hexa_dump', 'previous_icrs', 'rfis',
-    'kyc', 'l1_victim', 'l1_suspect', 'kodex',
+    'c360', 'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs',
+    'rfis', 'kyc', 'l1_victim', 'l1_suspect', 'kodex',
 ]
 
 # Terminal statuses — a section in one of these states is "done".

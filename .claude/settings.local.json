@@ -13,7 +13,8 @@
       "Bash(grep:*)",
       "Bash(strings:*)",
       "Bash(sc query:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(wc:*)"
     ]
   }
 }

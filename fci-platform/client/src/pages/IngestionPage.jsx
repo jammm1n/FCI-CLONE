@@ -11,19 +11,16 @@ const SECTION_LABELS = {
   c360: 'C360 Data Processing',
   elliptic: 'Elliptic Wallet Screening',
   hexa_dump: 'L1 Referral Narrative',
+  raw_hex_dump: 'Raw Hex Dump',
+  kyc: 'KYC Document Summary',
   previous_icrs: 'Prior ICR Summary',
   rfis: 'RFI Summary',
-  kyc: 'KYC Document Summary',
+  kodex: 'Law Enforcement / Kodex',
   l1_victim: 'L1 Victim Communications',
   l1_suspect: 'L1 Suspect Communications',
-  kodex: 'Law Enforcement / Kodex',
   investigator_notes: 'Investigator Notes',
 };
 
-const FUTURE_SECTIONS = [
-  'hexa_dump', 'previous_icrs', 'rfis', 'kyc',
-  'l1_victim', 'l1_suspect', 'kodex',
-];
 
 // ── Status Indicator ─────────────────────────────────────────────
 
@@ -760,6 +757,59 @@ function NotesSection({ caseData }) {
   );
 }
 
+// ── Raw Hex Dump Section ─────────────────────────────────────
+
+function HexDumpSection({ caseData }) {
+  const { token } = useAuth();
+  const [text, setText] = useState(caseData.sections?.raw_hex_dump?.output || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const status = caseData.sections?.raw_hex_dump?.status || 'empty';
+
+  async function handleSave() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await ingestionApi.saveHexDump(token, caseData.case_id, text);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to save hex dump:', err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS.raw_hex_dump}
+        </h4>
+        <StatusDot status={status} />
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Paste raw hex dump data here..."
+        rows={6}
+        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </button>
+        {saved && <span className="text-xs text-emerald-500">Saved</span>}
+      </div>
+    </div>
+  );
+}
+
 // ── Future Section Placeholder ───────────────────────────────────
 
 function FutureSectionCard({ sectionKey, caseData }) {
@@ -967,8 +1017,8 @@ export default function IngestionPage() {
   // Check if assembly is possible
   const canAssemble = caseData?.sections && (() => {
     const required = [
-      'c360', 'elliptic', 'hexa_dump', 'previous_icrs', 'rfis',
-      'kyc', 'l1_victim', 'l1_suspect', 'kodex',
+      'c360', 'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs',
+      'rfis', 'kyc', 'l1_victim', 'l1_suspect', 'kodex',
     ];
     return required.every((key) => {
       const s = caseData.sections[key]?.status;
@@ -988,7 +1038,7 @@ export default function IngestionPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto px-6 py-6 animate-fade-in">
+      <div className="max-w-5xl mx-auto px-6 py-6 animate-fade-in">
         {/* Page header */}
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -1066,8 +1116,14 @@ export default function IngestionPage() {
               onProcessingStarted={handleProcessingStarted}
             />
 
-            {/* Future phase sections */}
-            {FUTURE_SECTIONS.map((key) => (
+            {/* L1 Referral Narrative (future) */}
+            <FutureSectionCard sectionKey="hexa_dump" caseData={caseData} />
+
+            {/* Raw Hex Dump (text input) */}
+            <HexDumpSection caseData={caseData} />
+
+            {/* Remaining future phase sections */}
+            {['kyc', 'previous_icrs', 'rfis', 'kodex', 'l1_victim', 'l1_suspect'].map((key) => (
               <FutureSectionCard
                 key={key}
                 sectionKey={key}

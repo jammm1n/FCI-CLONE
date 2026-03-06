@@ -34,12 +34,13 @@ ASSEMBLY_ORDER = [
     ('c360', 'C360 Transaction Summary', 'C360 data not provided.'),
     ('elliptic', 'Elliptic Wallet Screening Results', 'No wallet screening performed.'),
     ('hexa_dump', 'L1 Referral Narrative', 'No L1 referral data provided.'),
+    ('raw_hex_dump', 'Raw Hex Dump', 'No hex dump data provided.'),
+    ('kyc', 'KYC Document Summary', 'KYC documents not provided.'),
     ('previous_icrs', 'Prior ICR Summary', 'No prior ICRs identified for this subject.'),
     ('rfis', 'RFI Summary', 'No RFIs on record for this subject.'),
-    ('kyc', 'KYC Document Summary', 'KYC documents not provided.'),
+    ('kodex', 'Law Enforcement / Kodex Summary', 'No law enforcement cases identified.'),
     ('l1_victim', 'L1 Victim Communications Summary', 'No victim communications available.'),
     ('l1_suspect', 'L1 Suspect Communications Summary', 'No suspect communications available.'),
-    ('kodex', 'Law Enforcement / Kodex Summary', 'No law enforcement cases identified.'),
     ('investigator_notes', 'Investigator Notes', 'No additional notes.'),
 ]
 
@@ -247,6 +248,36 @@ async def save_notes(case_id: str, notes_text: str) -> dict:
         }},
     )
 
+    return {'status': status, 'updated_at': now}
+
+
+async def save_text_section(case_id: str, section_key: str, text: str) -> dict:
+    """
+    Save a plain-text section (no AI processing).
+
+    Empty string resets the section to 'empty'.
+    Returns {status, updated_at}.
+    """
+    now = _utcnow()
+
+    if text.strip():
+        status = 'complete'
+        output = text.strip()
+    else:
+        status = 'empty'
+        output = None
+
+    await _collection().update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': status,
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
     return {'status': status, 'updated_at': now}
 
 

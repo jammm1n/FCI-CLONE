@@ -167,6 +167,17 @@ export async function saveNotes(token, caseId, notes) {
   return handleResponse(res);
 }
 
+// ── Raw Hex Dump ────────────────────────────────────────────
+
+export async function saveHexDump(token, caseId, text) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/hex-dump`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ notes: text }),
+  });
+  return handleResponse(res);
+}
+
 // ── Assembly ─────────────────────────────────────────────────────
 
 export async function assembleCase(token, caseId) {
