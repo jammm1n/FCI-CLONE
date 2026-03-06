@@ -67,6 +67,14 @@ export async function resetCase(token, caseId) {
   return handleResponse(res);
 }
 
+export async function deleteCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 // ── C360 ─────────────────────────────────────────────────────────
 
 export async function uploadC360(token, caseId, files) {

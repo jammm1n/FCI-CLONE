@@ -66,6 +66,8 @@ class SectionStatus(BaseModel):
     """Lightweight section status for polling."""
     status: str
     updated_at: Optional[datetime] = None
+    ai_status: Optional[str] = None
+    ai_progress: Optional[dict] = None
 
 
 class CaseStatusResponse(BaseModel):

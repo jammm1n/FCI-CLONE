@@ -41,7 +41,7 @@ function StatusDot({ status }) {
   );
 }
 
-// ── Preview Modal ────────────────────────────────────────────────
+// ── Preview Modal (simple — used for non-C360 sections) ─────────
 
 function PreviewModal({ title, content, onClose }) {
   const [copied, setCopied] = useState(false);
@@ -97,7 +97,179 @@ function PreviewModal({ title, content, onClose }) {
   );
 }
 
-// ── Preview Button ───────────────────────────────────────────────
+// ── C360 Per-Processor Preview Modal ────────────────────────────
+
+const PROCESSOR_LABELS = {
+  tx_summary: 'Transaction Summary',
+  user_profile: 'User Profile',
+  privacy_coin: 'Privacy Coin Breakdown',
+  counterparty: 'Counterparty Analysis',
+  device: 'Device & IP Analysis',
+  elliptic: 'Wallet Address Extraction',
+  fiat: 'Failed Fiat Withdrawals',
+  ctm: 'CTM Alerts',
+  ftm: 'FTM Alerts',
+  blocks: 'Account Blocks',
+};
+
+const PROCESSOR_ORDER = [
+  'tx_summary', 'user_profile', 'privacy_coin', 'counterparty',
+  'device', 'fiat', 'ctm', 'ftm', 'blocks',
+];
+
+// Processors that go through AI (excludes user_profile and elliptic)
+const AI_PROCESSORS = new Set([
+  'tx_summary', 'blocks', 'ctm', 'privacy_coin', 'fiat',
+  'counterparty', 'device', 'ftm',
+]);
+
+function ProcessorSection({ processorId, processorOutputs, aiOutputs }) {
+  const [showRaw, setShowRaw] = useState(false);
+
+  const po = processorOutputs[processorId] || {};
+  const ai = aiOutputs[processorId] || {};
+  const label = po.label || PROCESSOR_LABELS[processorId] || processorId;
+  const hasAI = AI_PROCESSORS.has(processorId);
+
+  // Determine what to show
+  const aiOutput = ai.ai_output || null;
+  const rawOutput = po.content || null;
+  const skipped = po.skipped || ai.skipped;
+  const hasError = ai.error && !ai.ai_output;
+
+  // Status indicator
+  let statusText = '';
+  let statusColor = '';
+  if (skipped) {
+    statusText = 'No data';
+    statusColor = 'text-surface-400';
+  } else if (hasError) {
+    statusText = 'AI error';
+    statusColor = 'text-red-400';
+  } else if (aiOutput) {
+    statusText = 'AI processed';
+    statusColor = 'text-emerald-400';
+  } else if (!hasAI && rawOutput) {
+    statusText = 'Raw (no AI)';
+    statusColor = 'text-surface-400';
+  } else if (rawOutput) {
+    statusText = 'Raw fallback';
+    statusColor = 'text-amber-400';
+  }
+
+  return (
+    <div className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-surface-100 dark:bg-surface-750">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-surface-800 dark:text-surface-200">{label}</span>
+          <span className={`text-[10px] ${statusColor}`}>{statusText}</span>
+        </div>
+        {rawOutput && hasAI && (
+          <button
+            onClick={() => setShowRaw(!showRaw)}
+            className="text-[10px] px-2 py-0.5 rounded border border-surface-300 dark:border-surface-600 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 transition-colors"
+          >
+            {showRaw ? 'Show AI' : 'Show Raw'}
+          </button>
+        )}
+      </div>
+      <div className="px-4 py-3">
+        {skipped && !rawOutput && (
+          <p className="text-xs text-surface-400 italic">Data was not uploaded for this section.</p>
+        )}
+        {hasError && (
+          <p className="text-xs text-red-400 mb-2">AI processing error: {ai.error}</p>
+        )}
+        {showRaw && rawOutput ? (
+          <pre className="whitespace-pre-wrap text-xs text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
+            {rawOutput}
+          </pre>
+        ) : aiOutput ? (
+          <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
+            {aiOutput}
+          </pre>
+        ) : rawOutput ? (
+          <pre className="whitespace-pre-wrap text-xs text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
+            {rawOutput}
+          </pre>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function C360PreviewModal({ title, data, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  const processorOutputs = data.processor_outputs || {};
+  const aiOutputs = data.ai_outputs || {};
+  const fullOutput = data.output || '';
+
+  function handleCopy() {
+    navigator.clipboard.writeText(fullOutput);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  const hasPerProcessor = Object.keys(processorOutputs).length > 0 || Object.keys(aiOutputs).length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-surface-800 rounded-2xl w-[90%] max-w-5xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100">
+            {title}
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+            >
+              {copied ? 'Copied!' : 'Copy All'}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {hasPerProcessor ? (
+            PROCESSOR_ORDER.map((pid) => (
+              <ProcessorSection
+                key={pid}
+                processorId={pid}
+                processorOutputs={processorOutputs}
+                aiOutputs={aiOutputs}
+              />
+            ))
+          ) : (
+            <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
+              {fullOutput || 'No output available.'}
+            </pre>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Preview Button (simple — used for non-C360 sections) ────────
 
 function PreviewButton({ token, caseId, sectionKey, label }) {
   const [loading, setLoading] = useState(false);
@@ -137,6 +309,52 @@ function PreviewButton({ token, caseId, sectionKey, label }) {
           title={label}
           content={preview}
           onClose={() => setPreview(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ── C360 Preview Button (per-processor modal) ────────────────────
+
+function C360PreviewButton({ token, caseId, label }) {
+  const [loading, setLoading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+
+  async function handleClick() {
+    setLoading(true);
+    try {
+      const data = await ingestionApi.getC360Output(token, caseId);
+      setPreviewData(data);
+    } catch (err) {
+      setPreviewData({ output: `Error loading preview: ${err.message}` });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        title="Preview output"
+        className="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 hover:text-gold-500 transition-colors disabled:opacity-50"
+      >
+        {loading ? (
+          <LoadingSpinner size="sm" />
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+      {previewData !== null && (
+        <C360PreviewModal
+          title={label}
+          data={previewData}
+          onClose={() => setPreviewData(null)}
         />
       )}
     </>
@@ -231,6 +449,58 @@ function CaseCreationForm({ onCreated }) {
   );
 }
 
+// ── C360 Processing Status ───────────────────────────────────────
+
+function C360ProcessingStatus({ c360 }) {
+  const aiStatus = c360.ai_status || 'pending';
+  const aiProgress = c360.ai_progress || {};
+
+  if (aiStatus === 'pending') {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gold-500">
+        <LoadingSpinner size="sm" />
+        Processing C360 data...
+      </div>
+    );
+  }
+
+  // AI is processing — show per-processor progress
+  const total = Object.keys(aiProgress).length;
+  const done = Object.values(aiProgress).filter(
+    (s) => s === 'complete' || s === 'skipped' || s === 'error'
+  ).length;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm text-gold-500">
+        <LoadingSpinner size="sm" />
+        AI Processing{total > 0 ? ` (${done}/${total})` : '...'}
+      </div>
+      {total > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(aiProgress).map(([pid, pstatus]) => {
+            const label = PROCESSOR_LABELS[pid] || pid;
+            let dotColor = 'bg-surface-500';
+            if (pstatus === 'complete') dotColor = 'bg-emerald-500';
+            else if (pstatus === 'processing') dotColor = 'bg-gold-400 animate-pulse';
+            else if (pstatus === 'error') dotColor = 'bg-red-500';
+            else if (pstatus === 'skipped') dotColor = 'bg-surface-400';
+            return (
+              <span
+                key={pid}
+                className="inline-flex items-center gap-1 text-[10px] text-surface-400 px-1.5 py-0.5 rounded bg-surface-200/50 dark:bg-surface-700/50"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                {label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── C360 Upload Section ──────────────────────────────────────────
 
 function C360Section({ caseData, onProcessingStarted }) {
@@ -309,10 +579,9 @@ function C360Section({ caseData, onProcessingStarted }) {
         </h4>
         <div className="flex items-center gap-2">
           {status === 'complete' && (
-            <PreviewButton
+            <C360PreviewButton
               token={token}
               caseId={caseData.case_id}
-              sectionKey="c360"
               label={SECTION_LABELS.c360}
             />
           )}
@@ -376,10 +645,7 @@ function C360Section({ caseData, onProcessingStarted }) {
               Verify this is the correct user ID for the case you are investigating.
             </p>
           )}
-          <div className="flex items-center gap-2 text-sm text-gold-500">
-            <LoadingSpinner size="sm" />
-            Processing C360 data...
-          </div>
+          <C360ProcessingStatus c360={c360} />
         </div>
       )}
 
@@ -955,11 +1221,33 @@ export default function IngestionPage() {
     fetchActive();
   }, [token]);
 
-  // Polling callback — refresh full case data when status changes
+  // Polling callback — refresh case data during processing
   const handleStatusUpdate = useCallback(
     async (status) => {
       const sections = status.sections || {};
       const anyProcessing = Object.values(sections).some((s) => s.status === 'processing');
+
+      // Update AI progress in real-time from status polling
+      if (caseData?.case_id && sections.c360) {
+        const c360Status = sections.c360;
+        if (c360Status.ai_status && c360Status.ai_status !== 'pending') {
+          setCaseData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              sections: {
+                ...prev.sections,
+                c360: {
+                  ...prev.sections?.c360,
+                  ai_status: c360Status.ai_status,
+                  ai_progress: c360Status.ai_progress || {},
+                },
+              },
+            };
+          });
+        }
+      }
+
       if (!anyProcessing && caseData?.case_id) {
         try {
           const full = await ingestionApi.getCase(token, caseData.case_id);
@@ -1004,8 +1292,8 @@ export default function IngestionPage() {
   async function handleReset() {
     setResetting(true);
     try {
-      const result = await ingestionApi.resetCase(token, caseData.case_id);
-      setCaseData(result);
+      await ingestionApi.deleteCase(token, caseData.case_id);
+      setCaseData(null);
       setConfirmReset(false);
     } catch (err) {
       setError(err.message);

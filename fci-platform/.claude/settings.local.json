@@ -5,7 +5,8 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(python:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(node:*)"
     ]
   }
 }

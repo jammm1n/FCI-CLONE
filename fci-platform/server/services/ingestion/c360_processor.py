@@ -447,6 +447,7 @@ def _run_sync_pipeline(files_bytes, params):
 
     # ── 7. Run all processors ─────────────────────────────────
     output_parts = []
+    processor_outputs = {}
     wallet_addresses = []
     csv_content = None
     csv_filename = None
@@ -461,6 +462,13 @@ def _run_sync_pipeline(files_bytes, params):
             output_parts.append(
                 '### {}\n\n{}'.format(processor.label, message)
             )
+            processor_outputs[processor.id] = {
+                'label': processor.label,
+                'content': message,
+                'has_data': False,
+                'skipped': True,
+                'error': None,
+            }
             continue
 
         # Case B: Data uploaded but required params missing
@@ -474,6 +482,15 @@ def _run_sync_pipeline(files_bytes, params):
                 'not complete. Missing required parameters that could not '
                 'be auto-populated: {}.'.format(processor.label, field_list)
             )
+            processor_outputs[processor.id] = {
+                'label': processor.label,
+                'content': 'Data files were detected but processing could '
+                           'not complete. Missing required parameters that '
+                           'could not be auto-populated: {}.'.format(field_list),
+                'has_data': False,
+                'skipped': False,
+                'error': 'Missing fields: {}'.format(field_list),
+            }
             continue
 
         # Case C: Run the processor
@@ -492,6 +509,14 @@ def _run_sync_pipeline(files_bytes, params):
                         result.content or 'Processing completed but no findings.',
                     )
                 )
+
+            processor_outputs[processor.id] = {
+                'label': processor.label,
+                'content': result.content,
+                'has_data': result.has_data,
+                'skipped': False,
+                'error': None,
+            }
 
             # Extract wallet addresses and CSV from elliptic processor
             if processor.id == 'elliptic' and result.metadata:
@@ -514,6 +539,13 @@ def _run_sync_pipeline(files_bytes, params):
                     processor.label, str(e), traceback.format_exc(),
                 )
             )
+            processor_outputs[processor.id] = {
+                'label': processor.label,
+                'content': None,
+                'has_data': False,
+                'skipped': False,
+                'error': str(e),
+            }
 
     # ── Assemble final output ─────────────────────────────────
     assembled_output = '\n\n---\n\n'.join(output_parts)
@@ -546,6 +578,7 @@ def _run_sync_pipeline(files_bytes, params):
 
     return {
         'output': assembled_output,
+        'processor_outputs': processor_outputs,
         'wallet_addresses': wallet_addresses,
         'csv_content': csv_content,
         'csv_filename': csv_filename,

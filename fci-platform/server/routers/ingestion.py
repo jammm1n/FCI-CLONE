@@ -32,6 +32,9 @@ from server.routers.auth import get_current_user
 from server.services.ingestion import ingestion_service
 from server.services.ingestion import c360_processor
 from server.services.ingestion import elliptic_processor
+from server.services.ingestion.ai_processor import (
+    process_with_ai, PROCESSOR_PROMPT_MAP,
+)
 from server.services.icr.address_manager import build_address_list
 from server.services.icr.uid_search import search_associated_uids
 from server.models.ingestion_schemas import (
@@ -207,7 +210,7 @@ async def upload_c360(
 
 
 async def _process_c360_background(case_id: str, files_bytes: list, params: dict):
-    """Background task: run C360 pipeline, update MongoDB on completion."""
+    """Background task: run C360 pipeline, AI processing, update MongoDB."""
     try:
         result = await c360_processor.process_c360_files(files_bytes, params)
 
@@ -226,17 +229,19 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
         # over quick extraction (which skipped UOL)
         user_info = result.get('uol_customer_info')
         if not user_info:
-            # Fall back to whatever quick extraction stored
             case_now = await ingestion_service.get_case(case_id)
             user_info = (
                 case_now.get('sections', {}).get('c360', {}).get('user_info')
                 if case_now else None
             )
 
+        processor_outputs = result.get('processor_outputs', {})
+
+        # Store raw processor outputs and metadata (status stays 'processing')
         await ingestion_service.update_section(
-            case_id, 'c360', 'complete',
-            output=result['output'],
+            case_id, 'c360', 'processing',
             extra_fields={
+                'processor_outputs': processor_outputs,
                 'wallet_addresses': result['wallet_addresses'],
                 'detected_file_types': result['detected_file_types'],
                 'undetected_files': result['undetected_files'],
@@ -279,7 +284,139 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
             except Exception:
                 logger.exception('Auto address xref failed for %s', case_id)
 
-        logger.info('C360 processing complete for case %s', case_id)
+        # ── AI Processing ─────────────────────────────────────────
+        # Sequential API calls for each processor that has a prompt.
+        # Variables for Prompt 17 (device/IP)
+        auto_pop = result.get('auto_populate', {})
+        variables = {
+            'nationality': auto_pop.get('nationality', 'Unknown'),
+            'residence': auto_pop.get('residence', 'Unknown'),
+        }
+
+        from server.database import get_database
+        db = get_database()['ingestion_cases']
+
+        await db.update_one(
+            {'_id': case_id},
+            {'$set': {
+                'sections.c360.ai_status': 'processing',
+                'sections.c360.ai_progress': {},
+            }},
+        )
+
+        ai_outputs = {}
+        ai_had_error = False
+
+        # Processor sort order for assembly
+        PROCESSOR_SORT_ORDER = [
+            ('tx_summary', 'Transaction Summary'),
+            ('user_profile', 'User Profile'),
+            ('privacy_coin', 'Privacy Coin Breakdown'),
+            ('counterparty', 'Counterparty Analysis'),
+            ('device', 'Device & IP Analysis'),
+            ('elliptic', 'Wallet Address Extraction'),
+            ('fiat', 'Failed Fiat Withdrawals'),
+            ('ctm', 'CTM Alerts'),
+            ('ftm', 'FTM Alerts'),
+            ('blocks', 'Account Blocks'),
+        ]
+
+        for processor_id in PROCESSOR_PROMPT_MAP:
+            po = processor_outputs.get(processor_id, {})
+
+            # Skip processors with no data or that were skipped
+            if po.get('skipped') or not po.get('has_data') or not po.get('content'):
+                ai_outputs[processor_id] = {
+                    'ai_output': None,
+                    'skipped': True,
+                    'error': None,
+                }
+                await db.update_one(
+                    {'_id': case_id},
+                    {'$set': {
+                        f'sections.c360.ai_progress.{processor_id}': 'skipped',
+                    }},
+                )
+                continue
+
+            # Update progress: processing
+            await db.update_one(
+                {'_id': case_id},
+                {'$set': {
+                    f'sections.c360.ai_progress.{processor_id}': 'processing',
+                }},
+            )
+
+            # Pass variables only for prompt 17 (device)
+            proc_vars = variables if processor_id == 'device' else None
+
+            ai_result = await process_with_ai(
+                processor_id, po['content'], proc_vars,
+            )
+            ai_outputs[processor_id] = ai_result
+
+            if ai_result.get('error'):
+                ai_had_error = True
+                await db.update_one(
+                    {'_id': case_id},
+                    {'$set': {
+                        f'sections.c360.ai_progress.{processor_id}': 'error',
+                    }},
+                )
+            else:
+                await db.update_one(
+                    {'_id': case_id},
+                    {'$set': {
+                        f'sections.c360.ai_progress.{processor_id}': 'complete',
+                    }},
+                )
+
+        # ── Assemble final output from AI narratives ──────────────
+        parts = []
+        for processor_id, label in PROCESSOR_SORT_ORDER:
+            if processor_id == 'elliptic':
+                continue  # Exclude — intermediate data for wallet pipeline
+
+            ai_entry = ai_outputs.get(processor_id, {})
+            po = processor_outputs.get(processor_id, {})
+
+            if ai_entry.get('ai_output'):
+                # AI narrative available
+                parts.append('### {}\n\n{}'.format(label, ai_entry['ai_output']))
+            elif processor_id == 'user_profile' and po.get('has_data') and po.get('content'):
+                # user_profile: pass through raw (no AI)
+                parts.append('### {}\n\n{}'.format(po.get('label', label), po['content']))
+            elif po.get('has_data') and po.get('content'):
+                # Fallback: raw output (AI failed or no prompt)
+                parts.append('### {}\n\n{}'.format(po.get('label', label), po['content']))
+            elif po.get('skipped') and po.get('content'):
+                # Data not uploaded
+                parts.append('### {}\n\n{}'.format(po.get('label', label), po['content']))
+
+        assembled_output = '\n\n---\n\n'.join(parts)
+
+        # Determine AI status
+        any_complete = any(
+            r.get('ai_output') for r in ai_outputs.values()
+        )
+        if ai_had_error and any_complete:
+            ai_status = 'partial'
+        elif ai_had_error:
+            ai_status = 'error'
+        else:
+            ai_status = 'complete'
+
+        # Final update: store AI outputs and assembled output
+        await ingestion_service.update_section(
+            case_id, 'c360', 'complete',
+            output=assembled_output,
+            extra_fields={
+                'ai_outputs': ai_outputs,
+                'ai_status': ai_status,
+            },
+        )
+
+        logger.info('C360 processing + AI complete for case %s', case_id)
 
     except Exception as e:
         logger.exception('C360 processing failed for case %s', case_id)
@@ -310,6 +447,10 @@ async def get_c360_output(case_id: str, current_user: dict = Depends(get_current
         'warnings': c360.get('warnings', []),
         'wallet_addresses': c360.get('wallet_addresses', []),
         'updated_at': c360.get('updated_at'),
+        'processor_outputs': c360.get('processor_outputs', {}),
+        'ai_outputs': c360.get('ai_outputs', {}),
+        'ai_status': c360.get('ai_status', 'pending'),
+        'ai_progress': c360.get('ai_progress', {}),
     }
 
 
@@ -690,6 +831,16 @@ async def reset_case(case_id: str, current_user: dict = Depends(get_current_user
     try:
         doc = await ingestion_service.reset_case(case_id)
         return _serialize_case(doc)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete('/cases/{case_id}')
+async def delete_case(case_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete an ingestion case entirely. Returns to square one."""
+    try:
+        await ingestion_service.delete_case(case_id)
+        return {'deleted': True, 'case_id': case_id}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

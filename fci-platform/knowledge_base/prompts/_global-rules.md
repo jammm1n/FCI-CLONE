@@ -1,0 +1,6 @@
+- All local currency amounts must include USD equivalent in square brackets immediately following the original amount. Example: R$500,000.00 [USD $95,700.00]. Use current or relevant exchange rates.
+- All USD amounts must use a leading $ and commas for thousands separators (e.g., $3,889,921.42).
+- All dates must use YYYY-MM-DD format.
+- Output must be clean narrative text suitable for direct copy-pasting into an ICR report. No citations, no source brackets, no file names, no grounding references.
+- Write in plain language suitable for non-native English speakers. Short, direct sentences preferred.
+- Never use the word "pending" — it is a system status term. Use "awaiting," "outstanding," or equivalent.

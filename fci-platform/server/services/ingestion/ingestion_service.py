@@ -62,6 +62,11 @@ def _empty_sections():
     sections['c360']['warnings'] = []
     sections['c360']['csv_content'] = None
     sections['c360']['csv_filename'] = None
+    # C360 AI processing fields
+    sections['c360']['processor_outputs'] = {}
+    sections['c360']['ai_outputs'] = {}
+    sections['c360']['ai_status'] = 'pending'
+    sections['c360']['ai_progress'] = {}
     # Elliptic has extra fields
     sections['elliptic']['wallet_addresses'] = []
     sections['elliptic']['manual_addresses'] = []
@@ -151,10 +156,15 @@ async def get_case_status(case_id: str) -> dict | None:
     section_statuses = {}
     for key in ALL_SECTION_KEYS:
         section = doc.get('sections', {}).get(key, {})
-        section_statuses[key] = {
+        entry = {
             'status': section.get('status', 'empty'),
             'updated_at': section.get('updated_at'),
         }
+        # Include AI processing fields for C360
+        if key == 'c360':
+            entry['ai_status'] = section.get('ai_status', 'pending')
+            entry['ai_progress'] = section.get('ai_progress', {})
+        section_statuses[key] = entry
 
     return {
         'case_id': doc['_id'],
@@ -310,6 +320,32 @@ async def _check_ready_state(case_id: str):
             {'$set': {'status': 'ready', 'updated_at': _utcnow()}},
         )
         logger.info('Case %s auto-transitioned to ready', case_id)
+
+
+# ── Delete ────────────────────────────────────────────────────────
+
+
+async def delete_case(case_id: str):
+    """
+    Delete an ingestion case entirely.
+
+    Removes the document from MongoDB. Only allowed when status is
+    'ingesting' or 'ready'.
+
+    Raises ValueError if case not found or status disallows deletion.
+    """
+    doc = await _collection().find_one({'_id': case_id})
+    if not doc:
+        raise ValueError(f'Case not found: {case_id}')
+
+    if doc.get('status') not in ('ingesting', 'ready'):
+        raise ValueError(
+            f'Cannot delete case in status "{doc.get("status")}". '
+            'Only ingesting or ready cases can be deleted.'
+        )
+
+    await _collection().delete_one({'_id': case_id})
+    logger.info('Deleted ingestion case %s', case_id)
 
 
 # ── Reset ─────────────────────────────────────────────────────────
