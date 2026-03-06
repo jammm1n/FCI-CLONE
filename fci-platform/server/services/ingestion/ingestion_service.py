@@ -311,6 +311,7 @@ async def reset_case(case_id: str) -> dict:
             '$set': {
                 'status': 'ingesting',
                 'subject_uid': '',
+                'coconspirator_uids': [],
                 'sections': _empty_sections(),
                 'assembled_case_data': None,
                 'updated_at': now,
