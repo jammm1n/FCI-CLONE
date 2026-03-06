@@ -1038,6 +1038,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
   const status = section.status || 'empty';
   const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
+  const isNone = status === 'none';
 
   async function handleSave() {
     setSaving(true);
@@ -1073,6 +1074,44 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
     } catch (err) {
       console.error(`Failed to load preview for ${sectionKey}:`, err);
     }
+  }
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to mark ${sectionKey} N/A:`, err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error(`Failed to reopen ${sectionKey}:`, err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1116,6 +1155,14 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
               {saving ? 'Saving & Processing...' : 'Save & Process'}
             </button>
             {saved && <span className="text-xs text-emerald-500">Saved</span>}
+            {status === 'empty' && !text.trim() && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
           </div>
         </>
       )}
@@ -1231,6 +1278,16 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
   const status = section.status || 'empty';
   const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
+  const isNone = status === 'none';
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to mark ${sectionKey} N/A:`, err);
+    }
+  }
 
   async function handleAddEntry() {
     if (!text.trim()) return;
@@ -1293,6 +1350,35 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
     } catch (err) {
       console.error(`Failed to load preview for ${sectionKey}:`, err);
     }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error(`Failed to reopen ${sectionKey}:`, err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1370,6 +1456,14 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
                 {processing ? 'Processing...' : `Done — Process All (${entries.length + (text.trim() ? 1 : 0)})`}
               </button>
             )}
+            {entries.length === 0 && !text.trim() && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
           </div>
         </>
       )}
@@ -1406,6 +1500,522 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
 }
 
 
+// ── RFI Entry Section (iterative entries with image support) ─────
+
+function RFIEntrySection({ caseData, onSaved }) {
+  const sectionKey = 'rfis';
+  const { token } = useAuth();
+  const section = caseData.sections?.[sectionKey] || {};
+  const [text, setText] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewTab, setPreviewTab] = useState('ai');
+
+  const entries = section.entries || [];
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
+  const isNone = status === 'none';
+
+  const fileInputRef = useRef(null);
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to mark RFIs N/A:', err);
+    }
+  }
+
+  function handleFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles((prev) => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeSelectedFile(idx) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function addImageFiles(files) {
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    }
+  }
+
+  function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      addImageFiles(imageFiles);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    addImageFiles(files);
+  }
+
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handleAddEntry() {
+    if (!text.trim()) return;
+    setAdding(true);
+    try {
+      await ingestionApi.addEntryWithImages(
+        token, caseData.case_id, sectionKey, text, selectedFiles,
+      );
+      setText('');
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to add RFI entry:', err);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleRemoveEntry(entryId) {
+    try {
+      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to remove entry:', err);
+    }
+  }
+
+  async function handleProcess() {
+    setProcessing(true);
+    try {
+      // Auto-add pending text+files before processing
+      if (text.trim()) {
+        await ingestionApi.addEntryWithImages(
+          token, caseData.case_id, sectionKey, text, selectedFiles,
+        );
+        setText('');
+        setSelectedFiles([]);
+      }
+      await ingestionApi.processEntries(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to process RFIs:', err);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      for (const entry of entries) {
+        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id);
+      }
+      setText('');
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to reset RFIs:', err);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey);
+      setPreviewData(data);
+      setPreviewTab('ai');
+      setShowPreview(true);
+    } catch (err) {
+      console.error('Failed to load preview:', err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error(`Failed to reopen ${sectionKey}:`, err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
+        </h4>
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'partial' ? 'bg-amber-500/20 text-amber-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'partial' ? 'AI partial' :
+               aiStatus === 'error' ? 'AI failed (raw saved)' : ''}
+            </span>
+          )}
+          <StatusDot status={status === 'incomplete' ? 'empty' : status} />
+        </div>
+      </div>
+
+      {/* Existing entries */}
+      {entries.length > 0 && (
+        <div className={`space-y-2 mb-3 ${isComplete ? 'opacity-60' : ''}`}>
+          {entries.map((entry, idx) => (
+            <div
+              key={entry.id}
+              className="flex items-start gap-2 bg-white dark:bg-surface-900 rounded-lg p-3 border border-surface-200 dark:border-surface-700"
+            >
+              <span className="text-xs text-surface-400 font-mono mt-0.5 shrink-0">#{idx + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-surface-700 dark:text-surface-300 line-clamp-3">
+                  {entry.text}
+                </p>
+                {entry.images && entry.images.length > 0 && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <svg className="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs text-surface-400">
+                      {entry.images.length} image{entry.images.length !== 1 ? 's' : ''}
+                    </span>
+                    {/* Thumbnail strip */}
+                    <div className="flex gap-1 ml-1">
+                      {entry.images.slice(0, 4).map((img) => (
+                        <img
+                          key={img.image_id}
+                          src={`/api/ingestion/images/${caseData.case_id}/${sectionKey}/${entry.id}/${img.image_id}`}
+                          alt={img.filename || 'RFI document'}
+                          className="w-8 h-8 rounded object-cover border border-surface-600"
+                        />
+                      ))}
+                      {entry.images.length > 4 && (
+                        <span className="w-8 h-8 rounded bg-surface-700 border border-surface-600 flex items-center justify-center text-[10px] text-surface-400">
+                          +{entry.images.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!isComplete && (
+                <button
+                  onClick={() => handleRemoveEntry(entry.id)}
+                  className="text-surface-400 hover:text-red-400 text-xs shrink-0 transition-colors"
+                  title="Remove entry"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new entry (hidden when complete) */}
+      {!isComplete && (
+        <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`rounded-lg transition-colors ${dragOver ? 'ring-2 ring-gold-500 bg-gold-500/5' : ''}`}
+          >
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onPaste={handlePaste}
+              placeholder="Describe the RFI — what was requested, when, and any response received. Paste or drag images here..."
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-2"
+            />
+          </div>
+
+          {/* Image upload area */}
+          <div className="mb-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              onChange={handleFilesSelected}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-surface-400 dark:border-surface-600 text-surface-500 dark:text-surface-400 hover:border-gold-500 hover:text-gold-500 text-xs transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Attach Documents
+            </button>
+            <span className="text-[10px] text-surface-500 ml-2">or paste / drag &amp; drop</span>
+
+            {/* Selected file previews */}
+            {selectedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="relative group">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-16 h-16 rounded-lg object-cover border border-surface-300 dark:border-surface-600"
+                    />
+                    <button
+                      onClick={() => removeSelectedFile(idx)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      &times;
+                    </button>
+                    <span className="block text-[9px] text-surface-400 mt-0.5 max-w-[64px] truncate">
+                      {file.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleAddEntry}
+              disabled={adding || !text.trim()}
+              className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {adding ? 'Adding...' : 'Add Another'}
+            </button>
+            {(entries.length > 0 || text.trim()) && (
+              <button
+                onClick={handleProcess}
+                disabled={processing || (entries.length === 0 && !text.trim())}
+                className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Processing...' : `Done — Process All (${entries.length + (text.trim() ? 1 : 0)})`}
+              </button>
+            )}
+            {entries.length === 0 && !text.trim() && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {showPreview && previewData && (
+        <RFIPreviewModal
+          title={SECTION_LABELS[sectionKey]}
+          data={previewData}
+          caseId={caseData.case_id}
+          activeTab={previewTab}
+          onTabChange={setPreviewTab}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+// ── RFI Preview Modal ────────────────────────────────────────────
+
+function RFIPreviewModal({ title, data, caseId, activeTab, onTabChange, onClose }) {
+  const content = activeTab === 'ai' ? data.output : data.raw_text;
+  const entries = data.entries || [];
+  const [copied, setCopied] = useState(false);
+  const [expandedEntry, setExpandedEntry] = useState(null);
+
+  function handleCopy() {
+    if (content) {
+      navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-surface-100 dark:bg-surface-900 rounded-lg p-0.5">
+              <button
+                onClick={() => onTabChange('ai')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'ai'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                AI Summary
+              </button>
+              <button
+                onClick={() => onTabChange('entries')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'entries'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                Per-Entry ({entries.length})
+              </button>
+              <button
+                onClick={() => onTabChange('raw')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'raw'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                Raw
+              </button>
+            </div>
+            <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {data.ai_error && activeTab === 'ai' && (
+            <div className="mb-3 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              AI Error: {data.ai_error}
+            </div>
+          )}
+
+          {activeTab === 'entries' ? (
+            <div className="space-y-3">
+              {entries.map((entry, idx) => (
+                <div key={entry.id} className="bg-surface-100 dark:bg-surface-900 rounded-lg border border-surface-200 dark:border-surface-700">
+                  <button
+                    onClick={() => setExpandedEntry(expandedEntry === idx ? null : idx)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left"
+                  >
+                    <span className="text-sm font-medium text-surface-800 dark:text-surface-200">
+                      RFI #{idx + 1}
+                      {entry.images && entry.images.length > 0 && (
+                        <span className="ml-2 text-xs text-surface-400">
+                          ({entry.images.length} doc{entry.images.length !== 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-surface-400 transition-transform ${expandedEntry === idx ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {expandedEntry === idx && (
+                    <div className="px-4 pb-3 space-y-2">
+                      <div className="text-xs text-surface-400 mb-1">Original text:</div>
+                      <pre className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-wrap font-mono bg-white dark:bg-surface-800 rounded p-2">
+                        {entry.text}
+                      </pre>
+                      {entry.images && entry.images.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {entry.images.map((img) => (
+                            <a
+                              key={img.image_id}
+                              href={`/api/ingestion/images/${caseId}/rfis/${entry.id}/${img.image_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <img
+                                src={`/api/ingestion/images/${caseId}/rfis/${entry.id}/${img.image_id}`}
+                                alt={img.filename || 'Document'}
+                                className="w-24 h-24 rounded-lg object-cover border border-surface-600 hover:border-gold-500 transition-colors"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {entry.ai_output && (
+                        <>
+                          <div className="text-xs text-surface-400 mt-3 mb-1">AI analysis:</div>
+                          <pre className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-wrap font-mono bg-emerald-500/5 border border-emerald-500/20 rounded p-2">
+                            {entry.ai_output}
+                          </pre>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
+              {content || 'No content available.'}
+            </pre>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ── Future Section Placeholder ───────────────────────────────────
 
 function FutureSectionCard({ sectionKey, caseData }) {
@@ -1418,6 +2028,14 @@ function FutureSectionCard({ sectionKey, caseData }) {
       await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
     } catch (err) {
       console.error('Failed to mark none:', err);
+    }
+  }
+
+  async function handleReopen() {
+    try {
+      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+    } catch (err) {
+      console.error('Failed to reopen:', err);
     }
   }
 
@@ -1441,7 +2059,15 @@ function FutureSectionCard({ sectionKey, caseData }) {
               onClick={handleMarkNone}
               className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
             >
-              Mark N/A
+              No Data
+            </button>
+          )}
+          {status === 'none' && (
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
             </button>
           )}
         </div>
@@ -1656,7 +2282,7 @@ export default function IngestionPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto px-6 py-6 animate-fade-in">
+      <div className="max-w-7xl mx-auto px-6 py-6 animate-fade-in">
         {/* Page header */}
         <div className="flex items-start justify-between mb-6">
           <div>
@@ -1750,6 +2376,12 @@ export default function IngestionPage() {
               onSaved={handleProcessingStarted}
             />
 
+            {/* KYC Document Summary (future — image-only input) */}
+            <FutureSectionCard
+              sectionKey="kyc"
+              caseData={caseData}
+            />
+
             {/* Prior ICR Summary (iterative entries) */}
             <IterativeEntrySection
               sectionKey="previous_icrs"
@@ -1758,8 +2390,14 @@ export default function IngestionPage() {
               onSaved={handleProcessingStarted}
             />
 
+            {/* RFI Summary (iterative entries with images) */}
+            <RFIEntrySection
+              caseData={caseData}
+              onSaved={handleProcessingStarted}
+            />
+
             {/* Remaining future phase sections */}
-            {['kyc', 'rfis', 'kodex', 'l1_victim', 'l1_suspect'].map((key) => (
+            {['kodex', 'l1_victim', 'l1_suspect'].map((key) => (
               <FutureSectionCard
                 key={key}
                 sectionKey={key}

@@ -12,9 +12,13 @@ All state lives in the MongoDB `ingestion_cases` collection.
 No in-memory session store.
 """
 
+import base64
 import logging
+import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
+from server.config import settings
 from server.database import get_database
 from server.models.ingestion_schemas import (
     ALL_SECTION_KEYS,
@@ -376,28 +380,129 @@ async def save_text_section_with_ai(
     }
 
 
+# ── Image Storage ─────────────────────────────────────────────────
+
+EXT_MAP = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+}
+
+
+def _store_ingestion_images(
+    case_id: str,
+    section_key: str,
+    entry_id: str,
+    files: list[tuple[str, bytes, str]],
+) -> list[dict]:
+    """
+    Store uploaded images to disk for an ingestion entry.
+
+    Args:
+        case_id: The ingestion case ID.
+        section_key: The section key (e.g., 'rfis').
+        entry_id: The entry ID within the section.
+        files: List of (filename, file_bytes, media_type) tuples.
+
+    Returns:
+        List of image reference dicts for MongoDB storage:
+        [{'image_id': str, 'media_type': str, 'stored_path': str, 'filename': str}]
+    """
+    image_dir = (
+        Path(settings.IMAGES_DIR) / 'ingestion' / case_id / section_key / entry_id
+    )
+    image_dir.mkdir(parents=True, exist_ok=True)
+
+    stored = []
+    for filename, file_bytes, media_type in files:
+        image_id = f'img_{uuid.uuid4().hex[:12]}'
+        ext = EXT_MAP.get(media_type, 'bin')
+        filepath = image_dir / f'{image_id}.{ext}'
+
+        try:
+            filepath.write_bytes(file_bytes)
+            logger.info('Stored ingestion image: %s (%d bytes)', filepath, len(file_bytes))
+        except Exception as e:
+            logger.error('Failed to store image %s: %s', image_id, e)
+            continue
+
+        stored.append({
+            'image_id': image_id,
+            'media_type': media_type,
+            'stored_path': str(filepath),
+            'filename': filename,
+        })
+
+    return stored
+
+
+def _load_entry_images_as_base64(entry: dict) -> list[dict]:
+    """
+    Load stored images for an entry from disk and return as base64.
+
+    Returns list of {'base64': str, 'media_type': str} for the AI API.
+    """
+    images = entry.get('images', [])
+    if not images:
+        return []
+
+    result = []
+    for img_ref in images:
+        stored_path = img_ref.get('stored_path', '')
+        if not stored_path:
+            continue
+        path = Path(stored_path)
+        if not path.is_file():
+            logger.warning('Image file not found: %s', stored_path)
+            continue
+        try:
+            img_bytes = path.read_bytes()
+            img_b64 = base64.b64encode(img_bytes).decode('ascii')
+            result.append({
+                'base64': img_b64,
+                'media_type': img_ref['media_type'],
+            })
+        except Exception as e:
+            logger.warning('Failed to load image %s: %s', stored_path, e)
+    return result
+
+
 # ── Iterative Entry Sections (Prior ICR, RFI) ─────────────────────
 
 
-async def add_entry(case_id: str, section_key: str, text: str) -> dict:
+async def add_entry(
+    case_id: str,
+    section_key: str,
+    text: str,
+    images: list[dict] | None = None,
+    entry_id: str | None = None,
+) -> dict:
     """
-    Add a text entry to an iterative section.
+    Add a text entry (with optional image references) to an iterative section.
+
+    Args:
+        case_id: The ingestion case ID.
+        section_key: The section key (e.g., 'previous_icrs', 'rfis').
+        text: The entry text.
+        images: Optional list of image reference dicts (from _store_ingestion_images).
+        entry_id: Optional pre-generated entry ID (used when images are stored first).
 
     Returns the new entry dict with its generated id.
     """
     now = _utcnow()
     col = _collection()
 
-    # Get current entries to generate next id
-    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}.entries': 1})
-    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
-    entry_id = f'entry_{len(entries)}'
+    if not entry_id:
+        entry_id = f'entry_{uuid.uuid4().hex[:8]}'
 
     entry = {
         'id': entry_id,
         'text': text.strip(),
         'added_at': now,
     }
+    if images:
+        entry['images'] = images
 
     await col.update_one(
         {'_id': case_id},
@@ -452,8 +557,10 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
     """
     Combine all entries in an iterative section and run AI processing.
 
-    Concatenates all entry texts (numbered), sends to AI with the
-    section's prompt, stores the result.
+    For most sections: concatenates entry texts, sends to AI, stores result.
+    For RFI ('rfis'): two-stage pipeline:
+      1. Each entry processed individually with prompt-22 (text + images)
+      2. All per-entry narratives combined and sent to prompt-10 for summary
     """
     from server.services.ingestion.ai_processor import process_with_ai
 
@@ -464,22 +571,29 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
     if not entries:
         return {'status': 'empty', 'ai_status': None, 'ai_error': 'No entries to process'}
 
-    # Combine entries into numbered text
-    parts = []
-    for i, entry in enumerate(entries, 1):
-        parts.append(f'--- Entry {i} ---\n{entry["text"]}')
-    combined_text = '\n\n'.join(parts)
-
     now = _utcnow()
     await col.update_one(
         {'_id': case_id},
         {'$set': {
             f'sections.{section_key}.status': 'processing',
             f'sections.{section_key}.ai_status': 'processing',
-            f'sections.{section_key}.raw_text': combined_text,
             f'sections.{section_key}.updated_at': now,
             'updated_at': now,
         }},
+    )
+
+    if section_key == 'rfis':
+        return await _process_rfi_entries(case_id, section_key, entries)
+
+    # Default path: combine entries into numbered text, single AI call
+    parts = []
+    for i, entry in enumerate(entries, 1):
+        parts.append(f'--- Entry {i} ---\n{entry["text"]}')
+    combined_text = '\n\n'.join(parts)
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {f'sections.{section_key}.raw_text': combined_text}},
     )
 
     ai_result = await process_with_ai(section_key, combined_text)
@@ -489,6 +603,95 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
         output = ai_result['ai_output']
         ai_status = 'complete'
         ai_error = None
+    else:
+        output = combined_text
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI processing returned no output')
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'complete',
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.raw_text': combined_text,
+            f'sections.{section_key}.ai_status': ai_status,
+            f'sections.{section_key}.ai_error': ai_error,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
+    return {
+        'status': 'complete',
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+        'entry_count': len(entries),
+    }
+
+
+async def _process_rfi_entries(
+    case_id: str, section_key: str, entries: list[dict],
+) -> dict:
+    """
+    Two-stage RFI processing:
+      Stage 1: Each entry → prompt-22 (rfi_doc_review) with text + images
+      Stage 2: All per-entry outputs combined → prompt-10 (rfis) for summary
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    col = _collection()
+
+    # Stage 1: Process each entry individually
+    entry_narratives = []
+    entry_errors = []
+
+    for i, entry in enumerate(entries, 1):
+        # Load images from disk if this entry has them
+        images_b64 = _load_entry_images_as_base64(entry)
+
+        ai_result = await process_with_ai(
+            'rfi_doc_review',
+            entry['text'],
+            images=images_b64 if images_b64 else None,
+        )
+
+        if ai_result.get('ai_output'):
+            narrative = ai_result['ai_output']
+        else:
+            # Fallback: use raw text
+            narrative = entry['text']
+            entry_errors.append(f'Entry {i}: {ai_result.get("error", "no output")}')
+
+        entry_narratives.append(narrative)
+
+        # Store per-entry AI output back on the entry
+        await col.update_one(
+            {'_id': case_id, f'sections.{section_key}.entries.id': entry['id']},
+            {'$set': {
+                f'sections.{section_key}.entries.$.ai_output': narrative,
+            }},
+        )
+
+    # Stage 2: Combine all per-entry narratives, send to prompt-10
+    combined_parts = []
+    for i, narrative in enumerate(entry_narratives, 1):
+        combined_parts.append(f'--- RFI {i} ---\n{narrative}')
+    combined_text = '\n\n'.join(combined_parts)
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {f'sections.{section_key}.raw_text': combined_text}},
+    )
+
+    ai_result = await process_with_ai('rfis', combined_text)
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete' if not entry_errors else 'partial'
+        ai_error = '; '.join(entry_errors) if entry_errors else None
     else:
         output = combined_text
         ai_status = 'error'

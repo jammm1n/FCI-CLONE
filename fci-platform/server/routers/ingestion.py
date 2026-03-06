@@ -25,10 +25,12 @@ Endpoint overview:
 
 import asyncio
 import logging
-from typing import List
+import mimetypes
+from pathlib import Path
+from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse, PlainTextResponse
 
 from server.routers.auth import get_current_user
 from server.services.ingestion import ingestion_service
@@ -793,6 +795,18 @@ async def mark_section_none(
     return {'section': section_key, 'status': 'none'}
 
 
+@router.post('/cases/{case_id}/sections/{section_key}/reopen')
+async def reopen_section(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reopen a section that was marked as N/A, setting it back to empty."""
+    await _get_case_or_404(case_id)
+    await ingestion_service.update_section(case_id, section_key, 'empty')
+    return {'section': section_key, 'status': 'empty'}
+
+
 # ── Investigator Notes ────────────────────────────────────────────
 
 
@@ -866,7 +880,7 @@ async def get_text_section(
 
 # ── Iterative Entry Sections (Prior ICR) ─────────────────────────
 
-_ITERATIVE_SECTIONS = {'previous_icrs'}
+_ITERATIVE_SECTIONS = {'previous_icrs', 'rfis'}
 
 
 @router.post('/cases/{case_id}/entries/{section_key}')
@@ -939,6 +953,96 @@ async def get_entries(
         'ai_error': section.get('ai_error'),
         'updated_at': section.get('updated_at'),
     }
+
+
+# ── Entry with Images (RFI) ───────────────────────────────────────
+
+_IMAGE_SECTIONS = {'rfis'}
+_ALLOWED_IMAGE_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+
+
+@router.post('/cases/{case_id}/entries/{section_key}/with-images')
+async def add_entry_with_images(
+    case_id: str,
+    section_key: str,
+    text: str = Form(...),
+    files: Optional[List[UploadFile]] = File(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Add an entry with optional image attachments to an iterative section.
+
+    Accepts multipart form data: text field + optional image files.
+    Images are stored to disk; MongoDB stores references only.
+    """
+    if section_key not in _IMAGE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Image entries not supported for section: {section_key}. '
+                   f'Allowed: {", ".join(sorted(_IMAGE_SECTIONS))}',
+        )
+    await _get_case_or_404(case_id)
+
+    if not text.strip():
+        raise HTTPException(status_code=400, detail='Text cannot be empty.')
+
+    # Read and validate image files
+    image_refs = []
+    entry_id = None
+    if files:
+        from server.services.ingestion.ingestion_service import _store_ingestion_images
+        import uuid
+
+        entry_id = f'entry_{uuid.uuid4().hex[:8]}'
+
+        file_data = []
+        for f in files:
+            if not f.content_type or f.content_type not in _ALLOWED_IMAGE_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'Only image files (JPEG, PNG, GIF, WebP) accepted. '
+                           f'Got: {f.content_type} for {f.filename}',
+                )
+            content = await f.read()
+            file_data.append((f.filename or 'image', content, f.content_type))
+
+        image_refs = _store_ingestion_images(case_id, section_key, entry_id, file_data)
+
+    # Add entry with image references
+    entry = await ingestion_service.add_entry(
+        case_id, section_key, text,
+        images=image_refs if image_refs else None,
+        entry_id=entry_id,
+    )
+    return entry
+
+
+# ── Ingestion Image Serving ───────────────────────────────────────
+
+
+@router.get('/images/{case_id}/{section_key}/{entry_id}/{image_id}')
+async def get_ingestion_image(
+    case_id: str,
+    section_key: str,
+    entry_id: str,
+    image_id: str,
+):
+    """Serve a stored ingestion image file."""
+    from server.config import settings
+
+    image_dir = (
+        Path(settings.IMAGES_DIR) / 'ingestion' / case_id / section_key / entry_id
+    )
+    if not image_dir.is_dir():
+        raise HTTPException(status_code=404, detail='Image not found')
+
+    matches = list(image_dir.glob(f'{image_id}.*'))
+    if not matches:
+        raise HTTPException(status_code=404, detail='Image not found')
+
+    filepath = matches[0]
+    media_type = mimetypes.guess_type(str(filepath))[0] or 'application/octet-stream'
+    return FileResponse(filepath, media_type=media_type)
 
 
 # ── Reset ─────────────────────────────────────────────────────────

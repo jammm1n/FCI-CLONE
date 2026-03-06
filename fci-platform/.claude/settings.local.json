@@ -6,7 +6,8 @@
       "Bash(grep:*)",
       "Bash(python:*)",
       "Bash(npm run:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

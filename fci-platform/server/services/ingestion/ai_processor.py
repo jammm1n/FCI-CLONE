@@ -13,6 +13,7 @@ Key design decisions:
   - Does NOT reuse ai_client.py (too complex for simple batch calls)
 """
 
+import base64
 import logging
 from pathlib import Path
 
@@ -46,6 +47,7 @@ SECTION_PROMPT_MAP = {
     'raw_hex_dump': 'prompt-21-haoDesk-cleanup.md',
     'previous_icrs': 'prompt-04-prior-icr.md',
     'rfis':         'prompt-10-rfi-summary.md',
+    'rfi_doc_review': 'prompt-22-rfi-document-review.md',
 }
 
 # ── Prompt Loading ───────────────────────────────────────────────
@@ -118,6 +120,7 @@ async def process_with_ai(
     processor_id: str,
     raw_content: str,
     variables: dict | None = None,
+    images: list[dict] | None = None,
 ) -> dict:
     """
     Send raw processor output through AI with the mapped prompt.
@@ -127,6 +130,8 @@ async def process_with_ai(
         raw_content: The raw text output from the processor.
         variables: Optional dict of placeholder values to inject
                    (e.g., {'nationality': 'US', 'residence': 'UK'}).
+        images: Optional list of image dicts for vision API.
+                Each dict: {'base64': str, 'media_type': str}.
 
     Returns:
         {
@@ -137,7 +142,10 @@ async def process_with_ai(
             'error': str | None,       # Error message if failed
         }
     """
-    prompt_file = PROCESSOR_PROMPT_MAP.get(processor_id, '')
+    prompt_file = (
+        PROCESSOR_PROMPT_MAP.get(processor_id)
+        or SECTION_PROMPT_MAP.get(processor_id, '')
+    )
     model = settings.ANTHROPIC_MODEL
     result = {
         'ai_output': None,
@@ -158,6 +166,22 @@ async def process_with_ai(
     if variables:
         prompt_text = _inject_variables(prompt_text, variables)
 
+    # Build user message content — plain text or multimodal (images + text)
+    if images:
+        user_content = []
+        for img in images:
+            user_content.append({
+                'type': 'image',
+                'source': {
+                    'type': 'base64',
+                    'media_type': img['media_type'],
+                    'data': img['base64'],
+                },
+            })
+        user_content.append({'type': 'text', 'text': raw_content})
+    else:
+        user_content = raw_content
+
     # Call the API
     try:
         client = _get_client()
@@ -166,7 +190,7 @@ async def process_with_ai(
             max_tokens=settings.ANTHROPIC_MAX_TOKENS,
             system=prompt_text,
             messages=[
-                {'role': 'user', 'content': raw_content},
+                {'role': 'user', 'content': user_content},
             ],
         )
 

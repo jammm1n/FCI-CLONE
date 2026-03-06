@@ -164,6 +164,14 @@ export async function markSectionNone(token, caseId, sectionKey) {
   return handleResponse(res);
 }
 
+export async function reopenSection(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/sections/${sectionKey}/reopen`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 // ── Notes ────────────────────────────────────────────────────────
 
 export async function saveNotes(token, caseId, notes) {
@@ -200,6 +208,22 @@ export async function addEntry(token, caseId, sectionKey, text) {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ text }),
+  });
+  return handleResponse(res);
+}
+
+export async function addEntryWithImages(token, caseId, sectionKey, text, files) {
+  const formData = new FormData();
+  formData.append('text', text);
+  if (files && files.length > 0) {
+    for (const file of files) {
+      formData.append('files', file);
+    }
+  }
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/with-images`, {
+    method: 'POST',
+    headers: bearerOnly(token),
+    body: formData,
   });
   return handleResponse(res);
 }
