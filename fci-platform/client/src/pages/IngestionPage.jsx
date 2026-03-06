@@ -44,22 +44,155 @@ function StatusDot({ status }) {
   );
 }
 
+// ── Preview Modal ────────────────────────────────────────────────
+
+function PreviewModal({ title, content, onClose }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-surface-800 rounded-2xl w-[90%] max-w-4xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100">
+            {title}
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">
+          <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
+            {content || 'No output available.'}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Preview Button ───────────────────────────────────────────────
+
+function PreviewButton({ token, caseId, sectionKey, label }) {
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
+
+  async function handleClick() {
+    setLoading(true);
+    try {
+      const data = await ingestionApi.getSectionOutput(token, caseId, sectionKey);
+      setPreview(data.output || 'No output available.');
+    } catch (err) {
+      setPreview(`Error loading preview: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        title="Preview output"
+        className="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 hover:text-gold-500 transition-colors disabled:opacity-50"
+      >
+        {loading ? (
+          <LoadingSpinner size="sm" />
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+      {preview !== null && (
+        <PreviewModal
+          title={label}
+          content={preview}
+          onClose={() => setPreview(null)}
+        />
+      )}
+    </>
+  );
+}
+
+// ── User Info Card ───────────────────────────────────────────────
+
+function UserInfoCard({ userInfo, uid }) {
+  if (!userInfo && !uid) return null;
+
+  const fields = [];
+  if (uid) fields.push(['User ID', uid]);
+  if (userInfo) {
+    if (userInfo.full_name) fields.push(['Name', userInfo.full_name]);
+    if (userInfo.email) fields.push(['Email', userInfo.email]);
+    if (userInfo.nationality) fields.push(['Nationality', userInfo.nationality]);
+    if (userInfo.auth_type) fields.push(['Account Type', userInfo.auth_type]);
+    if (userInfo.registration_time) fields.push(['Registered', userInfo.registration_time]);
+    if (userInfo.status) fields.push(['Status', userInfo.status]);
+  }
+
+  if (fields.length === 0) return null;
+
+  return (
+    <div className="rounded-lg bg-surface-200/50 dark:bg-surface-700/50 border border-surface-300/50 dark:border-surface-600/50 p-3 space-y-1.5">
+      {fields.map(([label, value]) => (
+        <div key={label} className="flex items-baseline gap-2 text-xs">
+          <span className="text-surface-500 dark:text-surface-400 min-w-[90px]">{label}</span>
+          <span className={`font-mono ${label === 'User ID' ? 'text-gold-500 font-semibold text-sm' : 'text-surface-800 dark:text-surface-200'}`}>
+            {value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Case Creation Form ───────────────────────────────────────────
 
 function CaseCreationForm({ onCreated }) {
   const { token } = useAuth();
   const [caseId, setCaseId] = useState('');
-  const [subjectUid, setSubjectUid] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!caseId.trim() || !subjectUid.trim()) return;
+    if (!caseId.trim()) return;
     setCreating(true);
     setError('');
     try {
-      const result = await ingestionApi.createCase(token, caseId.trim(), subjectUid.trim());
+      const result = await ingestionApi.createCase(token, caseId.trim());
       onCreated(result);
     } catch (err) {
       if (err.data?.existing_case_id) {
@@ -75,38 +208,24 @@ function CaseCreationForm({ onCreated }) {
   return (
     <form onSubmit={handleSubmit} className="bg-surface-100 dark:bg-surface-800 rounded-xl p-6 border border-surface-200 dark:border-surface-700">
       <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100 mb-4">Create New Case</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-            HowDesk Case Number
-          </label>
-          <input
-            type="text"
-            value={caseId}
-            onChange={(e) => setCaseId(e.target.value)}
-            placeholder="CASE-2026-0451"
-            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
-            Subject UID
-          </label>
-          <input
-            type="text"
-            value={subjectUid}
-            onChange={(e) => setSubjectUid(e.target.value)}
-            placeholder="BIN-84729103"
-            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
-          />
-        </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+          HowDesk Case Number
+        </label>
+        <input
+          type="text"
+          value={caseId}
+          onChange={(e) => setCaseId(e.target.value)}
+          placeholder="CASE-2026-0451"
+          className="w-full max-w-sm px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+        />
       </div>
       {error && (
         <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>
       )}
       <button
         type="submit"
-        disabled={creating || !caseId.trim() || !subjectUid.trim()}
+        disabled={creating || !caseId.trim()}
         className="px-5 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {creating ? 'Creating...' : 'Create Case'}
@@ -117,19 +236,23 @@ function CaseCreationForm({ onCreated }) {
 
 // ── C360 Upload Section ──────────────────────────────────────────
 
-function C360Section({ caseData, onProcessingStarted, onCaseUpdated }) {
+function C360Section({ caseData, onProcessingStarted }) {
   const { token } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
-  const [editingUid, setEditingUid] = useState(false);
-  const [uidValue, setUidValue] = useState('');
-  const [savingUid, setSavingUid] = useState(false);
+
+  // Quick info returned synchronously from upload
+  const [quickInfo, setQuickInfo] = useState(null);
 
   const c360 = caseData.sections?.c360 || {};
   const status = c360.status || 'empty';
+
+  // Reconstruct quick info from stored c360 data (for page reload during processing)
+  const userInfo = quickInfo?.user_info || c360.user_info || null;
+  const detectedUid = quickInfo?.file_uid || c360.detected_uid || caseData.subject_uid || '';
 
   function filterValidFiles(fileList) {
     return Array.from(fileList).filter((f) => {
@@ -143,7 +266,13 @@ function C360Section({ caseData, onProcessingStarted, onCaseUpdated }) {
     setUploading(true);
     setError('');
     try {
-      await ingestionApi.uploadC360(token, caseData.case_id, files);
+      const result = await ingestionApi.uploadC360(token, caseData.case_id, files);
+      // Store quick info from synchronous response
+      setQuickInfo({
+        file_uid: result.file_uid || '',
+        user_info: result.user_info || null,
+        detected_file_types: result.detected_file_types || [],
+      });
       setFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
       onProcessingStarted();
@@ -181,7 +310,17 @@ function C360Section({ caseData, onProcessingStarted, onCaseUpdated }) {
         <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
           {SECTION_LABELS.c360}
         </h4>
-        <StatusDot status={status} />
+        <div className="flex items-center gap-2">
+          {status === 'complete' && (
+            <PreviewButton
+              token={token}
+              caseId={caseData.case_id}
+              sectionKey="c360"
+              label={SECTION_LABELS.c360}
+            />
+          )}
+          <StatusDot status={status} />
+        </div>
       </div>
 
       {status === 'empty' && (
@@ -233,121 +372,41 @@ function C360Section({ caseData, onProcessingStarted, onCaseUpdated }) {
       )}
 
       {status === 'processing' && (
-        <div className="flex items-center gap-2 text-sm text-gold-500">
-          <LoadingSpinner size="sm" />
-          Processing C360 data...
+        <div className="space-y-3">
+          <UserInfoCard userInfo={userInfo} uid={detectedUid} />
+          {detectedUid && (
+            <p className="text-xs text-surface-400 italic">
+              Verify this is the correct user ID for the case you are investigating.
+            </p>
+          )}
+          <div className="flex items-center gap-2 text-sm text-gold-500">
+            <LoadingSpinner size="sm" />
+            Processing C360 data...
+          </div>
         </div>
       )}
 
-      {status === 'complete' && (() => {
-        const detectedUid = c360.detected_uid || '';
-        const enteredUid = caseData.subject_uid || '';
-        const uidMismatch = detectedUid && enteredUid && detectedUid !== enteredUid;
-
-        async function handleSaveUid(newUid) {
-          setSavingUid(true);
-          try {
-            await ingestionApi.updateSubjectUid(token, caseData.case_id, newUid);
-            setEditingUid(false);
-            if (onCaseUpdated) onCaseUpdated();
-          } catch (err) {
-            setError(err.message || 'Failed to update UID');
-          } finally {
-            setSavingUid(false);
-          }
-        }
-
-        return (
-          <div className="space-y-2">
-            {uidMismatch && !editingUid && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                <div className="flex items-start gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-red-500 shrink-0 mt-0.5">
-                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-red-500">UID Mismatch</p>
-                    <p className="text-xs text-red-400 mt-0.5">
-                      You entered: <span className="font-mono font-semibold">{enteredUid}</span>
-                    </p>
-                    <p className="text-xs text-red-400">
-                      Files contain: <span className="font-mono font-semibold">{detectedUid}</span>
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <button
-                        onClick={() => handleSaveUid(detectedUid)}
-                        disabled={savingUid}
-                        className="px-3 py-1 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
-                      >
-                        {savingUid ? 'Updating...' : `Use ${detectedUid}`}
-                      </button>
-                      <button
-                        onClick={() => { setEditingUid(true); setUidValue(enteredUid); }}
-                        className="px-3 py-1 rounded-md bg-surface-600/50 hover:bg-surface-600/70 text-surface-300 text-xs font-medium transition-colors"
-                      >
-                        Edit UID manually
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {editingUid && (
-              <div className="p-3 rounded-lg bg-surface-700/50 border border-surface-600">
-                <p className="text-xs text-surface-400 mb-2">
-                  Update subject UID (files detected: <span className="font-mono">{detectedUid}</span>)
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={uidValue}
-                    onChange={(e) => setUidValue(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface-900 border border-surface-600 text-surface-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
-                  />
-                  <button
-                    onClick={() => handleSaveUid(uidValue.trim())}
-                    disabled={savingUid || !uidValue.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-xs transition-colors disabled:opacity-50"
-                  >
-                    {savingUid ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setEditingUid(false)}
-                    className="px-3 py-1.5 rounded-lg bg-surface-600 hover:bg-surface-500 text-surface-300 text-xs transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!uidMismatch && detectedUid && !editingUid && (
-              <p className="text-xs text-emerald-500">
-                UID confirmed: <span className="font-mono">{detectedUid}</span> matches entered UID
-              </p>
-            )}
-
-            {!detectedUid && !editingUid && (
-              <p className="text-xs text-surface-500">
-                No UID detected in uploaded files.
-              </p>
-            )}
-
-            <p className="text-sm text-emerald-500 dark:text-emerald-400">
-              Processing complete. {(c360.detected_file_types || []).length} file types detected.
+      {status === 'complete' && (
+        <div className="space-y-3">
+          <UserInfoCard userInfo={userInfo} uid={detectedUid} />
+          {detectedUid && (
+            <p className="text-xs text-surface-400 italic">
+              Verify this is the correct user ID for the case you are investigating.
             </p>
-            {(c360.warnings || []).length > 0 && (
-              <div className="text-xs text-amber-500 space-y-1">
-                {c360.warnings.map((w, i) => (
-                  <p key={i}>{w.message}</p>
-                ))}
-              </div>
-            )}
-            <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
-          </div>
-        );
-      })()}
+          )}
+          <p className="text-sm text-emerald-500 dark:text-emerald-400">
+            Processing complete. {(c360.detected_file_types || []).length} file types detected.
+          </p>
+          {(c360.warnings || []).length > 0 && (
+            <div className="text-xs text-amber-500 space-y-1">
+              {c360.warnings.map((w, i) => (
+                <p key={i}>{w.message}</p>
+              ))}
+            </div>
+          )}
+          <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
+        </div>
+      )}
 
       {status === 'error' && (
         <p className="text-sm text-red-500 dark:text-red-400">
@@ -433,6 +492,14 @@ function AdditionalInputsSection({ caseData, onSaved }) {
       // Save extra wallets
       const wallets = extraWallets.split('\n').map((w) => w.trim()).filter(Boolean);
       await ingestionApi.addManualAddresses(token, caseData.case_id, wallets);
+
+      // Run address cross-reference (includes manual wallets vs UOL)
+      await ingestionApi.runAddressXref(token, caseData.case_id);
+
+      // Run UID search if UIDs were provided
+      if (uids.length > 0) {
+        await ingestionApi.runUidSearch(token, caseData.case_id);
+      }
 
       setEditing(false);
       if (onSaved) onSaved();
@@ -571,7 +638,17 @@ function EllipticSection({ caseData, onProcessingStarted }) {
         <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
           {SECTION_LABELS.elliptic}
         </h4>
-        <StatusDot status={ellStatus} />
+        <div className="flex items-center gap-2">
+          {ellStatus === 'complete' && (
+            <PreviewButton
+              token={token}
+              caseId={caseData.case_id}
+              sectionKey="elliptic"
+              label={SECTION_LABELS.elliptic}
+            />
+          )}
+          <StatusDot status={ellStatus} />
+        </div>
       </div>
 
       {!c360Complete && ellStatus === 'empty' && (
@@ -729,7 +806,7 @@ function FutureSectionCard({ sectionKey, caseData }) {
 
 // ── Assembled Output Modal ───────────────────────────────────────
 
-function AssembledOutputModal({ markdown, onClose }) {
+function AssembledOutputModal({ caseId, markdown, onClose }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -737,6 +814,24 @@ function AssembledOutputModal({ markdown, onClose }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+
+  function handleDownload() {
+    const blob = new Blob([markdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${caseId}_case_document.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  useEffect(() => {
+    function handleKey(e) {
+      if (e.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -749,6 +844,12 @@ function AssembledOutputModal({ markdown, onClose }) {
             Assembled Case Data
           </h3>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold-500 hover:bg-gold-600 text-surface-900 transition-colors"
+            >
+              Download .md
+            </button>
             <button
               onClick={handleCopy}
               className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
@@ -784,6 +885,8 @@ export default function IngestionPage() {
   const [error, setError] = useState('');
   const [assembledMarkdown, setAssembledMarkdown] = useState(null);
   const [assembling, setAssembling] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // Fetch active case on mount
   useEffect(() => {
@@ -805,7 +908,6 @@ export default function IngestionPage() {
   // Polling callback — refresh full case data when status changes
   const handleStatusUpdate = useCallback(
     async (status) => {
-      // If any section just completed, fetch full case data
       const sections = status.sections || {};
       const anyProcessing = Object.values(sections).some((s) => s.status === 'processing');
       if (!anyProcessing && caseData?.case_id) {
@@ -832,7 +934,6 @@ export default function IngestionPage() {
 
   function handleProcessingStarted() {
     startPolling();
-    // Also refresh immediately
     if (caseData?.case_id) {
       ingestionApi.getCase(token, caseData.case_id).then(setCaseData).catch(() => {});
     }
@@ -847,6 +948,19 @@ export default function IngestionPage() {
       setError(err.message);
     } finally {
       setAssembling(false);
+    }
+  }
+
+  async function handleReset() {
+    setResetting(true);
+    try {
+      const result = await ingestionApi.resetCase(token, caseData.case_id);
+      setCaseData(result);
+      setConfirmReset(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -876,17 +990,47 @@ export default function IngestionPage() {
     <AppLayout>
       <div className="max-w-3xl mx-auto px-6 py-6 animate-fade-in">
         {/* Page header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-100">
-            Data Ingestion
-          </h2>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-surface-900 dark:text-surface-100">
+              Data Ingestion
+            </h2>
+            {caseData && (
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-sm font-mono text-surface-500">{caseData.case_id}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300">
+                  {caseData.status}
+                </span>
+              </div>
+            )}
+          </div>
           {caseData && (
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-sm font-mono text-surface-500">{caseData.case_id}</span>
-              <span className="text-sm text-surface-400">UID: {caseData.subject_uid}</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300">
-                {caseData.status}
-              </span>
+            <div className="flex items-center gap-2">
+              {!confirmReset ? (
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  Reset Case
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-400">Clear all data?</span>
+                  <button
+                    onClick={handleReset}
+                    disabled={resetting}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                  >
+                    {resetting ? 'Resetting...' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmReset(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-300 dark:border-surface-600 text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -908,7 +1052,6 @@ export default function IngestionPage() {
             <C360Section
               caseData={caseData}
               onProcessingStarted={handleProcessingStarted}
-              onCaseUpdated={() => ingestionApi.getCase(token, caseData.case_id).then(setCaseData).catch(() => {})}
             />
 
             {/* Additional UIDs + Wallets (appears after C360 completes) */}
@@ -957,6 +1100,7 @@ export default function IngestionPage() {
       {/* Assembled output modal */}
       {assembledMarkdown && (
         <AssembledOutputModal
+          caseId={caseData?.case_id || 'case'}
           markdown={assembledMarkdown}
           onClose={() => setAssembledMarkdown(null)}
         />

@@ -27,14 +27,12 @@ async function handleResponse(res) {
 
 // ── Case Management ──────────────────────────────────────────────
 
-export async function createCase(token, caseId, subjectUid, coconspirators = []) {
+export async function createCase(token, caseId) {
   const res = await fetch(`${BASE_URL}/cases`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({
       case_id: caseId,
-      subject_uid: subjectUid,
-      coconspirator_uids: coconspirators,
     }),
   });
   return handleResponse(res);
@@ -56,6 +54,14 @@ export async function getCase(token, caseId) {
 
 export async function getCaseStatus(token, caseId) {
   const res = await fetch(`${BASE_URL}/cases/${caseId}/status`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function resetCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/reset`, {
+    method: 'POST',
     headers: authHeaders(token),
   });
   return handleResponse(res);
@@ -113,13 +119,29 @@ export async function getEllipticOutput(token, caseId) {
   return handleResponse(res);
 }
 
-// ── UIDs ─────────────────────────────────────────────────────
+// ── Cross-Reference & UID Search ─────────────────────────────────
 
-export async function updateSubjectUid(token, caseId, subjectUid) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/uids`, {
-    method: 'PUT',
+export async function runAddressXref(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/address-xref`, {
+    method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({ subject_uid: subjectUid }),
+  });
+  return handleResponse(res);
+}
+
+export async function runUidSearch(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/uid-search`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ── Section Output (for preview) ─────────────────────────────────
+
+export async function getSectionOutput(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/${sectionKey}`, {
+    headers: authHeaders(token),
   });
   return handleResponse(res);
 }

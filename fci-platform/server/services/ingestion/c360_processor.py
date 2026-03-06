@@ -23,8 +23,11 @@ Key design decisions:
 """
 
 import asyncio
+import io
 import logging
 import traceback
+
+import openpyxl
 
 from ..icr.parser import parse_uploaded_file
 from ..icr.file_detector import classify_files
@@ -297,6 +300,79 @@ def _build_uol_info(uol_data):
     }
 
 
+# ── Quick Extraction (synchronous) ────────────────────────────────
+
+
+def _is_uol_file(filename, file_bytes):
+    """
+    Lightweight UOL detection — reads only sheet names, no cell data.
+
+    Returns True if the file is a UOL workbook (multi-sheet with
+    'Customer Information' tab). Used to skip UOL during quick
+    extraction since parsing all UOL tabs is slow.
+    """
+    if not filename.lower().endswith(('.xlsx', '.xls')):
+        return False
+    try:
+        wb = openpyxl.load_workbook(
+            io.BytesIO(file_bytes), read_only=True, data_only=True,
+        )
+        try:
+            names = [n.lower().strip() for n in wb.sheetnames]
+            return 'customer information' in names and len(wb.sheetnames) >= 3
+        finally:
+            wb.close()
+    except Exception:
+        return False
+
+
+def _extract_quick_info(files_bytes):
+    """
+    Fast extraction of UID from uploaded files.
+
+    Skips UOL workbooks (slow to parse) — only parses lightweight
+    C360 CSVs and single-sheet Excel files. UID comes from
+    DEVICE_SUM or ADDR_VALUE fallback chain. User info from UOL
+    populates later when the full background pipeline completes.
+
+    Returns:
+        Dict with file_uid, detected_file_types.
+    """
+    parsed_files = []
+    for name, content in files_bytes:
+        # Skip UOL workbooks — too slow for quick extraction
+        if _is_uol_file(name, content):
+            continue
+        try:
+            result = parse_uploaded_file(name, content)
+            parsed_files.append(result)
+        except Exception as e:
+            logger.warning('Quick parse failed for %s: %s', name, e)
+            parsed_files.append({
+                'filename': name,
+                'error': str(e),
+                'headers': [],
+                'rows': [],
+            })
+
+    # Classify (no UOL data since we skipped it)
+    detected, undetected, uol_data = classify_files(parsed_files)
+
+    # Extract UID from C360 files only (DEVICE_SUM or ADDR_VALUE)
+    file_uid = _extract_subject_uid(detected, None)
+
+    return {
+        'file_uid': file_uid or '',
+        'user_info': None,
+        'detected_file_types': list(detected.keys()),
+    }
+
+
+async def extract_quick_info(files_bytes):
+    """Async wrapper for quick extraction. Offloads to thread pool."""
+    return await asyncio.to_thread(_extract_quick_info, files_bytes)
+
+
 # ── Sync Pipeline ─────────────────────────────────────────────────
 
 
@@ -451,6 +527,23 @@ def _run_sync_pipeline(files_bytes, params):
         for f in (undetected or [])
     ]
 
+    # Extract customer_info from UOL for user_info display
+    uol_customer_info = None
+    if uol_data and uol_data.get('customer_info'):
+        uol_customer_info = uol_data['customer_info']
+
+    # Build UOL raw data for cross-referencing (address manager, UID search)
+    uol_raw_data = None
+    if uol_data:
+        uol_raw_data = {
+            'crypto_withdrawals': uol_data.get('crypto_withdrawals', []),
+            'crypto_deposits': uol_data.get('crypto_deposits', []),
+            'binance_pay': uol_data.get('binance_pay', []),
+            'p2p_transactions': uol_data.get('p2p_transactions', []),
+            'fiat_withdrawals': uol_data.get('fiat_withdrawals', []),
+            'fiat_deposits': uol_data.get('fiat_deposits', []),
+        }
+
     return {
         'output': assembled_output,
         'wallet_addresses': wallet_addresses,
@@ -470,6 +563,8 @@ def _run_sync_pipeline(files_bytes, params):
         ],
         'auto_populate': auto_populated,
         'uol_info': _build_uol_info(uol_data),
+        'uol_customer_info': uol_customer_info,
+        'uol_raw_data': uol_raw_data,
     }
 
 

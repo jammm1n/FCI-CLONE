@@ -17,9 +17,11 @@ Endpoint overview:
   GET    /cases/{case_id}/elliptic          Get Elliptic section output
   POST   /cases/{case_id}/sections/{key}/none  Mark section as N/A
   PUT    /cases/{case_id}/notes             Save investigator notes
+  POST   /cases/{case_id}/reset             Reset case to initial state
   POST   /cases/{case_id}/assemble          Assemble final case markdown
 """
 
+import asyncio
 import logging
 from typing import List
 
@@ -30,6 +32,8 @@ from server.routers.auth import get_current_user
 from server.services.ingestion import ingestion_service
 from server.services.ingestion import c360_processor
 from server.services.ingestion import elliptic_processor
+from server.services.icr.address_manager import build_address_list
+from server.services.icr.uid_search import search_associated_uids
 from server.models.ingestion_schemas import (
     CreateIngestionCaseRequest,
     ManualAddressesRequest,
@@ -57,6 +61,7 @@ async def _get_case_or_404(case_id: str) -> dict:
 def _serialize_case(doc: dict) -> dict:
     """Convert MongoDB document to JSON-safe response."""
     doc['case_id'] = doc.pop('_id')
+    doc.pop('uol_raw_data', None)  # Don't send raw UOL data to frontend
     return doc
 
 
@@ -128,7 +133,12 @@ async def upload_c360(
     files: List[UploadFile] = File(...),
     current_user: dict = Depends(get_current_user),
 ):
-    """Upload C360 spreadsheet files and trigger background processing."""
+    """
+    Upload C360 spreadsheet files and trigger background processing.
+
+    Returns extracted UID and user info synchronously (fast parse),
+    then runs the full processor pipeline in the background.
+    """
     case = await _get_case_or_404(case_id)
 
     # Guard: don't reprocess if already complete or processing
@@ -159,21 +169,40 @@ async def upload_c360(
         content = await f.read()
         files_bytes.append((f.filename, content))
 
-    params = {'subject_uid': case.get('subject_uid', '')}
+    # Quick extraction: parse files, extract UID + user info (fast, ~1s)
+    quick_info = await c360_processor.extract_quick_info(files_bytes)
 
-    # Record upload count immediately
+    # Write extracted UID to the case document immediately
+    file_uid = quick_info.get('file_uid', '')
+    if file_uid:
+        from server.database import get_database
+        await get_database()['ingestion_cases'].update_one(
+            {'_id': case_id},
+            {'$set': {'subject_uid': file_uid}},
+        )
+
+    # Record upload + quick extraction results, set status to processing
     await ingestion_service.update_section(
         case_id, 'c360', 'processing',
-        extra_fields={'files_uploaded': len(files_bytes)},
+        extra_fields={
+            'files_uploaded': len(files_bytes),
+            'detected_uid': file_uid,
+            'user_info': quick_info.get('user_info'),
+            'detected_file_types': quick_info.get('detected_file_types', []),
+        },
     )
 
+    # Kick off full processor pipeline in background
+    params = {'subject_uid': file_uid or case.get('subject_uid', '')}
     background_tasks.add_task(_process_c360_background, case_id, files_bytes, params)
 
     return {
         'accepted': True,
         'files_received': len(files_bytes),
         'section_status': 'processing',
-        'message': 'Processing started. Poll /status for updates.',
+        'file_uid': file_uid,
+        'user_info': quick_info.get('user_info'),
+        'detected_file_types': quick_info.get('detected_file_types', []),
     }
 
 
@@ -193,6 +222,17 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                     {'$set': {'subject_uid': result['subject_uid']}},
                 )
 
+        # Build user_info: prefer UOL customer_info (has name, email, etc.)
+        # over quick extraction (which skipped UOL)
+        user_info = result.get('uol_customer_info')
+        if not user_info:
+            # Fall back to whatever quick extraction stored
+            case_now = await ingestion_service.get_case(case_id)
+            user_info = (
+                case_now.get('sections', {}).get('c360', {}).get('user_info')
+                if case_now else None
+            )
+
         await ingestion_service.update_section(
             case_id, 'c360', 'complete',
             output=result['output'],
@@ -206,8 +246,39 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 'csv_content': result['csv_content'],
                 'csv_filename': result['csv_filename'],
                 'detected_uid': result.get('file_uid', ''),
+                'user_info': user_info,
             },
         )
+
+        # Store UOL raw data for cross-referencing (address manager, UID search)
+        if result.get('uol_raw_data'):
+            from server.database import get_database
+            await get_database()['ingestion_cases'].update_one(
+                {'_id': case_id},
+                {'$set': {'uol_raw_data': result['uol_raw_data']}},
+            )
+
+        # Auto-run address cross-reference with extracted wallet addresses
+        if result.get('wallet_addresses'):
+            try:
+                address_map = {
+                    e['address']: e for e in result['wallet_addresses']
+                }
+                session_like = {
+                    'elliptic_addresses': address_map,
+                    'uol_data': result.get('uol_raw_data') or {},
+                }
+                xref = await asyncio.to_thread(
+                    build_address_list, session_like, [],
+                )
+                from server.database import get_database
+                await get_database()['ingestion_cases'].update_one(
+                    {'_id': case_id},
+                    {'$set': {'sections.c360.address_xref': xref['narrative']}},
+                )
+            except Exception:
+                logger.exception('Auto address xref failed for %s', case_id)
+
         logger.info('C360 processing complete for case %s', case_id)
 
     except Exception as e:
@@ -220,12 +291,20 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
 
 @router.get('/cases/{case_id}/c360')
 async def get_c360_output(case_id: str, current_user: dict = Depends(get_current_user)):
-    """Return the C360 section data after processing."""
+    """Return the C360 section data after processing, including cross-references."""
     case = await _get_case_or_404(case_id)
     c360 = case.get('sections', {}).get('c360', {})
+
+    # Concatenate processor output + address xref + uid search narratives
+    output = c360.get('output') or ''
+    if c360.get('address_xref'):
+        output += '\n\n---\n\n' + c360['address_xref']
+    if c360.get('uid_search'):
+        output += '\n\n---\n\n' + c360['uid_search']
+
     return {
         'status': c360.get('status', 'empty'),
-        'output': c360.get('output'),
+        'output': output,
         'detected_file_types': c360.get('detected_file_types', []),
         'undetected_files': c360.get('undetected_files', []),
         'warnings': c360.get('warnings', []),
@@ -419,6 +498,105 @@ async def get_elliptic_output(case_id: str, current_user: dict = Depends(get_cur
     }
 
 
+# ── Address Cross-Reference & UID Search ──────────────────────────
+
+
+@router.post('/cases/{case_id}/address-xref')
+async def run_address_xref(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Cross-reference all wallet addresses against UOL crypto transaction history.
+
+    Combines C360-extracted + manual addresses, matches them against UOL
+    crypto withdrawal and deposit tabs. Stores the narrative in the C360
+    section for preview and assembly.
+    """
+    case = await _get_case_or_404(case_id)
+
+    uol_raw = case.get('uol_raw_data')
+    if not uol_raw:
+        return {
+            'narrative': 'No UOL data available for cross-referencing.',
+            'stats': {'total_addresses': 0, 'uol_matched': 0, 'uol_unmatched': 0},
+        }
+
+    # Reconstruct address map from stored wallet addresses
+    c360_addrs = case.get('sections', {}).get('c360', {}).get('wallet_addresses', [])
+    address_map = {e['address']: e for e in c360_addrs if isinstance(e, dict)}
+
+    # Get manual addresses
+    manual_addrs = case.get('sections', {}).get('elliptic', {}).get('manual_addresses', [])
+
+    session_like = {
+        'elliptic_addresses': address_map,
+        'uol_data': uol_raw,
+    }
+
+    result = await asyncio.to_thread(build_address_list, session_like, manual_addrs)
+
+    # Store narrative on the c360 section
+    from server.database import get_database
+    await get_database()['ingestion_cases'].update_one(
+        {'_id': case_id},
+        {'$set': {'sections.c360.address_xref': result['narrative']}},
+    )
+
+    return {
+        'narrative': result['narrative'],
+        'stats': result['stats'],
+    }
+
+
+@router.post('/cases/{case_id}/uid-search')
+async def run_uid_search(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Search UOL transaction history for connections to coconspirator UIDs.
+
+    Searches Crypto Withdrawals, Crypto Deposits, Binance Pay, and P2P
+    tabs for transactions involving the specified UIDs. Stores the
+    narrative in the C360 section for preview and assembly.
+    """
+    case = await _get_case_or_404(case_id)
+
+    uol_raw = case.get('uol_raw_data')
+    if not uol_raw:
+        return {
+            'narrative': 'No UOL data available for UID search.',
+            'stats': {'uids_searched': 0, 'uids_found': 0, 'total_matches': 0},
+        }
+
+    uids = case.get('coconspirator_uids', [])
+    if not uids:
+        return {
+            'narrative': 'No UIDs to search for.',
+            'stats': {'uids_searched': 0, 'uids_found': 0, 'total_matches': 0},
+        }
+
+    session_like = {
+        'uol_data': uol_raw,
+        'subject_uid': case.get('subject_uid', ''),
+    }
+
+    result = await asyncio.to_thread(search_associated_uids, session_like, uids)
+
+    # Store narrative on the c360 section
+    from server.database import get_database
+    await get_database()['ingestion_cases'].update_one(
+        {'_id': case_id},
+        {'$set': {'sections.c360.uid_search': result['narrative']}},
+    )
+
+    return {
+        'narrative': result['narrative'],
+        'stats': result['stats'],
+    }
+
+
 # ── Co-conspirator UIDs ───────────────────────────────────────────
 
 
@@ -484,6 +662,19 @@ async def save_notes(
     await _get_case_or_404(case_id)
     result = await ingestion_service.save_notes(case_id, body.notes)
     return result
+
+
+# ── Reset ─────────────────────────────────────────────────────────
+
+
+@router.post('/cases/{case_id}/reset')
+async def reset_case(case_id: str, current_user: dict = Depends(get_current_user)):
+    """Reset an ingestion case to its initial state, clearing all sections."""
+    try:
+        doc = await ingestion_service.reset_case(case_id)
+        return _serialize_case(doc)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Assembly ──────────────────────────────────────────────────────

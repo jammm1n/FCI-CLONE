@@ -80,9 +80,9 @@ def _collection():
 
 async def create_ingestion_case(
     case_id: str,
-    subject_uid: str,
-    coconspirator_uids: list[str],
-    created_by: str,
+    subject_uid: str = '',
+    coconspirator_uids: list[str] | None = None,
+    created_by: str = '',
 ) -> dict:
     """
     Create a new ingestion case document.
@@ -112,7 +112,7 @@ async def create_ingestion_case(
         'status': 'ingesting',
         'created_by': created_by,
         'subject_uid': subject_uid,
-        'coconspirator_uids': coconspirator_uids,
+        'coconspirator_uids': coconspirator_uids or [],
         'sections': _empty_sections(),
         'assembled_case_data': None,
         'created_at': now,
@@ -281,6 +281,50 @@ async def _check_ready_state(case_id: str):
         logger.info('Case %s auto-transitioned to ready', case_id)
 
 
+# ── Reset ─────────────────────────────────────────────────────────
+
+
+async def reset_case(case_id: str) -> dict:
+    """
+    Reset an ingestion case to its initial state.
+
+    Clears all sections, subject_uid, and assembled data.
+    Only allowed when status is 'ingesting' or 'ready'.
+
+    Returns the reset case document.
+    Raises ValueError if case not found or status disallows reset.
+    """
+    doc = await _collection().find_one({'_id': case_id})
+    if not doc:
+        raise ValueError(f'Case not found: {case_id}')
+
+    if doc.get('status') not in ('ingesting', 'ready'):
+        raise ValueError(
+            f'Cannot reset case in status "{doc.get("status")}". '
+            'Only ingesting or ready cases can be reset.'
+        )
+
+    now = _utcnow()
+    await _collection().update_one(
+        {'_id': case_id},
+        {
+            '$set': {
+                'status': 'ingesting',
+                'subject_uid': '',
+                'sections': _empty_sections(),
+                'assembled_case_data': None,
+                'updated_at': now,
+                'completed_at': None,
+            },
+            '$unset': {'uol_raw_data': 1},
+        },
+    )
+    logger.info('Reset ingestion case %s', case_id)
+
+    updated = await _collection().find_one({'_id': case_id})
+    return updated
+
+
 # ── Assembly ──────────────────────────────────────────────────────
 
 
@@ -335,6 +379,12 @@ async def assemble_case_data(case_id: str) -> dict:
         parts.append('')
 
         if sec_status == 'complete' and output:
+            # For C360, append cross-reference narratives
+            if section_key == 'c360':
+                if section.get('address_xref'):
+                    output += '\n\n' + section['address_xref']
+                if section.get('uid_search'):
+                    output += '\n\n' + section['uid_search']
             parts.append(output)
             sections_included.append(section_key)
         else:
@@ -345,14 +395,17 @@ async def assemble_case_data(case_id: str) -> dict:
 
     assembled = '\n'.join(parts)
 
-    # Store the assembled output
+    # Store the assembled output and purge UOL raw data
     now = _utcnow()
     await _collection().update_one(
         {'_id': case_id},
-        {'$set': {
-            'assembled_case_data': assembled,
-            'updated_at': now,
-        }},
+        {
+            '$set': {
+                'assembled_case_data': assembled,
+                'updated_at': now,
+            },
+            '$unset': {'uol_raw_data': 1},
+        },
     )
 
     return {

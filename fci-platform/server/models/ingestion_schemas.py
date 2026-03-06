@@ -40,7 +40,7 @@ TERMINAL_STATUSES = {'complete', 'none'}
 class CreateIngestionCaseRequest(BaseModel):
     """POST /api/ingestion/cases"""
     case_id: str
-    subject_uid: str
+    subject_uid: str = ''
     coconspirator_uids: list[str] = []
 
 
