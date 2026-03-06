@@ -972,21 +972,30 @@ function EllipticSection({ caseData, onProcessingStarted }) {
 
 // ── Notes Section ────────────────────────────────────────────────
 
-function NotesSection({ caseData }) {
+function NotesSection({ caseData, onSaved }) {
+  const sectionKey = 'investigator_notes';
   const { token } = useAuth();
-  const [notes, setNotes] = useState(caseData.sections?.investigator_notes?.output || '');
+  const section = caseData.sections?.[sectionKey] || {};
+  const [notes, setNotes] = useState(section.output || '');
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
-  const notesStatus = caseData.sections?.investigator_notes?.status || 'empty';
+  const status = section.status || 'empty';
+  const isComplete = status === 'complete';
+  const isNone = status === 'none';
+
+  // Sync local state when section data changes (e.g., after reopen refreshes case)
+  useEffect(() => {
+    if (section.output && !isComplete) {
+      setNotes(section.output);
+    }
+  }, [section.output, isComplete]);
 
   async function handleSave() {
+    if (!notes.trim()) return;
     setSaving(true);
-    setSaved(false);
     try {
       await ingestionApi.saveNotes(token, caseData.case_id, notes);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to save notes:', err);
     } finally {
@@ -994,13 +1003,84 @@ function NotesSection({ caseData }) {
     }
   }
 
+  async function handleReopen() {
+    try {
+      // Re-save existing notes to set status back to complete (reopens for editing)
+      // We just need to toggle a local editing state — notes stay in MongoDB
+      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to reopen notes:', err);
+    }
+  }
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to mark notes N/A:', err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopenNone() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error('Failed to reopen notes:', err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopenNone}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isComplete) {
+    return (
+      <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <StatusDot status="complete" />
+        </div>
+        <pre className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-300 text-sm whitespace-pre-wrap mb-3 opacity-70">
+          {section.output}
+        </pre>
+        <button
+          onClick={handleReopen}
+          className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
-          {SECTION_LABELS.investigator_notes}
+          {SECTION_LABELS[sectionKey]}
         </h4>
-        <StatusDot status={notesStatus} />
+        <StatusDot status={status} />
       </div>
       <textarea
         value={notes}
@@ -1012,12 +1092,19 @@ function NotesSection({ caseData }) {
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !notes.trim()}
           className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Notes'}
         </button>
-        {saved && <span className="text-xs text-emerald-500">Saved</span>}
+        {!notes.trim() && (
+          <button
+            onClick={handleMarkNone}
+            className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          >
+            No Data
+          </button>
+        )}
       </div>
     </div>
   );
@@ -2016,6 +2103,786 @@ function RFIPreviewModal({ title, data, caseId, activeTab, onTabChange, onClose 
 }
 
 
+// ── Helpers: Extract Images from HTML Paste ──────────────────────
+
+const MIN_PASTE_IMAGE_BYTES = 15000; // 15KB — skip avatars and UI chrome
+
+function dataUriToFile(dataUri, index) {
+  try {
+    const [header, base64] = dataUri.split(',');
+    if (!base64) return null;
+    const mime = header.match(/:(.*?);/)?.[1] || 'image/png';
+    const binary = atob(base64);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    const ext = mime.split('/')[1] || 'png';
+    return new File([array], `pasted_${Date.now()}_${index}.${ext}`, { type: mime });
+  } catch {
+    return null;
+  }
+}
+
+function extractImagesFromHtml(html) {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const imgs = doc.querySelectorAll('img');
+    const files = [];
+    imgs.forEach((img, idx) => {
+      const src = img.src;
+      if (src && src.startsWith('data:')) {
+        const file = dataUriToFile(src, idx);
+        if (file && file.size >= MIN_PASTE_IMAGE_BYTES) {
+          files.push(file);
+        }
+      }
+    });
+    return files;
+  } catch {
+    return [];
+  }
+}
+
+
+// ── Text + Image Section (L1 Victim, L1 Suspect) ────────────────
+
+function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
+  const { token } = useAuth();
+  const section = caseData.sections?.[sectionKey] || {};
+  const [text, setText] = useState(section.raw_text || '');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewTab, setPreviewTab] = useState('ai');
+  const [dragOver, setDragOver] = useState(false);
+
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
+  const isNone = status === 'none';
+  const isProcessing = status === 'processing';
+
+  const fileInputRef = useRef(null);
+
+  function handleFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles((prev) => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeSelectedFile(idx) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function addImageFiles(files) {
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    }
+  }
+
+  function handlePaste(e) {
+    const html = e.clipboardData?.getData('text/html');
+
+    // Extract images embedded in HTML (e.g., chat log pasted via Notes)
+    if (html) {
+      const extracted = extractImagesFromHtml(html);
+      if (extracted.length > 0) {
+        setSelectedFiles((prev) => [...prev, ...extracted]);
+      }
+    }
+
+    // Handle direct image paste (screenshot only, no text content)
+    const items = e.clipboardData?.items;
+    if (items) {
+      const hasText = Array.from(items).some(
+        (i) => i.type.startsWith('text/')
+      );
+      if (!hasText) {
+        const imageFiles = [];
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) imageFiles.push(file);
+          }
+        }
+        if (imageFiles.length > 0) {
+          e.preventDefault();
+          setSelectedFiles((prev) => [...prev, ...imageFiles]);
+        }
+      }
+    }
+    // Default: text flows into textarea normally
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    addImageFiles(files);
+  }
+
+  async function handleSaveAndProcess() {
+    if (!text.trim() && selectedFiles.length === 0) return;
+    setSaving(true);
+    try {
+      await ingestionApi.saveTextImageSection(
+        token, caseData.case_id, sectionKey, text, selectedFiles,
+      );
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to save ${sectionKey}:`, err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      await ingestionApi.resetTextImageSection(token, caseData.case_id, sectionKey);
+      setText('');
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to reset ${sectionKey}:`, err);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getTextImageSection(token, caseData.case_id, sectionKey);
+      setPreviewData(data);
+      setPreviewTab('ai');
+      setShowPreview(true);
+    } catch (err) {
+      console.error(`Failed to load preview for ${sectionKey}:`, err);
+    }
+  }
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to mark ${sectionKey} N/A:`, err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error(`Failed to reopen ${sectionKey}:`, err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
+        </h4>
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed (raw saved)' : ''}
+            </span>
+          )}
+          <StatusDot status={status} />
+        </div>
+      </div>
+
+      {/* Input area (hidden when complete or processing) */}
+      {!isComplete && !isProcessing && (
+        <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`rounded-lg transition-colors ${dragOver ? 'ring-2 ring-gold-500 bg-gold-500/5' : ''}`}
+          >
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              rows={6}
+              className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-2"
+            />
+          </div>
+
+          {/* Image upload area */}
+          <div className="mb-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              onChange={handleFilesSelected}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-surface-400 dark:border-surface-600 text-surface-500 dark:text-surface-400 hover:border-gold-500 hover:text-gold-500 text-xs transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Attach Screenshots
+            </button>
+            <span className="text-[10px] text-surface-500 ml-2">or paste / drag &amp; drop — embedded images auto-extracted</span>
+
+            {/* Selected file previews */}
+            {selectedFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="relative group">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={file.name}
+                      className="w-16 h-16 rounded-lg object-cover border border-surface-300 dark:border-surface-600"
+                    />
+                    <button
+                      onClick={() => removeSelectedFile(idx)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      &times;
+                    </button>
+                    <span className="block text-[9px] text-surface-400 mt-0.5 max-w-[64px] truncate">
+                      {file.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveAndProcess}
+              disabled={saving || (!text.trim() && selectedFiles.length === 0)}
+              className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Processing...' : 'Save & Process'}
+            </button>
+            {status === 'empty' && !text.trim() && selectedFiles.length === 0 && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Processing indicator */}
+      {isProcessing && (
+        <div className="flex items-center gap-3 py-4">
+          <LoadingSpinner size="sm" />
+          <span className="text-sm text-surface-400">Processing communications...</span>
+        </div>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {showPreview && previewData && (
+        <TextImagePreviewModal
+          title={SECTION_LABELS[sectionKey]}
+          sectionKey={sectionKey}
+          data={previewData}
+          caseId={caseData.case_id}
+          activeTab={previewTab}
+          onTabChange={setPreviewTab}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+// ── Text + Image Preview Modal ───────────────────────────────────
+
+function TextImagePreviewModal({ title, sectionKey, data, caseId, activeTab, onTabChange, onClose }) {
+  const content = activeTab === 'ai' ? data.output : data.raw_text;
+  const images = data.images || [];
+  const batchId = data.batch_id;
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (content) {
+      navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-surface-100 dark:bg-surface-900 rounded-lg p-0.5">
+              <button
+                onClick={() => onTabChange('ai')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'ai'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                AI Summary
+              </button>
+              <button
+                onClick={() => onTabChange('raw')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'raw'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                Raw
+              </button>
+            </div>
+            <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {data.ai_error && activeTab === 'ai' && (
+            <div className="mb-3 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              AI Error: {data.ai_error}
+            </div>
+          )}
+
+          {/* Source images */}
+          {images.length > 0 && batchId && (
+            <div className="mb-4">
+              <div className="text-xs text-surface-400 mb-2">Source images ({images.length})</div>
+              <div className="flex flex-wrap gap-2">
+                {images.map((img) => (
+                  <a
+                    key={img.image_id}
+                    href={`/api/ingestion/images/${caseId}/${sectionKey}/${batchId}/${img.image_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={`/api/ingestion/images/${caseId}/${sectionKey}/${batchId}/${img.image_id}`}
+                      alt={img.filename || 'Screenshot'}
+                      className="w-20 h-20 rounded-lg object-cover border border-surface-300 dark:border-surface-600 hover:border-gold-500 transition-colors"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
+            {content || 'No content available.'}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ── KYC Document Section (Image-Only) ────────────────────────────
+
+function KYCSection({ caseData, onSaved }) {
+  const sectionKey = 'kyc';
+  const { token } = useAuth();
+  const section = caseData.sections?.[sectionKey] || {};
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
+  const isNone = status === 'none';
+  const isProcessing = status === 'processing';
+
+  const fileInputRef = useRef(null);
+
+  function handleFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles((prev) => [...prev, ...files]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeSelectedFile(idx) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function addImageFiles(files) {
+    const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    }
+  }
+
+  function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      addImageFiles(imageFiles);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    addImageFiles(files);
+  }
+
+  async function handleUploadAndProcess() {
+    if (selectedFiles.length === 0) return;
+    setUploading(true);
+    try {
+      await ingestionApi.uploadKYC(token, caseData.case_id, selectedFiles);
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to upload KYC:', err);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      await ingestionApi.resetKYC(token, caseData.case_id);
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to reset KYC:', err);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getKYCOutput(token, caseData.case_id);
+      setPreviewData(data);
+      setShowPreview(true);
+    } catch (err) {
+      console.error('Failed to load KYC preview:', err);
+    }
+  }
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to mark KYC N/A:', err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error('Failed to reopen KYC:', err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
+        </h4>
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed' : ''}
+            </span>
+          )}
+          <StatusDot status={status} />
+        </div>
+      </div>
+
+      {/* Upload area (hidden when complete or processing) */}
+      {!isComplete && !isProcessing && (
+        <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+            tabIndex={0}
+            className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer focus:outline-none ${
+              dragOver
+                ? 'border-gold-500 bg-gold-500/5'
+                : 'border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500'
+            }`}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              multiple
+              onChange={handleFilesSelected}
+              className="hidden"
+            />
+            <svg className="w-8 h-8 mx-auto mb-2 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              Click to select, paste, or drag &amp; drop KYC screenshots
+            </p>
+            <p className="text-[10px] text-surface-400 mt-1">
+              Binance Admin screenshots, ID documents, proof of address
+            </p>
+          </div>
+
+          {/* Selected file previews */}
+          {selectedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {selectedFiles.map((file, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-20 h-20 rounded-lg object-cover border border-surface-300 dark:border-surface-600"
+                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    &times;
+                  </button>
+                  <span className="block text-[9px] text-surface-400 mt-0.5 max-w-[80px] truncate">
+                    {file.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mt-3">
+            {selectedFiles.length > 0 && (
+              <button
+                onClick={handleUploadAndProcess}
+                disabled={uploading}
+                className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {uploading ? 'Processing...' : `Upload & Process (${selectedFiles.length})`}
+              </button>
+            )}
+            {selectedFiles.length === 0 && status === 'empty' && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Processing indicator */}
+      {isProcessing && (
+        <div className="flex items-center gap-3 py-4">
+          <LoadingSpinner size="sm" />
+          <span className="text-sm text-surface-400">Extracting identity data from images...</span>
+        </div>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {showPreview && previewData && (
+        <KYCPreviewModal
+          data={previewData}
+          caseId={caseData.case_id}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+// ── KYC Preview Modal ────────────────────────────────────────────
+
+function KYCPreviewModal({ data, caseId, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const images = data.images || [];
+  const batchId = data.batch_id;
+
+  function handleCopy() {
+    if (data.output) {
+      navigator.clipboard.writeText(data.output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+            {SECTION_LABELS.kyc}
+          </h3>
+          <div className="flex items-center gap-3">
+            <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {data.ai_error && (
+            <div className="mb-3 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              AI Error: {data.ai_error}
+            </div>
+          )}
+
+          {/* Source images */}
+          {images.length > 0 && batchId && (
+            <div className="mb-4">
+              <div className="text-xs text-surface-400 mb-2">Source documents ({images.length})</div>
+              <div className="flex flex-wrap gap-2">
+                {images.map((img) => (
+                  <a
+                    key={img.image_id}
+                    href={`/api/ingestion/images/${caseId}/kyc/${batchId}/${img.image_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={`/api/ingestion/images/${caseId}/kyc/${batchId}/${img.image_id}`}
+                      alt={img.filename || 'KYC document'}
+                      className="w-24 h-24 rounded-lg object-cover border border-surface-300 dark:border-surface-600 hover:border-gold-500 transition-colors"
+                    />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI output */}
+          <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
+            {data.output || 'No output available.'}
+          </pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ── Future Section Placeholder ───────────────────────────────────
 
 function FutureSectionCard({ sectionKey, caseData }) {
@@ -2376,10 +3243,10 @@ export default function IngestionPage() {
               onSaved={handleProcessingStarted}
             />
 
-            {/* KYC Document Summary (future — image-only input) */}
-            <FutureSectionCard
-              sectionKey="kyc"
+            {/* KYC Document Summary (image-only) */}
+            <KYCSection
               caseData={caseData}
+              onSaved={handleProcessingStarted}
             />
 
             {/* Prior ICR Summary (iterative entries) */}
@@ -2396,17 +3263,30 @@ export default function IngestionPage() {
               onSaved={handleProcessingStarted}
             />
 
-            {/* Remaining future phase sections */}
-            {['kodex', 'l1_victim', 'l1_suspect'].map((key) => (
-              <FutureSectionCard
-                key={key}
-                sectionKey={key}
-                caseData={caseData}
-              />
-            ))}
+            {/* Kodex (future phase) */}
+            <FutureSectionCard
+              sectionKey="kodex"
+              caseData={caseData}
+            />
+
+            {/* L1 Victim Communications */}
+            <TextImageSection
+              sectionKey="l1_victim"
+              caseData={caseData}
+              placeholder="Paste victim communications here — chat transcripts, case notes, screenshots. Embedded images will be auto-extracted..."
+              onSaved={handleProcessingStarted}
+            />
+
+            {/* L1 Suspect Communications */}
+            <TextImageSection
+              sectionKey="l1_suspect"
+              caseData={caseData}
+              placeholder="Paste suspect communications here — chat transcripts, case notes, screenshots. Embedded images will be auto-extracted..."
+              onSaved={handleProcessingStarted}
+            />
 
             {/* Notes */}
-            <NotesSection caseData={caseData} />
+            <NotesSection caseData={caseData} onSaved={handleProcessingStarted} />
 
             {/* Assembly */}
             <div className="pt-4 border-t border-surface-200 dark:border-surface-700">

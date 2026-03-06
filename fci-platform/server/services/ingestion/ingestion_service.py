@@ -74,6 +74,14 @@ def _empty_sections():
     # Elliptic has extra fields
     sections['elliptic']['wallet_addresses'] = []
     sections['elliptic']['manual_addresses'] = []
+    # Image-only sections
+    sections['kyc']['images'] = []
+    sections['kyc']['batch_id'] = None
+    # Text + image sections
+    sections['l1_victim']['images'] = []
+    sections['l1_victim']['batch_id'] = None
+    sections['l1_suspect']['images'] = []
+    sections['l1_suspect']['batch_id'] = None
     # Iterative entry sections
     sections['previous_icrs']['entries'] = []
     sections['rfis']['entries'] = []
@@ -466,6 +474,192 @@ def _load_entry_images_as_base64(entry: dict) -> list[dict]:
         except Exception as e:
             logger.warning('Failed to load image %s: %s', stored_path, e)
     return result
+
+
+# ── Image-Only Sections (KYC) ──────────────────────────────────────
+
+
+async def save_images_with_ai(
+    case_id: str, section_key: str, image_refs: list[dict], batch_id: str,
+) -> dict:
+    """
+    Save images to a section and run AI processing with vision.
+
+    Stores image references and batch_id on the section, loads images
+    as base64, sends to AI with the section's prompt, stores output.
+    Returns {status, updated_at, ai_status, ai_error}.
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    now = _utcnow()
+    col = _collection()
+
+    # Store image refs, mark as processing
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'processing',
+            f'sections.{section_key}.images': image_refs,
+            f'sections.{section_key}.batch_id': batch_id,
+            f'sections.{section_key}.ai_status': 'processing',
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    # Load images as base64
+    images_b64 = _load_entry_images_as_base64({'images': image_refs})
+
+    instruction = (
+        f'Extract the identity information from these '
+        f'{len(image_refs)} document image(s).'
+    )
+    ai_result = await process_with_ai(section_key, instruction, images=images_b64)
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete'
+        ai_error = None
+        status = 'complete'
+    else:
+        output = None
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI processing returned no output')
+        status = 'error'
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': status,
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.ai_status': ai_status,
+            f'sections.{section_key}.ai_error': ai_error,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
+    return {
+        'status': status,
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+    }
+
+
+# ── Text + Image Sections (L1 Victim, L1 Suspect) ─────────────────
+
+
+async def save_text_and_images_with_ai(
+    case_id: str,
+    section_key: str,
+    text: str,
+    image_refs: list[dict],
+    batch_id: str,
+) -> dict:
+    """
+    Save text and images to a section, then run AI processing with vision.
+
+    Stores raw_text + image references on the section, loads images as
+    base64, sends text + images to AI with the section's prompt, stores
+    output. Variable injection for subject_type (victim/suspect).
+
+    Returns {status, updated_at, ai_status, ai_error}.
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    now = _utcnow()
+    col = _collection()
+    raw_text = text.strip() if text else ''
+
+    if not raw_text and not image_refs:
+        # Clear the section
+        await col.update_one(
+            {'_id': case_id},
+            {'$set': {
+                f'sections.{section_key}.status': 'empty',
+                f'sections.{section_key}.output': None,
+                f'sections.{section_key}.raw_text': None,
+                f'sections.{section_key}.images': [],
+                f'sections.{section_key}.batch_id': None,
+                f'sections.{section_key}.ai_status': None,
+                f'sections.{section_key}.ai_error': None,
+                f'sections.{section_key}.updated_at': now,
+                'updated_at': now,
+            }},
+        )
+        await _check_ready_state(case_id)
+        return {
+            'status': 'empty', 'updated_at': now,
+            'ai_status': None, 'ai_error': None,
+        }
+
+    # Save raw text + images, mark as processing
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'processing',
+            f'sections.{section_key}.raw_text': raw_text,
+            f'sections.{section_key}.images': image_refs,
+            f'sections.{section_key}.batch_id': batch_id,
+            f'sections.{section_key}.ai_status': 'processing',
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    # Load images as base64
+    images_b64 = (
+        _load_entry_images_as_base64({'images': image_refs})
+        if image_refs else None
+    )
+
+    # Variable injection for victim/suspect
+    variables = None
+    if section_key == 'l1_victim':
+        variables = {'subject_type': 'victim'}
+    elif section_key == 'l1_suspect':
+        variables = {'subject_type': 'suspect'}
+
+    user_content = raw_text or 'Process these images.'
+    ai_result = await process_with_ai(
+        section_key, user_content,
+        variables=variables,
+        images=images_b64,
+    )
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete'
+        ai_error = None
+    else:
+        output = raw_text or None
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI processing returned no output')
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'complete',
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.raw_text': raw_text,
+            f'sections.{section_key}.ai_status': ai_status,
+            f'sections.{section_key}.ai_error': ai_error,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
+    return {
+        'status': 'complete',
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+    }
 
 
 # ── Iterative Entry Sections (Prior ICR, RFI) ─────────────────────

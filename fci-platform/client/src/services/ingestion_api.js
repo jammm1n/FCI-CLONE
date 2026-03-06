@@ -251,6 +251,69 @@ export async function getEntries(token, caseId, sectionKey) {
   return handleResponse(res);
 }
 
+// ── Text + Image Sections (L1 Victim, L1 Suspect) ───────────────
+
+export async function saveTextImageSection(token, caseId, sectionKey, text, files) {
+  const formData = new FormData();
+  formData.append('text', text || '');
+  if (files && files.length > 0) {
+    for (const file of files) {
+      formData.append('files', file);
+    }
+  }
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}`, {
+    method: 'PUT',
+    headers: bearerOnly(token),
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
+export async function getTextImageSection(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function resetTextImageSection(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}/reset`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ── KYC (Image-Only) ────────────────────────────────────────────
+
+export async function uploadKYC(token, caseId, files) {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc`, {
+    method: 'POST',
+    headers: bearerOnly(token),
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
+export async function getKYCOutput(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function resetKYC(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc/reset`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 // ── Assembly ─────────────────────────────────────────────────────
 
 export async function assembleCase(token, caseId) {

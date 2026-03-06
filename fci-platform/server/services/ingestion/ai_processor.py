@@ -48,6 +48,9 @@ SECTION_PROMPT_MAP = {
     'previous_icrs': 'prompt-04-prior-icr.md',
     'rfis':         'prompt-10-rfi-summary.md',
     'rfi_doc_review': 'prompt-22-rfi-document-review.md',
+    'kyc':          'prompt-13-kyc-document.md',
+    'l1_victim':    'prompt-23-l1-communications.md',
+    'l1_suspect':   'prompt-23-l1-communications.md',
 }
 
 # ── Prompt Loading ───────────────────────────────────────────────

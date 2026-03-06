@@ -955,6 +955,220 @@ async def get_entries(
     }
 
 
+# ── Text + Image Sections (L1 Victim, L1 Suspect) ────────────────
+
+_TEXT_IMAGE_SECTIONS = {'l1_victim', 'l1_suspect'}
+
+
+@router.put('/cases/{case_id}/text-image-section/{section_key}')
+async def save_text_image_section(
+    case_id: str,
+    section_key: str,
+    text: str = Form(''),
+    files: Optional[List[UploadFile]] = File(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Save a text + image section and run AI processing.
+
+    Accepts multipart form data: text field + optional image files.
+    AI translates, organizes, and condenses into a case-file summary.
+    """
+    if section_key not in _TEXT_IMAGE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}. '
+                   f'Allowed: {", ".join(sorted(_TEXT_IMAGE_SECTIONS))}',
+        )
+
+    case = await _get_case_or_404(case_id)
+
+    # Guard: don't reprocess if already complete or processing
+    sec_status = case.get('sections', {}).get(section_key, {}).get('status', 'empty')
+    if sec_status == 'processing':
+        raise HTTPException(status_code=409, detail=f'{section_key} is currently processing.')
+    if sec_status == 'complete':
+        raise HTTPException(
+            status_code=409,
+            detail=f'{section_key} is already complete. Reset before reprocessing.',
+        )
+
+    if not text.strip() and not files:
+        raise HTTPException(status_code=400, detail='Text or at least one image is required.')
+
+    # Read and validate image files
+    import uuid as _uuid
+    from server.services.ingestion.ingestion_service import _store_ingestion_images
+
+    image_refs = []
+    batch_id = f'batch_{_uuid.uuid4().hex[:8]}'
+
+    if files:
+        file_data = []
+        for f in files:
+            if not f.content_type or f.content_type not in _ALLOWED_IMAGE_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'Only image files (JPEG, PNG, GIF, WebP) accepted. '
+                           f'Got: {f.content_type} for {f.filename}',
+                )
+            content = await f.read()
+            file_data.append((f.filename or 'image', content, f.content_type))
+
+        image_refs = _store_ingestion_images(case_id, section_key, batch_id, file_data)
+
+    result = await ingestion_service.save_text_and_images_with_ai(
+        case_id, section_key, text, image_refs, batch_id,
+    )
+    return result
+
+
+@router.get('/cases/{case_id}/text-image-section/{section_key}')
+async def get_text_image_section(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return a text+image section's output, raw text, images, and AI status."""
+    if section_key not in _TEXT_IMAGE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}.',
+        )
+    case = await _get_case_or_404(case_id)
+    section = case.get('sections', {}).get(section_key, {})
+    return {
+        'status': section.get('status', 'empty'),
+        'output': section.get('output'),
+        'raw_text': section.get('raw_text'),
+        'images': section.get('images', []),
+        'batch_id': section.get('batch_id'),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('ai_error'),
+        'updated_at': section.get('updated_at'),
+    }
+
+
+@router.post('/cases/{case_id}/text-image-section/{section_key}/reset')
+async def reset_text_image_section(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reset a text+image section to empty."""
+    if section_key not in _TEXT_IMAGE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}.',
+        )
+    await _get_case_or_404(case_id)
+    await ingestion_service.update_section(
+        case_id, section_key, 'empty',
+        extra_fields={
+            'output': None,
+            'raw_text': None,
+            'images': [],
+            'batch_id': None,
+            'ai_status': None,
+            'ai_error': None,
+        },
+    )
+    return {'section': section_key, 'status': 'empty'}
+
+
+# ── KYC Document Upload (Image-Only) ─────────────────────────────
+
+
+@router.post('/cases/{case_id}/kyc')
+async def upload_kyc(
+    case_id: str,
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Upload KYC document images and run AI extraction.
+
+    Accepts image files (JPEG, PNG, GIF, WebP). AI identifies each
+    document/screenshot and extracts identity fields verbatim.
+    """
+    case = await _get_case_or_404(case_id)
+
+    # Guard: don't reprocess if already complete or processing
+    kyc_status = case.get('sections', {}).get('kyc', {}).get('status', 'empty')
+    if kyc_status == 'processing':
+        raise HTTPException(status_code=409, detail='KYC section is currently processing.')
+    if kyc_status == 'complete':
+        raise HTTPException(
+            status_code=409,
+            detail='KYC section is already complete. Reset before reprocessing.',
+        )
+
+    if not files:
+        raise HTTPException(status_code=400, detail='At least one image file is required.')
+
+    # Read and validate image files
+    import uuid as _uuid
+    from server.services.ingestion.ingestion_service import _store_ingestion_images
+
+    file_data = []
+    for f in files:
+        if not f.content_type or f.content_type not in _ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f'Only image files (JPEG, PNG, GIF, WebP) accepted. '
+                       f'Got: {f.content_type} for {f.filename}',
+            )
+        content = await f.read()
+        file_data.append((f.filename or 'image', content, f.content_type))
+
+    batch_id = f'batch_{_uuid.uuid4().hex[:8]}'
+    image_refs = _store_ingestion_images(case_id, 'kyc', batch_id, file_data)
+
+    result = await ingestion_service.save_images_with_ai(
+        case_id, 'kyc', image_refs, batch_id,
+    )
+    return result
+
+
+@router.get('/cases/{case_id}/kyc')
+async def get_kyc_output(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return KYC section data including output and image references."""
+    case = await _get_case_or_404(case_id)
+    section = case.get('sections', {}).get('kyc', {})
+    return {
+        'status': section.get('status', 'empty'),
+        'output': section.get('output'),
+        'images': section.get('images', []),
+        'batch_id': section.get('batch_id'),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('ai_error'),
+        'updated_at': section.get('updated_at'),
+    }
+
+
+@router.post('/cases/{case_id}/kyc/reset')
+async def reset_kyc(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reset KYC section to empty, clearing images and AI output."""
+    await _get_case_or_404(case_id)
+    await ingestion_service.update_section(
+        case_id, 'kyc', 'empty',
+        extra_fields={
+            'images': [],
+            'batch_id': None,
+            'output': None,
+            'ai_status': None,
+            'ai_error': None,
+        },
+    )
+    return {'section': 'kyc', 'status': 'empty'}
+
+
 # ── Entry with Images (RFI) ───────────────────────────────────────
 
 _IMAGE_SECTIONS = {'rfis'}

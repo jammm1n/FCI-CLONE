@@ -21,7 +21,7 @@ ALL_SECTION_KEYS = [
 # Sections that can be marked "none" (not applicable).
 NONEABLE_SECTION_KEYS = [
     'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs', 'rfis',
-    'kyc', 'l1_victim', 'l1_suspect', 'kodex',
+    'kyc', 'l1_victim', 'l1_suspect', 'kodex', 'investigator_notes',
 ]
 
 # Sections that must be terminal (complete/none) before case is "ready".
