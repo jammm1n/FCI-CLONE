@@ -17,6 +17,8 @@ Endpoint overview:
   GET    /cases/{case_id}/elliptic          Get Elliptic section output
   POST   /cases/{case_id}/sections/{key}/none  Mark section as N/A
   PUT    /cases/{case_id}/notes             Save investigator notes
+  PUT    /cases/{case_id}/text-section/{key}  Save text section with AI processing
+  GET    /cases/{case_id}/text-section/{key}  Get text section output + AI status
   POST   /cases/{case_id}/reset             Reset case to initial state
   POST   /cases/{case_id}/assemble          Assemble final case markdown
 """
@@ -42,6 +44,7 @@ from server.models.ingestion_schemas import (
     ManualAddressesRequest,
     EllipticSubmitRequest,
     NotesRequest,
+    TextSectionRequest,
     NONEABLE_SECTION_KEYS,
 )
 
@@ -805,21 +808,137 @@ async def save_notes(
     return result
 
 
-# ── Raw Hex Dump ─────────────────────────────────────────────────
+# ── Text Sections with AI Processing ─────────────────────────────
+
+# Allowed section keys for the generic text+AI endpoint.
+_TEXT_AI_SECTIONS = {'hexa_dump', 'raw_hex_dump'}
 
 
-@router.put('/cases/{case_id}/hex-dump')
-async def save_hex_dump(
+@router.put('/cases/{case_id}/text-section/{section_key}')
+async def save_text_section(
     case_id: str,
-    body: NotesRequest,
+    section_key: str,
+    body: TextSectionRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    """Save raw hex dump text. Same pattern as investigator notes."""
+    """
+    Save a text section and run AI processing.
+
+    Stores raw text + AI-generated narrative. Falls back to raw text
+    if AI fails. Supports: hexa_dump, raw_hex_dump.
+    """
+    if section_key not in _TEXT_AI_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}. '
+                   f'Allowed: {", ".join(sorted(_TEXT_AI_SECTIONS))}',
+        )
     await _get_case_or_404(case_id)
-    result = await ingestion_service.save_text_section(
-        case_id, 'raw_hex_dump', body.notes,
+    result = await ingestion_service.save_text_section_with_ai(
+        case_id, section_key, body.text,
     )
     return result
+
+
+@router.get('/cases/{case_id}/text-section/{section_key}')
+async def get_text_section(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return a text section's output, raw text, and AI status."""
+    if section_key not in _TEXT_AI_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}.',
+        )
+    case = await _get_case_or_404(case_id)
+    section = case.get('sections', {}).get(section_key, {})
+    return {
+        'status': section.get('status', 'empty'),
+        'output': section.get('output'),
+        'raw_text': section.get('raw_text'),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('ai_error'),
+        'updated_at': section.get('updated_at'),
+    }
+
+
+# ── Iterative Entry Sections (Prior ICR) ─────────────────────────
+
+_ITERATIVE_SECTIONS = {'previous_icrs'}
+
+
+@router.post('/cases/{case_id}/entries/{section_key}')
+async def add_entry(
+    case_id: str,
+    section_key: str,
+    body: TextSectionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Add a text entry to an iterative section."""
+    if section_key not in _ITERATIVE_SECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f'Invalid section key: {section_key}. '
+                   f'Allowed: {", ".join(sorted(_ITERATIVE_SECTIONS))}',
+        )
+    await _get_case_or_404(case_id)
+    if not body.text.strip():
+        raise HTTPException(status_code=400, detail='Text cannot be empty.')
+    entry = await ingestion_service.add_entry(case_id, section_key, body.text)
+    return entry
+
+
+@router.delete('/cases/{case_id}/entries/{section_key}/{entry_id}')
+async def remove_entry(
+    case_id: str,
+    section_key: str,
+    entry_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove an entry from an iterative section."""
+    if section_key not in _ITERATIVE_SECTIONS:
+        raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
+    await _get_case_or_404(case_id)
+    await ingestion_service.remove_entry(case_id, section_key, entry_id)
+    return {'deleted': True, 'entry_id': entry_id}
+
+
+@router.post('/cases/{case_id}/entries/{section_key}/process')
+async def process_entries(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Combine all entries and run AI processing to generate the summary."""
+    if section_key not in _ITERATIVE_SECTIONS:
+        raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
+    await _get_case_or_404(case_id)
+    result = await ingestion_service.process_entries_with_ai(case_id, section_key)
+    return result
+
+
+@router.get('/cases/{case_id}/entries/{section_key}')
+async def get_entries(
+    case_id: str,
+    section_key: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return all entries and AI output for an iterative section."""
+    if section_key not in _ITERATIVE_SECTIONS:
+        raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
+    case = await _get_case_or_404(case_id)
+    section = case.get('sections', {}).get(section_key, {})
+    return {
+        'status': section.get('status', 'empty'),
+        'entries': section.get('entries', []),
+        'output': section.get('output'),
+        'raw_text': section.get('raw_text'),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('ai_error'),
+        'updated_at': section.get('updated_at'),
+    }
 
 
 # ── Reset ─────────────────────────────────────────────────────────

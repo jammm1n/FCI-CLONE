@@ -60,6 +60,11 @@ class NotesRequest(BaseModel):
     notes: str
 
 
+class TextSectionRequest(BaseModel):
+    """PUT /api/ingestion/cases/{case_id}/sections/{key} — text with AI processing."""
+    text: str
+
+
 # ── Response Models ───────────────────────────────────────────────
 
 class SectionStatus(BaseModel):

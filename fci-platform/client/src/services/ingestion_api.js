@@ -175,13 +175,54 @@ export async function saveNotes(token, caseId, notes) {
   return handleResponse(res);
 }
 
-// ── Raw Hex Dump ────────────────────────────────────────────
+// ── Text Sections with AI ────────────────────────────────────────
 
-export async function saveHexDump(token, caseId, text) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/hex-dump`, {
+export async function saveTextSection(token, caseId, sectionKey, text) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}`, {
     method: 'PUT',
     headers: authHeaders(token),
-    body: JSON.stringify({ notes: text }),
+    body: JSON.stringify({ text }),
+  });
+  return handleResponse(res);
+}
+
+export async function getTextSection(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ── Iterative Entry Sections ─────────────────────────────────────
+
+export async function addEntry(token, caseId, sectionKey, text) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ text }),
+  });
+  return handleResponse(res);
+}
+
+export async function removeEntry(token, caseId, sectionKey, entryId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/${entryId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function processEntries(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/process`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function getEntries(token, caseId, sectionKey) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}`, {
+    headers: authHeaders(token),
   });
   return handleResponse(res);
 }

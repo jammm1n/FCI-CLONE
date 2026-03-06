@@ -34,7 +34,7 @@ ASSEMBLY_ORDER = [
     ('c360', 'C360 Transaction Summary', 'C360 data not provided.'),
     ('elliptic', 'Elliptic Wallet Screening Results', 'No wallet screening performed.'),
     ('hexa_dump', 'L1 Referral Narrative', 'No L1 referral data provided.'),
-    ('raw_hex_dump', 'Raw Hex Dump', 'No hex dump data provided.'),
+    ('raw_hex_dump', 'HaoDesk Case Data', 'No HaoDesk case data provided.'),
     ('kyc', 'KYC Document Summary', 'KYC documents not provided.'),
     ('previous_icrs', 'Prior ICR Summary', 'No prior ICRs identified for this subject.'),
     ('rfis', 'RFI Summary', 'No RFIs on record for this subject.'),
@@ -70,6 +70,9 @@ def _empty_sections():
     # Elliptic has extra fields
     sections['elliptic']['wallet_addresses'] = []
     sections['elliptic']['manual_addresses'] = []
+    # Iterative entry sections
+    sections['previous_icrs']['entries'] = []
+    sections['rfis']['entries'] = []
     return sections
 
 
@@ -164,6 +167,9 @@ async def get_case_status(case_id: str) -> dict | None:
         if key == 'c360':
             entry['ai_status'] = section.get('ai_status', 'pending')
             entry['ai_progress'] = section.get('ai_progress', {})
+        # Include AI status for text sections with AI processing
+        if section.get('ai_status'):
+            entry['ai_status'] = section['ai_status']
         section_statuses[key] = entry
 
     return {
@@ -289,6 +295,226 @@ async def save_text_section(case_id: str, section_key: str, text: str) -> dict:
 
     await _check_ready_state(case_id)
     return {'status': status, 'updated_at': now}
+
+
+async def save_text_section_with_ai(
+    case_id: str, section_key: str, text: str,
+) -> dict:
+    """
+    Save a text section, then run AI processing in the foreground.
+
+    Stores both raw_text (original input) and output (AI narrative).
+    If AI fails, falls back to storing the raw text as output.
+    Returns {status, updated_at, ai_status, ai_error}.
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    now = _utcnow()
+
+    if not text.strip():
+        # Clear the section
+        await _collection().update_one(
+            {'_id': case_id},
+            {'$set': {
+                f'sections.{section_key}.status': 'empty',
+                f'sections.{section_key}.output': None,
+                f'sections.{section_key}.raw_text': None,
+                f'sections.{section_key}.ai_status': None,
+                f'sections.{section_key}.updated_at': now,
+                'updated_at': now,
+            }},
+        )
+        await _check_ready_state(case_id)
+        return {'status': 'empty', 'updated_at': now, 'ai_status': None, 'ai_error': None}
+
+    raw_text = text.strip()
+
+    # Save raw text immediately, mark as processing
+    await _collection().update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'processing',
+            f'sections.{section_key}.raw_text': raw_text,
+            f'sections.{section_key}.ai_status': 'processing',
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    # Run AI processing
+    ai_result = await process_with_ai(section_key, raw_text)
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete'
+        ai_error = None
+    else:
+        output = raw_text  # Fallback to raw
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI processing returned no output')
+
+    await _collection().update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'complete',
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.raw_text': raw_text,
+            f'sections.{section_key}.ai_status': ai_status,
+            f'sections.{section_key}.ai_error': ai_error,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
+    return {
+        'status': 'complete',
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+    }
+
+
+# ── Iterative Entry Sections (Prior ICR, RFI) ─────────────────────
+
+
+async def add_entry(case_id: str, section_key: str, text: str) -> dict:
+    """
+    Add a text entry to an iterative section.
+
+    Returns the new entry dict with its generated id.
+    """
+    now = _utcnow()
+    col = _collection()
+
+    # Get current entries to generate next id
+    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}.entries': 1})
+    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
+    entry_id = f'entry_{len(entries)}'
+
+    entry = {
+        'id': entry_id,
+        'text': text.strip(),
+        'added_at': now,
+    }
+
+    await col.update_one(
+        {'_id': case_id},
+        {
+            '$push': {f'sections.{section_key}.entries': entry},
+            '$set': {
+                f'sections.{section_key}.status': 'incomplete',
+                f'sections.{section_key}.updated_at': now,
+                'updated_at': now,
+            },
+        },
+    )
+
+    logger.info('Added entry %s to %s.%s', entry_id, case_id, section_key)
+    return entry
+
+
+async def remove_entry(case_id: str, section_key: str, entry_id: str):
+    """Remove an entry from an iterative section by its id."""
+    now = _utcnow()
+    col = _collection()
+
+    await col.update_one(
+        {'_id': case_id},
+        {
+            '$pull': {f'sections.{section_key}.entries': {'id': entry_id}},
+            '$set': {
+                f'sections.{section_key}.updated_at': now,
+                'updated_at': now,
+            },
+        },
+    )
+
+    # If no entries left, reset section to empty
+    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}.entries': 1})
+    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
+    if not entries:
+        await col.update_one(
+            {'_id': case_id},
+            {'$set': {
+                f'sections.{section_key}.status': 'empty',
+                f'sections.{section_key}.output': None,
+                f'sections.{section_key}.raw_text': None,
+                f'sections.{section_key}.ai_status': None,
+            }},
+        )
+
+    logger.info('Removed entry %s from %s.%s', entry_id, case_id, section_key)
+
+
+async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
+    """
+    Combine all entries in an iterative section and run AI processing.
+
+    Concatenates all entry texts (numbered), sends to AI with the
+    section's prompt, stores the result.
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    col = _collection()
+    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}': 1})
+    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
+
+    if not entries:
+        return {'status': 'empty', 'ai_status': None, 'ai_error': 'No entries to process'}
+
+    # Combine entries into numbered text
+    parts = []
+    for i, entry in enumerate(entries, 1):
+        parts.append(f'--- Entry {i} ---\n{entry["text"]}')
+    combined_text = '\n\n'.join(parts)
+
+    now = _utcnow()
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'processing',
+            f'sections.{section_key}.ai_status': 'processing',
+            f'sections.{section_key}.raw_text': combined_text,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    ai_result = await process_with_ai(section_key, combined_text)
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete'
+        ai_error = None
+    else:
+        output = combined_text
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI processing returned no output')
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'sections.{section_key}.status': 'complete',
+            f'sections.{section_key}.output': output,
+            f'sections.{section_key}.raw_text': combined_text,
+            f'sections.{section_key}.ai_status': ai_status,
+            f'sections.{section_key}.ai_error': ai_error,
+            f'sections.{section_key}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id)
+    return {
+        'status': 'complete',
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+        'entry_count': len(entries),
+    }
 
 
 # ── Ready-State Detection ─────────────────────────────────────────

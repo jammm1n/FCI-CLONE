@@ -37,6 +37,17 @@ PROCESSOR_PROMPT_MAP = {
 
 # Processors NOT in this map (user_profile, elliptic) get no AI processing.
 
+# ── Text Section Prompt Map ─────────────────────────────────────
+# Maps ingestion section keys to their prompt files.
+# These are simple text-in / narrative-out sections (not C360 processors).
+
+SECTION_PROMPT_MAP = {
+    'hexa_dump':    'prompt-20-l1-referral.md',
+    'raw_hex_dump': 'prompt-21-haoDesk-cleanup.md',
+    'previous_icrs': 'prompt-04-prior-icr.md',
+    'rfis':         'prompt-10-rfi-summary.md',
+}
+
 # ── Prompt Loading ───────────────────────────────────────────────
 
 _GLOBAL_RULES = None
@@ -56,13 +67,14 @@ def _load_prompts():
 
     _GLOBAL_RULES = (prompts_dir / '_global-rules.md').read_text(encoding='utf-8')
 
-    for processor_id, filename in PROCESSOR_PROMPT_MAP.items():
+    all_mappings = {**PROCESSOR_PROMPT_MAP, **SECTION_PROMPT_MAP}
+    for key, filename in all_mappings.items():
         prompt_path = prompts_dir / filename
         if not prompt_path.exists():
             logger.warning('Prompt file not found: %s', prompt_path)
             continue
         prompt_text = prompt_path.read_text(encoding='utf-8')
-        _PROMPT_CACHE[processor_id] = _GLOBAL_RULES + '\n\n' + prompt_text
+        _PROMPT_CACHE[key] = _GLOBAL_RULES + '\n\n' + prompt_text
 
     logger.info(
         'Loaded %d prompts from %s', len(_PROMPT_CACHE), prompts_dir,

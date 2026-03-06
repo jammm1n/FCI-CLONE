@@ -11,7 +11,7 @@ const SECTION_LABELS = {
   c360: 'C360 Data Processing',
   elliptic: 'Elliptic Wallet Screening',
   hexa_dump: 'L1 Referral Narrative',
-  raw_hex_dump: 'Raw Hex Dump',
+  raw_hex_dump: 'HaoDesk Case Data',
   kyc: 'KYC Document Summary',
   previous_icrs: 'Prior ICR Summary',
   rfis: 'RFI Summary',
@@ -175,13 +175,13 @@ function ProcessorSection({ processorId, processorOutputs, aiOutputs }) {
       </div>
       <div className="px-4 py-3">
         {skipped && !rawOutput && (
-          <p className="text-xs text-surface-400 italic">Data was not uploaded for this section.</p>
+          <p className="text-sm text-surface-400 italic">Data was not uploaded for this section.</p>
         )}
         {hasError && (
           <p className="text-xs text-red-400 mb-2">AI processing error: {ai.error}</p>
         )}
         {showRaw && rawOutput ? (
-          <pre className="whitespace-pre-wrap text-xs text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
+          <pre className="whitespace-pre-wrap text-sm text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
             {rawOutput}
           </pre>
         ) : aiOutput ? (
@@ -189,7 +189,7 @@ function ProcessorSection({ processorId, processorOutputs, aiOutputs }) {
             {aiOutput}
           </pre>
         ) : rawOutput ? (
-          <pre className="whitespace-pre-wrap text-xs text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
+          <pre className="whitespace-pre-wrap text-sm text-surface-600 dark:text-surface-400 font-mono leading-relaxed">
             {rawOutput}
           </pre>
         ) : null}
@@ -574,7 +574,7 @@ function C360Section({ caseData, onProcessingStarted }) {
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
           {SECTION_LABELS.c360}
         </h4>
         <div className="flex items-center gap-2">
@@ -622,7 +622,7 @@ function C360Section({ caseData, onProcessingStarted }) {
             />
           </div>
           {files.length > 0 && (
-            <p className="text-xs text-surface-400 mb-3">
+            <p className="text-sm text-surface-400 mb-3">
               {files.length} file{files.length !== 1 ? 's' : ''} selected: {files.map((f) => f.name).join(', ')}
             </p>
           )}
@@ -641,7 +641,7 @@ function C360Section({ caseData, onProcessingStarted }) {
         <div className="space-y-3">
           <UserInfoCard userInfo={userInfo} uid={detectedUid} />
           {detectedUid && (
-            <p className="text-xs text-surface-400 italic">
+            <p className="text-sm text-surface-400 italic">
               Verify this is the correct user ID for the case you are investigating.
             </p>
           )}
@@ -653,7 +653,7 @@ function C360Section({ caseData, onProcessingStarted }) {
         <div className="space-y-3">
           <UserInfoCard userInfo={userInfo} uid={detectedUid} />
           {detectedUid && (
-            <p className="text-xs text-surface-400 italic">
+            <p className="text-sm text-surface-400 italic">
               Verify this is the correct user ID for the case you are investigating.
             </p>
           )}
@@ -661,7 +661,7 @@ function C360Section({ caseData, onProcessingStarted }) {
             Processing complete. {(c360.detected_file_types || []).length} file types detected.
           </p>
           {(c360.warnings || []).length > 0 && (
-            <div className="text-xs text-amber-500 space-y-1">
+            <div className="text-sm text-amber-500 space-y-1">
               {c360.warnings.map((w, i) => (
                 <p key={i}>{w.message}</p>
               ))}
@@ -780,7 +780,7 @@ function AdditionalInputsSection({ caseData, onSaved }) {
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
           Additional Inputs
         </h4>
         {!editing && (
@@ -794,7 +794,7 @@ function AdditionalInputsSection({ caseData, onSaved }) {
       </div>
 
       {!editing && (
-        <div className="text-xs text-surface-400 space-y-1">
+        <div className="text-sm text-surface-400 space-y-1">
           <p>
             UIDs: {existingUids.length > 0 ? existingUids.join(', ') : 'None'}
           </p>
@@ -806,13 +806,13 @@ function AdditionalInputsSection({ caseData, onSaved }) {
 
       {editing && (
         <>
-          <p className="text-xs text-surface-400 mb-4">
+          <p className="text-sm text-surface-400 mb-4">
             Optional. Add any additional UIDs of interest (victims, co-suspects) and extra wallet addresses not in the C360 data.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+              <label className="block text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">
                 Additional UIDs (one per line)
               </label>
               <textarea
@@ -824,7 +824,7 @@ function AdditionalInputsSection({ caseData, onSaved }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+              <label className="block text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">
                 Additional Wallets (one per line)
               </label>
               <textarea
@@ -898,7 +898,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
           {SECTION_LABELS.elliptic}
         </h4>
         <div className="flex items-center gap-2">
@@ -922,7 +922,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
 
       {c360Complete && ellStatus === 'empty' && (
         <>
-          <p className="text-xs text-surface-400 mb-3">
+          <p className="text-sm text-surface-400 mb-3">
             {walletCount} wallet address{walletCount !== 1 ? 'es' : ''} ready for screening.
           </p>
           {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
@@ -997,7 +997,7 @@ function NotesSection({ caseData }) {
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
           {SECTION_LABELS.investigator_notes}
         </h4>
         <StatusDot status={notesStatus} />
@@ -1023,44 +1023,74 @@ function NotesSection({ caseData }) {
   );
 }
 
-// ── Raw Hex Dump Section ─────────────────────────────────────
+// ── Text Section with AI Processing ──────────────────────────────
 
-function HexDumpSection({ caseData }) {
+function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
   const { token } = useAuth();
-  const [text, setText] = useState(caseData.sections?.raw_hex_dump?.output || '');
+  const section = caseData.sections?.[sectionKey] || {};
+  const [text, setText] = useState(section.raw_text || section.output || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewTab, setPreviewTab] = useState('ai');
 
-  const status = caseData.sections?.raw_hex_dump?.status || 'empty';
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
 
   async function handleSave() {
     setSaving(true);
     setSaved(false);
     try {
-      await ingestionApi.saveHexDump(token, caseData.case_id, text);
+      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, text);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      if (onSaved) onSaved();
     } catch (err) {
-      console.error('Failed to save hex dump:', err);
+      console.error(`Failed to save ${sectionKey}:`, err);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getTextSection(token, caseData.case_id, sectionKey);
+      setPreviewData(data);
+      setPreviewTab('ai');
+      setShowPreview(true);
+    } catch (err) {
+      console.error(`Failed to load preview for ${sectionKey}:`, err);
     }
   }
 
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-surface-900 dark:text-surface-100">
-          {SECTION_LABELS.raw_hex_dump}
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
         </h4>
-        <StatusDot status={status} />
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed (raw saved)' : ''}
+            </span>
+          )}
+          <StatusDot status={status} />
+        </div>
       </div>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="Paste raw hex dump data here..."
+        placeholder={placeholder}
         rows={6}
-        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
+        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
       />
       <div className="flex items-center gap-3">
         <button
@@ -1068,13 +1098,252 @@ function HexDumpSection({ caseData }) {
           disabled={saving}
           className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? 'Saving & Processing...' : 'Save & Process'}
         </button>
+        {status === 'complete' && (
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+        )}
         {saved && <span className="text-xs text-emerald-500">Saved</span>}
+      </div>
+
+      {showPreview && previewData && (
+        <TextPreviewModal
+          title={SECTION_LABELS[sectionKey]}
+          data={previewData}
+          activeTab={previewTab}
+          onTabChange={setPreviewTab}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+// ── Text Section Preview Modal ──────────────────────────────────
+
+function TextPreviewModal({ title, data, activeTab, onTabChange, onClose }) {
+  const content = activeTab === 'ai' ? data.output : data.raw_text;
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    if (content) {
+      navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h3>
+          <div className="flex items-center gap-3">
+            <div className="flex bg-surface-100 dark:bg-surface-900 rounded-lg p-0.5">
+              <button
+                onClick={() => onTabChange('ai')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'ai'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                AI Output
+              </button>
+              <button
+                onClick={() => onTabChange('raw')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === 'raw'
+                    ? 'bg-gold-500 text-surface-900'
+                    : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+                }`}
+              >
+                Raw Input
+              </button>
+            </div>
+            <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {data.ai_error && activeTab === 'ai' && (
+            <div className="mb-3 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              AI Error: {data.ai_error}
+            </div>
+          )}
+          <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
+            {content || 'No content available.'}
+          </pre>
+        </div>
       </div>
     </div>
   );
 }
+
+// ── Iterative Entry Section (Prior ICR) ──────────────────────────
+
+function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
+  const { token } = useAuth();
+  const section = caseData.sections?.[sectionKey] || {};
+  const [text, setText] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewTab, setPreviewTab] = useState('ai');
+
+  const entries = section.entries || [];
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
+
+  async function handleAddEntry() {
+    if (!text.trim()) return;
+    setAdding(true);
+    try {
+      await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text);
+      setText('');
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to add entry to ${sectionKey}:`, err);
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleRemoveEntry(entryId) {
+    try {
+      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to remove entry:`, err);
+    }
+  }
+
+  async function handleProcess() {
+    setProcessing(true);
+    try {
+      await ingestionApi.processEntries(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to process ${sectionKey}:`, err);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey);
+      setPreviewData(data);
+      setPreviewTab('ai');
+      setShowPreview(true);
+    } catch (err) {
+      console.error(`Failed to load preview for ${sectionKey}:`, err);
+    }
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
+        </h4>
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed (raw saved)' : ''}
+            </span>
+          )}
+          <StatusDot status={status === 'incomplete' ? 'empty' : status} />
+        </div>
+      </div>
+
+      {/* Existing entries */}
+      {entries.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {entries.map((entry, idx) => (
+            <div
+              key={entry.id}
+              className="flex items-start gap-2 bg-white dark:bg-surface-900 rounded-lg p-3 border border-surface-200 dark:border-surface-700"
+            >
+              <span className="text-xs text-surface-400 font-mono mt-0.5 shrink-0">#{idx + 1}</span>
+              <p className="text-sm text-surface-700 dark:text-surface-300 flex-1 line-clamp-3">
+                {entry.text}
+              </p>
+              <button
+                onClick={() => handleRemoveEntry(entry.id)}
+                className="text-surface-400 hover:text-red-400 text-xs shrink-0 transition-colors"
+                title="Remove entry"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new entry */}
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-3"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleAddEntry}
+          disabled={adding || !text.trim()}
+          className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+        >
+          {adding ? 'Adding...' : 'Add Entry'}
+        </button>
+        {entries.length > 0 && (
+          <button
+            onClick={handleProcess}
+            disabled={processing}
+            className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+          >
+            {processing ? 'Processing...' : `Process All (${entries.length})`}
+          </button>
+        )}
+        {status === 'complete' && (
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+        )}
+      </div>
+
+      {showPreview && previewData && (
+        <TextPreviewModal
+          title={SECTION_LABELS[sectionKey]}
+          data={previewData}
+          activeTab={previewTab}
+          onTabChange={setPreviewTab}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
 
 // ── Future Section Placeholder ───────────────────────────────────
 
@@ -1404,14 +1673,32 @@ export default function IngestionPage() {
               onProcessingStarted={handleProcessingStarted}
             />
 
-            {/* L1 Referral Narrative (future) */}
-            <FutureSectionCard sectionKey="hexa_dump" caseData={caseData} />
+            {/* L1 Referral Narrative */}
+            <TextAISection
+              sectionKey="hexa_dump"
+              caseData={caseData}
+              placeholder="Paste the L1 referral narrative here..."
+              onSaved={handleProcessingStarted}
+            />
 
-            {/* Raw Hex Dump (text input) */}
-            <HexDumpSection caseData={caseData} />
+            {/* HaoDesk Case Data */}
+            <TextAISection
+              sectionKey="raw_hex_dump"
+              caseData={caseData}
+              placeholder="Paste the HaoDesk case data here..."
+              onSaved={handleProcessingStarted}
+            />
+
+            {/* Prior ICR Summary (iterative entries) */}
+            <IterativeEntrySection
+              sectionKey="previous_icrs"
+              caseData={caseData}
+              placeholder="Paste a prior ICR here (one at a time)..."
+              onSaved={handleProcessingStarted}
+            />
 
             {/* Remaining future phase sections */}
-            {['kyc', 'previous_icrs', 'rfis', 'kodex', 'l1_victim', 'l1_suspect'].map((key) => (
+            {['kyc', 'rfis', 'kodex', 'l1_victim', 'l1_suspect'].map((key) => (
               <FutureSectionCard
                 key={key}
                 sectionKey={key}
