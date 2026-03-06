@@ -344,8 +344,8 @@ def _extract_quick_info(files_bytes):
         if _is_uol_file(name, content):
             continue
         try:
-            result = parse_uploaded_file(name, content)
-            parsed_files.append(result)
+            results = parse_uploaded_file(name, content)
+            parsed_files.extend(results)
         except Exception as e:
             logger.warning('Quick parse failed for %s: %s', name, e)
             parsed_files.append({
@@ -400,8 +400,8 @@ def _run_sync_pipeline(files_bytes, params):
     parsed_files = []
     for name, content in files_bytes:
         try:
-            result = parse_uploaded_file(name, content)
-            parsed_files.append(result)
+            results = parse_uploaded_file(name, content)
+            parsed_files.extend(results)
         except Exception as e:
             logger.warning('Failed to parse %s: %s', name, e)
             parsed_files.append({

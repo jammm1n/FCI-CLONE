@@ -14,9 +14,9 @@ def parse_uploaded_file(filename, file_bytes):
     """
     Parse an uploaded file into structured data.
 
-    Returns either:
-      - A regular file result dict with headers and rows
-      - A UOL result dict with multiple parsed tabs
+    Returns a list of parsed results. Most files produce a single
+    result, but multi-sheet Excel workbooks produce one per sheet.
+    UOL workbooks produce a single UOL result dict (with is_uol=True).
 
     Args:
         filename: Original filename
@@ -25,16 +25,16 @@ def parse_uploaded_file(filename, file_bytes):
     lower = filename.lower()
 
     if lower.endswith('.csv'):
-        return _parse_csv(filename, file_bytes)
+        return [_parse_csv(filename, file_bytes)]
     elif lower.endswith(('.xlsx', '.xls')):
         return _parse_excel(filename, file_bytes)
     else:
-        return {
+        return [{
             'filename': filename,
             'error': 'Unsupported file format',
             'headers': [],
             'rows': [],
-        }
+        }]
 
 
 def _parse_csv(filename, file_bytes):
@@ -87,11 +87,11 @@ def _parse_excel(filename, file_bytes):
             data_only=True,
         )
         try:
-            return _parse_uol_workbook(filename, wb_full)
+            return [_parse_uol_workbook(filename, wb_full)]
         finally:
             wb_full.close()
     else:
-        # Regular spreadsheets work fine in read_only mode
+        # Regular spreadsheets — parse all sheets
         wb = openpyxl.load_workbook(
             io.BytesIO(file_bytes),
             read_only=True,
@@ -110,26 +110,42 @@ def _is_uol_workbook(wb):
 
 
 def _parse_single_sheet(filename, wb):
-    """Parse the first sheet of a workbook into headers + row dicts."""
-    ws = wb[wb.sheetnames[0]]
-    all_rows = list(ws.iter_rows(values_only=True))
+    """
+    Parse all sheets of a non-UOL workbook.
 
-    if not all_rows:
-        return {'filename': filename, 'headers': [], 'rows': []}
+    Returns a list of parsed results — one per sheet that has data.
+    Single-sheet workbooks return a one-element list.
+    """
+    results = []
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        all_rows = list(ws.iter_rows(values_only=True))
 
-    headers = [safe_str(cell) for cell in all_rows[0]]
-    data_rows = []
-    for row in all_rows[1:]:
-        obj = {}
-        for j, header in enumerate(headers):
-            obj[header] = row[j] if j < len(row) else ''
-        data_rows.append(obj)
+        if not all_rows:
+            continue
 
-    return {
-        'filename': filename,
-        'headers': headers,
-        'rows': data_rows,
-    }
+        headers = [safe_str(cell) for cell in all_rows[0]]
+        if not any(headers):
+            continue
+
+        data_rows = []
+        for row in all_rows[1:]:
+            obj = {}
+            for j, header in enumerate(headers):
+                obj[header] = row[j] if j < len(row) else ''
+            data_rows.append(obj)
+
+        sheet_label = f'{filename} [{sheet_name}]' if len(wb.sheetnames) > 1 else filename
+        results.append({
+            'filename': sheet_label,
+            'headers': headers,
+            'rows': data_rows,
+        })
+
+    if not results:
+        return [{'filename': filename, 'headers': [], 'rows': []}]
+
+    return results
 
 
 def _parse_uol_workbook(filename, wb):
