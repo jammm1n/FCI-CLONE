@@ -113,6 +113,17 @@ export async function getEllipticOutput(token, caseId) {
   return handleResponse(res);
 }
 
+// ── UIDs ─────────────────────────────────────────────────────
+
+export async function updateSubjectUid(token, caseId, subjectUid) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/uids`, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify({ subject_uid: subjectUid }),
+  });
+  return handleResponse(res);
+}
+
 // ── Sections ─────────────────────────────────────────────────────
 
 export async function markSectionNone(token, caseId, sectionKey) {

@@ -205,6 +205,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 'uol_info': result['uol_info'],
                 'csv_content': result['csv_content'],
                 'csv_filename': result['csv_filename'],
+                'detected_uid': result.get('file_uid', ''),
             },
         )
         logger.info('C360 processing complete for case %s', case_id)
@@ -427,15 +428,20 @@ async def update_coconspirator_uids(
     body: dict,
     current_user: dict = Depends(get_current_user),
 ):
-    """Update the co-conspirator / additional UIDs list."""
+    """Update the co-conspirator / additional UIDs list and optionally subject_uid."""
     await _get_case_or_404(case_id)
-    uids = body.get('coconspirator_uids', [])
-    from server.database import get_database
-    await get_database()['ingestion_cases'].update_one(
-        {'_id': case_id},
-        {'$set': {'coconspirator_uids': uids}},
-    )
-    return {'coconspirator_uids': uids}
+    update = {}
+    if 'coconspirator_uids' in body:
+        update['coconspirator_uids'] = body['coconspirator_uids']
+    if 'subject_uid' in body:
+        update['subject_uid'] = body['subject_uid']
+    if update:
+        from server.database import get_database
+        await get_database()['ingestion_cases'].update_one(
+            {'_id': case_id},
+            {'$set': update},
+        )
+    return update
 
 
 # ── Section Management ────────────────────────────────────────────

@@ -117,13 +117,16 @@ function CaseCreationForm({ onCreated }) {
 
 // ── C360 Upload Section ──────────────────────────────────────────
 
-function C360Section({ caseData, onProcessingStarted }) {
+function C360Section({ caseData, onProcessingStarted, onCaseUpdated }) {
   const { token } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const [editingUid, setEditingUid] = useState(false);
+  const [uidValue, setUidValue] = useState('');
+  const [savingUid, setSavingUid] = useState(false);
 
   const c360 = caseData.sections?.c360 || {};
   const status = c360.status || 'empty';
@@ -236,21 +239,115 @@ function C360Section({ caseData, onProcessingStarted }) {
         </div>
       )}
 
-      {status === 'complete' && (
-        <div className="space-y-2">
-          <p className="text-sm text-emerald-500 dark:text-emerald-400">
-            Processing complete. {(c360.detected_file_types || []).length} file types detected.
-          </p>
-          {(c360.warnings || []).length > 0 && (
-            <div className="text-xs text-amber-500 space-y-1">
-              {c360.warnings.map((w, i) => (
-                <p key={i}>{w.message}</p>
-              ))}
-            </div>
-          )}
-          <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
-        </div>
-      )}
+      {status === 'complete' && (() => {
+        const detectedUid = c360.detected_uid || '';
+        const enteredUid = caseData.subject_uid || '';
+        const uidMismatch = detectedUid && enteredUid && detectedUid !== enteredUid;
+
+        async function handleSaveUid(newUid) {
+          setSavingUid(true);
+          try {
+            await ingestionApi.updateSubjectUid(token, caseData.case_id, newUid);
+            setEditingUid(false);
+            if (onCaseUpdated) onCaseUpdated();
+          } catch (err) {
+            setError(err.message || 'Failed to update UID');
+          } finally {
+            setSavingUid(false);
+          }
+        }
+
+        return (
+          <div className="space-y-2">
+            {uidMismatch && !editingUid && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                <div className="flex items-start gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-red-500 shrink-0 mt-0.5">
+                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-red-500">UID Mismatch</p>
+                    <p className="text-xs text-red-400 mt-0.5">
+                      You entered: <span className="font-mono font-semibold">{enteredUid}</span>
+                    </p>
+                    <p className="text-xs text-red-400">
+                      Files contain: <span className="font-mono font-semibold">{detectedUid}</span>
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={() => handleSaveUid(detectedUid)}
+                        disabled={savingUid}
+                        className="px-3 py-1 rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
+                      >
+                        {savingUid ? 'Updating...' : `Use ${detectedUid}`}
+                      </button>
+                      <button
+                        onClick={() => { setEditingUid(true); setUidValue(enteredUid); }}
+                        className="px-3 py-1 rounded-md bg-surface-600/50 hover:bg-surface-600/70 text-surface-300 text-xs font-medium transition-colors"
+                      >
+                        Edit UID manually
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editingUid && (
+              <div className="p-3 rounded-lg bg-surface-700/50 border border-surface-600">
+                <p className="text-xs text-surface-400 mb-2">
+                  Update subject UID (files detected: <span className="font-mono">{detectedUid}</span>)
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={uidValue}
+                    onChange={(e) => setUidValue(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface-900 border border-surface-600 text-surface-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+                  />
+                  <button
+                    onClick={() => handleSaveUid(uidValue.trim())}
+                    disabled={savingUid || !uidValue.trim()}
+                    className="px-3 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-xs transition-colors disabled:opacity-50"
+                  >
+                    {savingUid ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => setEditingUid(false)}
+                    className="px-3 py-1.5 rounded-lg bg-surface-600 hover:bg-surface-500 text-surface-300 text-xs transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!uidMismatch && detectedUid && !editingUid && (
+              <p className="text-xs text-emerald-500">
+                UID confirmed: <span className="font-mono">{detectedUid}</span> matches entered UID
+              </p>
+            )}
+
+            {!detectedUid && !editingUid && (
+              <p className="text-xs text-surface-500">
+                No UID detected in uploaded files.
+              </p>
+            )}
+
+            <p className="text-sm text-emerald-500 dark:text-emerald-400">
+              Processing complete. {(c360.detected_file_types || []).length} file types detected.
+            </p>
+            {(c360.warnings || []).length > 0 && (
+              <div className="text-xs text-amber-500 space-y-1">
+                {c360.warnings.map((w, i) => (
+                  <p key={i}>{w.message}</p>
+                ))}
+              </div>
+            )}
+            <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
+          </div>
+        );
+      })()}
 
       {status === 'error' && (
         <p className="text-sm text-red-500 dark:text-red-400">
@@ -811,6 +908,7 @@ export default function IngestionPage() {
             <C360Section
               caseData={caseData}
               onProcessingStarted={handleProcessingStarted}
+              onCaseUpdated={() => ingestionApi.getCase(token, caseData.case_id).then(setCaseData).catch(() => {})}
             />
 
             {/* Additional UIDs + Wallets (appears after C360 completes) */}

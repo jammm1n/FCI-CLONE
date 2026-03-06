@@ -457,6 +457,7 @@ def _run_sync_pipeline(files_bytes, params):
         'csv_content': csv_content,
         'csv_filename': csv_filename,
         'subject_uid': subject_uid,
+        'file_uid': file_uid or '',
         'detected_file_types': list(detected.keys()),
         'undetected_files': undetected_summary,
         'warnings': [
