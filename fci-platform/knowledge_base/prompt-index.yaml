@@ -140,3 +140,41 @@ processing_prompts:
       - Victim and suspect communications (text + screenshots)
       - Translation, chronological summary, scam/fraud enhancement
     token_estimate: 400
+
+  - id: ctm-enhanced
+    title: "CTM Alerts Enhanced Analysis"
+    filename: "prompt-02-ctm-enhanced.md"
+    covers:
+      - Deep-dive analysis of flagged transaction spreadsheets
+      - CTM alert enrichment beyond standard alert summaries
+      - Transaction-level narrative for cases with specific flagged transactions
+    token_estimate: 1500
+
+  - id: counterparty-analysis
+    title: "Internal Counterparty Analysis"
+    filename: "prompt-12-counterparty-analysis.md"
+    covers:
+      - Hexa counterparty text audit (self-reference, header mismatch, blocks)
+      - Risk flag table from C360 spreadsheets (Internal Transfer, Binance Pay, P2P)
+      - Clean counterparty summary and P2P totals
+      - Four-task structured factual output
+    token_estimate: 2000
+
+  - id: elliptic-extraction
+    title: "Elliptic Top Addresses — Data Extraction"
+    filename: "prompt-14e-elliptic-extraction.md"
+    covers:
+      - Structured extraction from Elliptic batch screening results
+      - Wallet Screening Table with full address, risk score, entity, direction
+      - Summary Statistics with flag list (Gambling, Sanctions, FATF)
+      - UOL Cross-Reference integration (conditional Section 3)
+    token_estimate: 4000
+
+  - id: case-intake
+    title: "RCM / Case Intake Data Extraction"
+    filename: "prompt-16e-case-intake.md"
+    covers:
+      - Nine-section structured extraction from RCM case intake documents
+      - Scam and fraud case intake parsing
+      - Victim information, suspect information, transaction details
+    token_estimate: 3000

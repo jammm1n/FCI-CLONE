@@ -289,7 +289,7 @@ scores, and transaction count.
 **Action — Determine which prompt to use:**
 IF data includes a "Snapshot of Suspicious Transactions"
 (specific flagged transactions):
-→ For cases with specific flagged transaction spreadsheets, fetch the CTM Enhanced Analysis prompt from the reference tier via `get_reference_document("ctm-enhanced-analysis")`
+→ For cases with specific flagged transaction spreadsheets, fetch the CTM Enhanced Analysis prompt from the reference tier via `get_prompt("ctm-enhanced")`
 IF data is general lifetime alert summary:
 → Write the CTM alert summary using the following spec:
 **Required output:** Single paragraph, 60-80 words.

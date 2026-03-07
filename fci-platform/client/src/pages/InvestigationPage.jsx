@@ -12,6 +12,7 @@ import ChatInput from '../components/investigation/ChatInput';
 import StreamingIndicator from '../components/investigation/StreamingIndicator';
 import Skeleton from '../components/shared/Skeleton';
 import DownloadPdfButton from '../components/shared/DownloadPdfButton';
+import TokenUsageDisplay from '../components/shared/TokenUsageDisplay';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
@@ -32,6 +33,7 @@ export default function InvestigationPage() {
     setConversationId,
     sending,
     aiLoading,
+    tokenUsage,
     loadHistory,
     sendMessage,
     triggerInitialAssessment,
@@ -212,7 +214,8 @@ export default function InvestigationPage() {
           className="flex-1 flex flex-col min-h-0 animate-slide-in-right"
           style={{ animationDelay: '100ms' }}
         >
-          <div className="flex items-center justify-end px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
+            <TokenUsageDisplay tokenUsage={tokenUsage} />
             <DownloadPdfButton
               conversationId={conversationId}
               disabled={sending || aiLoading}

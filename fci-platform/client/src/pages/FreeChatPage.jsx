@@ -9,6 +9,7 @@ import ChatMessageList from '../components/investigation/ChatMessageList';
 import ChatInput from '../components/investigation/ChatInput';
 import StreamingIndicator from '../components/investigation/StreamingIndicator';
 import DownloadPdfButton from '../components/shared/DownloadPdfButton';
+import TokenUsageDisplay from '../components/shared/TokenUsageDisplay';
 
 export default function FreeChatPage() {
   const { conversationId: paramConvId } = useParams();
@@ -24,6 +25,8 @@ export default function FreeChatPage() {
     setConversationId,
     sending,
     aiLoading,
+    tokenUsage,
+    setTokenUsage,
     loadHistory,
     sendMessage: hookSendMessage,
   } = useStreamingChat(token);
@@ -133,6 +136,8 @@ export default function FreeChatPage() {
                     : msg
                 )
               );
+            } else if (event.type === 'done') {
+              if (event.token_usage) setTokenUsage(event.token_usage);
             } else if (event.type === 'tool_use') {
               toolsUsed.push({
                 tool: event.tool,
@@ -178,7 +183,7 @@ export default function FreeChatPage() {
       // Existing conversation — use hook
       await hookSendMessage(content, images);
     }
-  }, [token, conversationId, hookSendMessage, setConversationId, setMessages, navigate, refreshSidebar]);
+  }, [token, conversationId, hookSendMessage, setConversationId, setMessages, setTokenUsage, navigate, refreshSidebar]);
 
   const handleNewChat = useCallback(() => {
     setMessages([]);
@@ -209,7 +214,8 @@ export default function FreeChatPage() {
           onDelete={handleDelete}
         />
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center justify-end px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
+            <TokenUsageDisplay tokenUsage={tokenUsage} />
             <DownloadPdfButton
               conversationId={conversationId}
               disabled={sending || aiLoading}

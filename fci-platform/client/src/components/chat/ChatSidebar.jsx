@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function ChatSidebar({
@@ -7,6 +8,14 @@ export default function ChatSidebar({
   onDelete,
 }) {
   const navigate = useNavigate();
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
+  // Clear pending delete after 3 seconds
+  useEffect(() => {
+    if (!pendingDeleteId) return;
+    const timer = setTimeout(() => setPendingDeleteId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [pendingDeleteId]);
 
   return (
     <div className="w-72 shrink-0 flex flex-col border-r border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-900 h-full">
@@ -43,11 +52,22 @@ export default function ChatSidebar({
             <span className="truncate flex-1">
               {conv.title || 'New conversation'}
             </span>
-            {onDelete && (
+            {onDelete && pendingDeleteId === conv.conversation_id ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  setPendingDeleteId(null);
                   onDelete(conv.conversation_id);
+                }}
+                className="shrink-0 ml-1 px-2 py-0.5 rounded text-xs font-medium bg-red-500/15 text-red-500 hover:bg-red-500/25 transition-colors"
+              >
+                Delete?
+              </button>
+            ) : onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPendingDeleteId(conv.conversation_id);
                 }}
                 className="opacity-0 group-hover:opacity-100 shrink-0 ml-1 p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 hover:text-red-500 transition-all"
                 title="Delete conversation"

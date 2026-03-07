@@ -14,6 +14,7 @@ export default function useStreamingChat(token) {
   const [conversationId, setConversationId] = useState(null);
   const [sending, setSending] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [tokenUsage, setTokenUsage] = useState(null);
 
   // Ref to avoid stale closure in streaming callbacks
   const conversationIdRef = useRef(null);
@@ -59,6 +60,8 @@ export default function useStreamingChat(token) {
                 : msg
             )
           );
+        } else if (event.type === 'done') {
+          if (event.token_usage) setTokenUsage(event.token_usage);
         } else if (event.type === 'tool_use') {
           toolsUsed.push({
             tool: event.tool,
@@ -188,6 +191,8 @@ export default function useStreamingChat(token) {
     setConversationId: setConvId,
     sending,
     aiLoading,
+    tokenUsage,
+    setTokenUsage,
     loadHistory,
     sendMessage,
     triggerInitialAssessment,

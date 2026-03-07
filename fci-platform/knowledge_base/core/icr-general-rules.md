@@ -388,7 +388,7 @@ and SSO case notes:
 
 The investigator may process these materials in
 a standalone chat using the case intake extraction
-prompt via `get_reference_document("case-intake-extraction")`
+prompt via `get_prompt("case-intake")`
 BEFORE starting Phase 0 in the main chat.
 
 If a case intake extraction is provided, it will contain
