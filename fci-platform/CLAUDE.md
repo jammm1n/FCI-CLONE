@@ -99,7 +99,7 @@ fci-platform/
   knowledge_base/
     core/                        # Tier 1 — loaded on startup
     reference/                   # Tier 2 — loaded on demand via tool calls
-    preprocessing/               # [TO BUILD in Phase 2] Extraction prompts
+    prompts/                     # Ingestion extraction prompts (used by ai_processor.py)
 
   reference/toolkit/
     icr_router_reference.py      # READ-ONLY. Source of auto-population logic to port.

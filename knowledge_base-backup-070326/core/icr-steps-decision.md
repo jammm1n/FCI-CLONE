@@ -124,8 +124,6 @@ risks not covered by that RFI:
    The case is closed because the investigator has
    completed their review and communicated the
    additional risks to the RFI team.
-**PRIOR RFIs FROM OTHER DEPARTMENTS:**
-RFIs can be issued by departments other than FCI (e.g., local compliance teams, bank relations, customer service) without a corresponding FCI ICR. When reviewing RFI history, use Binance Admin > User profile > RFI section for the most complete view. Check the issuing department. If prior RFI responses contain relevant information, summarize and include them in the current ICR regardless of which department issued them.
 **RFI RESPONSE REVIEW SLA:**
 When a user responds to an RFI, the response must be reviewed and analysed within 3 business days of receipt. This SLA applies to the analysis itself — separate from the broader case review prioritisation timeline (blocked user responses reviewed within 14 days per block-unblock-guidelines.md). If the response arrives while the case is in the investigator's queue, begin the analysis within 3 business days. If the response arrives after the case has been closed or transferred, coordinate with the assigned team member or TL to ensure timely review.
 **DUAL-LANGUAGE TEMPLATE RULE:** When the RFI is sent
@@ -398,44 +396,31 @@ TOTAL REJECTED UNUSUAL TRANSACTIONS: X (XXXX USD)
 [Plain text description listing specific amounts and
 TXIDs as applicable]
 **PART B: Executive Summary**
-Using the L1 Narrative and ALL outputs generated in
-Steps 2-19 as context, write an executive case summary.
+Execute Prompt #11 (Summary of Investigation) from
+prompt-library.md using the L1 Narrative and ALL outputs
+generated in Steps 2-19 as context.
 **CRITICAL — This is a NARRATIVE SUMMARY:**
 It must tell the story of what actually happened — not
 list sections. Summarize the events, the evidence, and
 the specific findings from the investigation.
-Format: Two paragraphs, 150-200 words total, neutral
-investigative tone:
+Format: Two paragraphs, 150-200 words total:
 - Paragraph 1 (2-3 sentences): Why the user/case was
-  flagged and the initial concerns. Use only phrases
-  and facts present in the case data.
-- Paragraph 2: One sentence per available section, in
-  this order when available:
-  1. User transactions overview
-  2. CTM/FTM alerts or exposed addresses
-  3. Top addresses by value
-  4. Fiat transactions
-  5. Internal CP analysis (use CP/CPs)
-  6. Device/IP analysis
-  7. OSINT
-  8. LE inquiries/cases
-  9. User communications
-  Only sections that exist. Do not mention missing
+  flagged and the initial concerns.
+- Paragraph 2: One sentence per available section —
+  only sections that exist. Do not mention missing
   sections.
 Constraint: Do not introduce numbers not present in the
 case data. Do not add recommendations unless already
 present.
-**MANDATORY RISK POSITION:** The executive summary must
-conclude with a risk position statement (1-2 sentences)
-assessing whether the overall findings present mitigated,
-partially mitigated, or unmitigated risk. Do not use the
-words "retain," "offboard," or "RFI" in this statement.
-This is distinct from the case recommendation (which
-belongs in Step 21) — it is a factual summary of the
-risk posture based on the evidence reviewed. Omitting
-this statement is a QC-relevant gap as it leaves the
-reader without an analytical assessment before reaching
-the conclusion.
+**MANDATORY RISK POSITION:** The executive summary must 
+conclude with a risk position statement (1-2 sentences) 
+assessing whether the overall findings present mitigated, 
+partially mitigated, or unmitigated risk. This is distinct 
+from the case recommendation (which belongs in Step 21) 
+— it is a factual summary of the risk posture based on 
+the evidence reviewed. Omitting this statement is a Q
+C-relevant gap as it leaves the reader without an 
+analytical assessment before reaching the conclusion.
 **QC Check (Ref: qc-submission-checklist.md #2.2):**
 - Activity period explicitly stated.
 - Totals explicitly stated.
@@ -448,7 +433,7 @@ guidance text: "Manual input of 3-4 sentences is
 required, provide a brief summary affecting the case
 outcome and clearly state whether you want to retain or
 offboard the user. What MLROs are required."
-**Pre-Decision Gate (MANDATORY):**
+**Pre-Decision Gate (MANDATORY — See System Prompt):**
 Before writing ANYTHING:
 1. Scan decision-matrix.md for rows where the Scenario Pattern matches the current case.
 2. Check mlro-escalation-matrix.md for jurisdiction, MLRO contact, and dual escalation status. For case-type-specific decisions, retrieve the relevant country block from mlro-escalation-decisions.md.
@@ -753,19 +738,3 @@ the authority for it: e.g., "recommend offboarding
 with withdrawals restricted per LE freeze order
 [reference]."
 ---
-## PRE-SUBMISSION VERIFICATION
-**Trigger:** User says "ready to submit," "check the case," or "run QC checks."
-**Action:**
-1. Identify the case type.
-2. Check all Auto-Fail items from qc-submission-checklist.md first — flag any at risk.
-3. Run through each QC section sequentially (KYC > Suspicious Activity > Main Body > RFI > Escalations > Offboarding > Attachments > Others). For escalation checks (#5.1-5.4): re-derive the escalation routing independently from source documents (mlro-escalation-matrix.md Quick Reference) rather than verifying against the escalation stated in the conclusion. Quote the source table row or confirm absence. This prevents propagation of an earlier escalation error through QC.
-4. Skip checks marked N/A for the case type.
-5. For each check: state what it requires, confirm satisfied or flag what is missing.
-6. Summarize findings with estimated point impact.
-7. Recommend fixes before submission.
-**Additional checks:**
-- Verify operation log is completed.
-- Verify "Save All and Generate" has been used for attachments.
-- Verify all local currency amounts include USD equivalents.
-- Verify no use of "pending" in narrative text.
-- Verify no SAR/reporting references in conclusion.

@@ -10,22 +10,6 @@ precedence for that step only.
 
 ---
 
-## Source of Truth Hierarchy
-When case data conflicts across sources, resolve using
-this priority:
-- **Name:** ID Document (special characters must match
-  exactly)
-- **Address:** Latest POA Document > ID Document
-  Address > Binance Admin (Basic Validate)
-- **Transaction Data:** Spreadsheet/C360 > Narrative
-  text
-- **Case Outcome Precedent:** case-decision-archive.md
-If a spreadsheet contradicts the narrative: **PAUSE.**
-Flag the discrepancy immediately. Do not proceed until
-the investigator resolves it.
-
----
-
 ## Hexa Protocol
 - Hexa-populated boxes are editable. If the Hexa AI
   output is poor or inaccurate, it should be tidied up.
@@ -185,16 +169,16 @@ narrative.
 ---
 
 ## Parallel Chat Data Products
-- **Preprocessed Data Products:** When the
-  ingestion pipeline processes raw data (device,
-  Elliptic, LE/Kodex, case intake, counterparty
-  extractions), the output is structured data —
-  not ICR narrative. The main chat writes all ICR
-  narrative using the structured data plus full
-  case context. The step doc for each section
-  defines what the final output should look like.
-  When structured data is available from
-  preprocessing:
+- **Parallel Chat Data Products:** When the
+  investigator processes raw data in a standalone
+  Mode 2 chat using an extraction prompt (#9E,
+  #14E, #15E, #16E, or #12), the output is
+  structured data — not ICR narrative. The main
+  chat writes all ICR narrative using the
+  structured data plus full case context. The
+  corresponding narrative prompt (#1-#13) defines
+  what the final output should look like. When
+  structured data arrives from a parallel chat:
   (1) Audit the data for accuracy
   (2) Write the narrative paragraph using the data
   (3) Apply proportionality and risk position
@@ -275,6 +259,17 @@ delete all "Manual summary required" or "Manual
 review required" placeholder text. Any system-
 generated instructional text remaining in the final
 report is a QC finding.
+
+**THREE-WAY OFFBOARDING REASON MATCH:**
+When the case outcome is offboarding, the offboarding
+reason must be identical across three locations:
+1. The ICR conclusion (Step 21)
+2. The User Investigation tab dropdown
+3. The Offboarding submission in Binance Admin
+A mismatch between any of these three is a QC finding.
+Before submitting the offboarding request, verify all
+three match exactly. This check should be part of the
+pre-submission verification process.
 
 **OLDER FORMAT ICR — SAVE WARNING:** The older
 full-page ICR format (used for multi-user cases and
@@ -387,11 +382,11 @@ chat logs, victim/suspect evidence screenshots,
 and SSO case notes:
 
 The investigator may process these materials in
-a standalone chat using the case intake extraction
-prompt via `get_reference_document("case-intake-extraction")`
-BEFORE starting Phase 0 in the main chat.
+a standalone chat using Prompt #16E (RCM / Case
+Intake Extraction) BEFORE starting Phase 0 in
+the main chat.
 
-If a case intake extraction is provided, it will contain
+If a #16E extraction is provided, it will contain
 nine structured sections: Allegation Summary,
 Victim Details, Suspect Details, Victim Evidence,
 Suspect Response, Suspect Evidence, CS/SSO Actions,
@@ -405,7 +400,7 @@ this distinguishes what is proven from what is
 claimed and directly informs the investigation
 approach.
 
-If no case intake extraction is provided, proceed with
+If no #16E extraction is provided, proceed with
 Phase 0 using the L1 referral and whatever case
 materials the investigator provides directly.
 
@@ -495,6 +490,35 @@ why all activity is attributed to one individual
 despite multiple UIDs).
 
 ---
+
+## Uncooperative vs Unresponsive User Classification
+When a user fails to adequately engage with the RFI
+process, the classification determines the workflow:
+
+**UNRESPONSIVE:** User does not reply at all.
+- Timeline: 14 calendar days from RFI issuance + 3
+  reminders with no response
+- Block: WOM under "RFI - SAR Investigation"
+- Tag: "Unresponsive User"
+- Follow-up: Periodic review every 6 months (June
+  and December). If user eventually responds, case
+  is prioritised and reviewed within 14 days.
+
+**UNCOOPERATIVE:** User replies but responses are
+intentionally insufficient, evasive, or irrelevant
+despite 3 RFI attempts (initial + 2 re-triggers).
+- Block: WOM under "RFI - Others"
+- Status: "Uncooperative user"
+- Timeline: Offboarding consideration begins 60
+  days after WOM placement
+- The 3-attempt threshold must be exhausted before
+  classifying a user as uncooperative. Each
+  re-trigger must contain progressively more
+  specific questions.
+
+These are different workflows with different block
+reasons, different escalation labels, and different
+timelines. Do not conflate them.
 
 ---
 

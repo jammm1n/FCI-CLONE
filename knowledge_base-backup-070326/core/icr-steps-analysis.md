@@ -26,7 +26,7 @@ the dominant pattern observed) into the single
 transaction overview paragraph rather than creating
 a separate Supplemental Analysis section. One
 paragraph, one risk assessment statement, done.
-**Required output:**
+**What Prompt #1 produces:**
 A single ~80-100 word paragraph covering:
 - Total number of transactions, date range (earliest
   to latest), and total value in original currency
@@ -289,24 +289,9 @@ scores, and transaction count.
 **Action — Determine which prompt to use:**
 IF data includes a "Snapshot of Suspicious Transactions"
 (specific flagged transactions):
-→ For cases with specific flagged transaction spreadsheets, fetch the CTM Enhanced Analysis prompt from the reference tier via `get_reference_document("ctm-enhanced-analysis")`
+→ Execute Prompt #2 (CTM Alerts ENHANCED)
 IF data is general lifetime alert summary:
-→ Write the CTM alert summary using the following spec:
-**Required output:** Single paragraph, 60-80 words.
-1. Report the date range covered by the CTM alerts
-   (only if start and end dates are explicitly present).
-2. Identify the top 1-3 entities by exposure amount (or
-   by risk score if exposure is not provided). For each:
-   entity attribution (or "unattributed"), exposure
-   amount, and associated wallet address(es).
-3. State the number of distinct entities if countable
-   from the data (do not approximate).
-4. Describe any explicit patterns (repeated exposure to
-   same entity, consistently high scores, concentration
-   in few entities).
-5. End with: "This is a summary of the provided alert
-   data and requires manual verification against the
-   underlying CTM records."
+→ Execute Prompt #6 (CTM Alerts STANDARD)
 IF no CTM data exists:
 → State "No off-chain alerts triggered."
 **BINANCE ADMIN CTM ALERT LOOKUP:**
@@ -351,8 +336,8 @@ amount, date range).
 2. Open with the standardized Elliptic template.
 3. Identify all high-risk entities with full wallet
    addresses.
-**If Elliptic data was extracted by the ingestion
-pipeline:**
+**If Elliptic data was extracted in a parallel
+chat using Prompt #14E:**
 The investigator will paste structured Elliptic
 data containing a Wallet Screening Table and
 Summary Statistics. Using this data:
@@ -497,7 +482,7 @@ or a replacement for batch screening.
 
 **WEB APP UOL INTEGRATION:** When the investigator
 processes Elliptic data in a parallel chat using
-the ingestion pipeline and the web app provides UOL
+Prompt #14E and the web app provides UOL
 cross-reference data, the extraction output will
 include a Section 3 (UOL Cross-Reference) and UOL
 Status fields per wallet in Section 1. This
@@ -764,8 +749,8 @@ RISK MITIGATION CROSS-REFERENCE: If any high-risk wallet finding in this section
    a wallet scoring 5 or above, perform the
    jurisdiction check per gambling-legality-matrix.md
    as documented in Step 9.
-**If Elliptic data was extracted by the ingestion
-pipeline:**
+**If Elliptic data was extracted in a parallel
+chat using Prompt #14E:**
 The same extraction may cover both Step 9
 (exposed addresses) and Step 10 (top addresses
 by value) if the investigator screened all
@@ -849,11 +834,11 @@ values can change over time.
 greyed-out section.
 **Action:**
 - IF data exists and edit button is visible:
-  Write the privacy coin analysis using the data
-  provided.
+  Execute Prompt #7 (Privacy Coin Analysis) from
+  prompt-library.md.
 - IF "No data" shown and section is greyed out:
   Skip entirely. Do not populate.
-**Required output:**
+**What Prompt #7 produces:**
 50-70 words reporting total transaction count, USD
 value, date range, and relevant privacy coin features
 (XMR, ZEC, DASH) with AML/CFT risk statement.
@@ -905,8 +890,8 @@ counterparties.
    (common in counterparty transaction counts such as
    "received seven of 22 from and made one"). Correct
    silently.
-**If counterparty data was extracted by the
-ingestion pipeline:**
+**If counterparty data was extracted in a parallel
+chat using Prompt #12:**
 The investigator will paste structured data
 containing four tasks: Hexa Corrections, Risk
 Flag Table, Clean Counterparty Summary, and P2P
@@ -1180,10 +1165,10 @@ transaction was excluded from the initial download.
 components only:
 (1) The Hexa fiat overview narrative (audit and
     retain as-is unless errors found)
-(2) One paragraph of failed fiat analysis if failed
-    fiat data exists (3 sentences maximum)
+(2) One paragraph from Prompt #8 if failed fiat
+    data exists (3 sentences maximum)
 (3) The Bifinity escalation flag check
-The failed fiat analysis output constitutes the complete
+The Prompt #8 output constitutes the complete
 failed fiat analysis. Do not add card-level
 breakdowns, discrepancy investigations, temporal
 analysis, channel-by-channel breakdowns, or
@@ -1192,10 +1177,10 @@ If the Hexa rejected count does not match the
 spreadsheet row count, note the discrepancy in
 one sentence — do not investigate the cause.
 **FIAT SUCCESSFUL/FAILED RATIO:**
-The fiat section must include the ratio of successful to failed fiat transactions. This can be a single sentence (e.g., "Of 47 total fiat transactions, 42 were successful and 5 were rejected, representing an 89% success rate"). Additionally, provide a brief indication of the top rejection reasons and whether the most common rejection reason raises compliance concerns. If the top rejection reason is "suspected fraud," this must be stated prominently. This ratio may be incorporated into the failed fiat analysis output or stated as a supplementary sentence after the failed fiat analysis paragraph.
+The fiat section must include the ratio of successful to failed fiat transactions. This can be a single sentence (e.g., "Of 47 total fiat transactions, 42 were successful and 5 were rejected, representing an 89% success rate"). Additionally, provide a brief indication of the top rejection reasons and whether the most common rejection reason raises compliance concerns. If the top rejection reason is "suspected fraud," this must be stated prominently. This ratio may be incorporated into the Prompt #8 output or stated as a supplementary sentence after the Prompt #8 paragraph.
 1. Audit the Hexa content.
-2. If Failed Fiat data exists: Write the failed fiat
-   analysis using the data provided.
+2. If Failed Fiat data exists: Execute Prompt #8
+   (Failed Fiat Transactions) from prompt-library.md.
 3. Identify the specific fiat channel used for
    suspicious activity (from UAL or C360 Fiat Details).
 **Error Reason Check:**
@@ -1243,7 +1228,8 @@ IP locations, language settings, VPN usage, and device
 sharing summary.
 **Action:**
 1. Audit the Hexa content.
-2. Write the device and IP analysis using:
+2. Execute Prompt #9 (Device and IP Analysis) from
+   prompt-library.md using:
 **Data Required for This Step:**
 1. User's nationality and country of residence
    (from C360 or KYC section)
@@ -1255,8 +1241,8 @@ sharing summary.
    languages. These headline figures anchor the
    device paragraph and must not be approximated
    from raw data.
-**If device data was extracted by the ingestion
-pipeline:**
+**If device data was extracted in a parallel chat
+using Prompt #9E:**
 The investigator will paste structured data
 containing six sections: Headline Figures,
 Location Frequency, Language Summary, VPN Usage,
@@ -1288,7 +1274,7 @@ Jurisdiction Check. Using this data:
 4. Append a risk position statement
 Do not paste the extraction tables into the ICR.
 Write a narrative paragraph using the data.
-**Required output:**
+**What Prompt #9 produces:**
 Assessment of whether access locations and device
 languages are normal for user's nationality/residence,
 VPN usage percentage, sanctioned/restricted jurisdiction
@@ -1328,7 +1314,7 @@ must be listed. Copy them directly from the data and
 include them in the section. Do not summarise as
 "shared with 12 UIDs" without listing them.
 **Two Components Required in This Section:**
-1. DEVICE PROFILE (from the device analysis): Total device count,
+1. DEVICE PROFILE (from Prompt #9): Total device count,
    total IP location count, total language count, VPN
    usage percentage, and whether this is normal for the
    user's nationality/residence.
@@ -1340,11 +1326,11 @@ include them in the section. Do not summarise as
    the last 12 months or only in the lifetime period.
    Recent sharing (within 12 months) carries higher risk
    weight than historical-only sharing.
-Both components must be present. The device analysis output alone
+Both components must be present. Prompt #9 output alone
 without device sharing analysis = QC finding. Device
 sharing analysis alone without the location/language
 profile = QC finding.
-**Placement in the form:** Append the device analysis output
+**Placement in the form:** Append the Prompt #9 output
 after the Hexa-generated device sharing paragraph
 (after the "12 months" device sharing text).
 **QC Check — Shared Devices (CRITICAL):**
@@ -1467,23 +1453,10 @@ shared device analysis. Never empty.
      state "open source research has been performed
      but no specific / negative news has been
      identified."
-**Required output:**
-IF no adverse findings:
+**Mandatory Content (Always Editable Field):**
+Must contain specific findings OR:
 "Open source research has been performed but no specific
 / negative news has been identified."
-IF adverse media is found: A narrative paragraph (60-100
-words) stating:
-1. What was found (article headline/topic, publication,
-   date)
-2. Identity confirmation — how the investigator
-   confirmed the subject in the article is the account
-   holder (matching name + at least one of: photo, DOB,
-   ID number, address, or unique identifier)
-3. Relevance to the investigation (e.g., fraud charges,
-   sanctions, criminal proceedings)
-4. A risk position statement on the finding
-For corporate accounts: one paragraph per entity
-screened (company + each UBO/director), clearly labeled.
 **QC Check (Ref: qc-submission-checklist.md #7.2):**
 - All screenshots saved as PDFs (Cmd+P / Ctrl+P).
 - If adverse media found: PDF of article + analysis
@@ -1495,13 +1468,13 @@ screened (company + each UBO/director), clearly labeled.
 RFI cases with dates, types, and response summaries.
 **Action:**
 1. Audit the Hexa content.
-2. Write a consolidated RFI summary using the data
-   provided.
+2. Execute Prompt #10 (RFI Summary) from
+   prompt-library.md to generate a consolidated summary.
 3. Add a comment on general responsiveness:
    e.g., "User is responsive to compliance requests"
    or "User has not provided responses to multiple
    RFI requests."
-**Required output:**
+**What Prompt #10 produces:**
 50-60 word summary of RFI types sent and responses
 received, with date range.
 **RFI LOOKUP — ALTERNATIVE METHOD:**

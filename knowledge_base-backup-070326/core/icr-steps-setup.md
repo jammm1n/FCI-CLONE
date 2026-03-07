@@ -1,63 +1,6 @@
 # ICR Steps: Setup & Context (Steps 1-6)
 ## Purpose
-This document covers Phase 0 (pre-investigation) and Steps 1 through 6 of the ICR form. These steps establish who the subject is, why the case exists, and what history is relevant. Cross-cutting rules in icr-general-rules.md apply to every step below.
----
-## PHASE 0: NARRATIVE FIRST (THE "HARD STOP")
-**Trigger:** Case data is loaded into the conversation. The AI receives the pre-processed case data automatically.
-**Action:**
-1. Ingest ALL provided case data.
-2. Reconstruct the story — who did what to whom, when, for how much, and how.
-3. Classify the case type. State: "Case Type Identified: [Type]. Primary SOP: [Filename]."
-4. Present the Narrative Theory to the user.
-5. Generate a Data Inventory confirming what was received and what may still be needed:
-   - Received: [list each data type provided]
-   - Not received: [list any expected data types not present]
-   - May be needed at specific steps: [list anything not yet available]
-6. Generate an Attachment Checklist by referencing Appendix E (Standard Attachment Checklist) in icr-steps-post.md. List only 'Always required' and applicable 'Conditionally required' categories. For UOL export, state simply 'UOL export' — required on all cases.
-**Account Status Detection (Phase 0):**
-In addition to case type classification, Phase 0 must identify and flag:
-- **Corporate account:** Company name in KYC/II-1 (Ltda, Ltd, LLC, Inc, S.A., GmbH, Corp), entity tag present, P2P Merchant Status, or KYB data visible. If detected, state: "Corporate account detected. Switching to company perspective." All output text from this point uses "the company" / "the entity" not "the user." Corporate-specific checks apply across steps — see Step 2 (KYB handling), and icr-general-rules.md (corporate rules).
-- **HPI status** (User InfoHub): State "HPI account detected. Enhanced offboarding workflow applies." Impact on approval pathway at Step 22 only.
-- **KOL status** (User InfoHub / VIP section): State "KOL account detected. Enhanced offboarding approval required (FCMI Manager + CCO + @KOLUserOffboardingBot notification + ELT Notification Form)." Impact on approval pathway at Step 22 only.
-- **P2P Merchant status** (affects courtesy notifications)
-- **VIP level** (affects approval tier — use highest level if multiple designations)
-- **Employee status** (requires enhanced approval pathway)
-State any detected special statuses at the end of the Phase 0 output. HPI, KOL, and employee status do not change the investigation methodology — all analytical steps proceed as normal.
-**HARD STOP:** Do NOT fill any ICR boxes yet. Ask: "Does this narrative accurately reflect the evidence? Shall we begin the ICR?"
-**System Constraint:** "Related Parent ICR" typically refers to the current case reference in HaoDesk/CICM. Do not treat as a missing document unless context explicitly suggests otherwise.
----
-## PACING MODE
-After Phase 0 confirmation, the investigation proceeds in one of two modes. Express mode is the default.
-### EXPRESS MODE (Default)
-Triggered by default, or when investigator says "express mode," "block mode," "grouped output," or "let's go fast."
-Output is grouped into four blocks. Each block covers multiple ICR steps in a single response. The investigator reviews each block, flags corrections, and says "next block" to proceed.
-**EXPRESS MODE BLOCKS:**
-BLOCK 1 — SETUP & CONTEXT (Phase 0 + Steps 1-6):
-Phase 0 narrative theory and case classification, Step 1 investigation header guidance, Step 2 KYC paragraph, Step 3 account summary and blocks, Step 4 L1 summary, Step 5 prior ICR analysis, Step 6 LE enquiry review.
-BLOCK 2 — CORE ANALYSIS (Steps 7-14):
-Step 7 transaction overview, Step 8 CTM alerts, Steps 9+10 Elliptic analysis (combined), Step 11 privacy coins, Step 12 counterparty analysis, Step 13 fiat transactions, Step 14 device/IP.
-BLOCK 3 — COMMUNICATIONS & SUMMARY (Steps 15-20):
-Step 15 OSINT, Step 16 user communication, Step 17 other unusual activity, Step 18 RFI decision, Step 19 RFI analysis summary, Step 20 summary of unusual transactions (Parts A and B).
-BLOCK 4 — DECISION (Step 21):
-Pre-decision gate (decision matrix scan, MLRO escalation check, auto-fail check), conclusion and recommendation, escalation routing, offboarding guidance if applicable.
-Each block output must be clearly labelled with step numbers and ICR section names for copy-paste into HaoDesk fields.
-**EXPRESS MODE QC OBLIGATION:**
-At the end of each block, append a "BLOCK QC" section. For every step in the block, list QC checks from the step guide documents and confirm each is satisfied or flag what needs attention. Format as a markdown table:
-"BLOCK [X] QC:"
-| Step | Check | Status |
-One row per QC check. Status: PASS or FLAG. If flagged, add short reason (max 10 words). No separate commentary — table is the complete QC output.
-**EXPRESS MODE CONSTRAINTS:**
-- Phase 0 is ALWAYS presented first and confirmed before Block 1 begins. Hard Stop still applies.
-- If case is unusually complex (5+ prior ICRs, 10+ LE cases, multi-jurisdiction, corporate with extensive KYB), recommend Standard Mode.
-- All step-specific rules still apply — Express Mode changes grouping, not analytical requirements.
-- Investigator may switch to Standard Mode by saying "slow down" or "step by step from here."
-### STANDARD MODE
-Triggered when investigator says "step by step," "standard mode," or "one at a time."
-Rules:
-1. One step at a time. Do not generate multiple ICR steps in a single response.
-2. The Loop: Execute current step per the relevant step document, applying all rules from icr-general-rules.md. Perform QC check. STOP. Present output and ask: "Ready for the next step?"
-3. If user provides bulk data covering multiple steps: acknowledge receipt but still process one step at a time.
-Investigator may switch to Express Mode at any point by saying "express mode."
+This document covers Steps 1 through 6 of the ICR form. These steps establish who the subject is, why the case exists, and what history is relevant. Cross-cutting rules in icr-general-rules.md apply to every step below.
 ---
 ## STEP 1: INVESTIGATE HEADER
 **ICR Section:** Investigate > Summary tab
@@ -212,15 +155,6 @@ later steps (they affect MLRO escalation, Bifinity
 checks, counterparty analysis, and offboarding)
 but do not include them in the People Involved
 paragraph text.
-**Required output (Individual Accounts):**
-The corrected Hexa paragraph containing only: full name,
-email, phone, nationality/residency (per the Nationality
-vs Residency Distinction above), DOB, ID document type
-and number, address, registration date, last login, and
-account balance. Apply corrections in-place — do not
-rewrite accurate Hexa text. If corrections were made,
-append a brief note: "Corrections applied: [list fields
-changed and reason]."
 **METADATA DISPLAY — FORMAT-DEPENDENT:**
 The metadata exclusion rule above applies to the
 NEWER Hexa box format where these fields are displayed
@@ -266,24 +200,13 @@ company name, entity tag, or merchant status):
 3. APPEND a separate paragraph below the modified Hexa
    text. This supplementary paragraph covers details
    Hexa does not capture. Include:
-   - Ultimate Beneficial Owner(s): names and roles
-     within the company (mandatory). Nationality, DOB,
-     country of residence, and other identifying details
-     are required only when adverse media is found on
-     the UBO and additional confirmation is needed that
-     the media subject is the same individual as the UBO.
+   - Ultimate Beneficial Owner(s): names (mandatory). Nationality, DOB, country of residence, and other identifying details are required only when adverse media is found on the UBO and additional confirmation is needed that the media subject is the same individual as the UBO.
    - Company's stated business purpose
    - Operational activities and how the company
      generates revenue
    - Any relevant details from the business description
-     that inform the risk assessment
    This paragraph goes BELOW the Hexa text — never
-   merged into it or replacing it. Do not duplicate
-   information that appears in the modified Hexa
-   paragraph above (company name, registration number,
-   address).
-   Format: single paragraph, 60-80 words, passive
-   compliance voice. No bullets, no headings.
+   merged into it or replacing it.
 4. Look up the company details in Binance Admin > KYC
    Certificate > Company KYC section. Available fields:
    - Company name
@@ -372,12 +295,12 @@ Summary of account activities during the examined period
 2. If block cases are listed:
    a. Download the Lifetime Block/Unblock spreadsheet
       from Compliance 360 > User Status Info.
-   b. Write the block summary using the account
-      block data.
+   b. Execute Prompt #3 (Account Blocks) from
+      prompt-library.md using this spreadsheet.
    c. Append the generated block summary paragraph
       UNDERNEATH the existing Hexa content in this
       same box.
-**Required output:**
+**What Prompt #3 produces:**
 A single paragraph listing all block/unblock actions in
 chronological order with block type, action taken,
 timestamp, unlock reasons, and current status of each
@@ -422,9 +345,9 @@ L1 referral reason.
   generation failed"), manually replace with the actual
   L1 referral summary.
 - If L1 referral narrative is available and needs
-  enhancement: Write the L1 summary enhancement
-  using the referral data.
-**Output Format (L1 enhancement):**
+  enhancement: Execute Prompt #5 (Scam Analysis P2P)
+  from prompt-library.md.
+**Output Format (if using Prompt #5):**
 "It was referred to the FCI Team that [summarize the
 allegation]. The activity was performed between
 YYYY-MM-DD to YYYY-MM-DD and was attempted in [ADID or
@@ -458,11 +381,12 @@ provided."
 ICRs with reference numbers and outcomes.
 **Action:**
 1. Audit the Hexa content for accuracy.
-2. Write a consolidated prior ICR
+2. Execute Prompt #4 (Prior ICR Analysis) from
+   prompt-library.md to generate a consolidated
    summary paragraph.
 3. Append as Supplemental Analysis or replace if
    Hexa output is insufficient.
-**Required output:**
+**What Prompt #4 produces:**
 A single paragraph (~60-75 words) summarizing each ICR
 with reference number, creation date, and outcome.
 Concludes with one neutral sentence on overall patterns.
@@ -542,8 +466,8 @@ enforcement cases.
    Kodex Case Details.
 3. If Kodex shows cases not in the Hexa text, add them.
 4. Provide appropriate level of detail per request type.
-**If LE data was extracted by the ingestion
-pipeline:**
+**If LE data was extracted in a parallel chat
+using Prompt #15E:**
 The investigator will paste structured LE data
 containing an LE Case Table and Summary. Using
 this data:
@@ -623,7 +547,7 @@ money laundering investigation carries different
 weight than being one of 50+ targets in a mass drug
 trafficking sweep. The narrative must make this
 distinction immediately clear to the reader.
-When the preprocessed LE extraction data provides a
+When extraction data from Prompt #15E provides a
 target UID count per case, that count must appear
 verbatim in the ICR narrative for each case. If
 extraction data is not available and the Kodex case
@@ -698,18 +622,6 @@ This classification should be applied to every LE
 case and the tier stated in the risk position
 statement for the LE section. See also Decision
 Matrix Rule #56.
-**Required output:** One or more narrative paragraphs
-covering all LE cases. For each case: the requesting
-authority, date, subject matter, LE target count
-(mandatory), subject role (direct target vs
-third-party), and the specificity tier (High / Medium /
-Low per the LE RISK WEIGHT ASSESSMENT above). Group
-related cases from the same agency where appropriate.
-Conclude with a risk position statement summarising the
-overall LE risk profile. Length is proportional to
-complexity — a single low-specificity data request may
-be 2-3 sentences; multiple high-specificity cases with
-freezes may require a full paragraph.
 **If no LE enquiries:** State "No law enforcement
 enquiries identified."
 **QC Check (Ref: qc-submission-checklist.md #3.11):**

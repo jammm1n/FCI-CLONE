@@ -18,13 +18,3 @@ Action:
 Format: Produce a concise summary in formal English, structured chronologically. Use short paragraphs. Keep it as brief as possible while covering all material facts — do not reproduce full transcripts, condense them. Do not use bullet points.
 
 Do not add commentary, risk assessments, flags, or recommendations. Do not speculate on intent or credibility. Present what the communications show, in English, in order.
-
-Scam/Fraud Case Enhancement:
-If the communications describe a scam or fraud scheme (victim reports, P2P disputes, impersonation, romance scam, investment scam), additionally extract and include at the end of the summary:
-- Total dollar amount involved (with USD equivalent in square brackets if in local currency)
-- Complete date range of the scam activity
-- Total number of alerts or incidents referenced
-- OID or ADID numbers with dates and attempted amounts (if present)
-- A one-sentence summary of the scam scheme
-Use this format for the scam summary paragraph: "It was referred to the FCI Team that [summarize the scam]. The scam activity was performed between YYYY-MM-DD to YYYY-MM-DD and was attempted in [ADID or OID] for a total attempted amount of [XXX] USD."
-If the communications do not describe a scam or fraud scheme, omit this section entirely.
