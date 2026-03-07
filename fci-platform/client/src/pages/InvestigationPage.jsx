@@ -5,7 +5,7 @@ import * as api from '../services/api';
 import useStreamingChat from '../hooks/useStreamingChat';
 import AppLayout from '../components/AppLayout';
 import CaseHeader from '../components/investigation/CaseHeader';
-import CaseDataTabs from '../components/investigation/CaseDataTabs';
+import CaseDataTabs, { TAB_GROUPS } from '../components/investigation/CaseDataTabs';
 import CaseDataPanel from '../components/investigation/CaseDataPanel';
 import ChatMessageList from '../components/investigation/ChatMessageList';
 import ChatInput from '../components/investigation/ChatInput';
@@ -18,7 +18,8 @@ export default function InvestigationPage() {
   const { token } = useAuth();
 
   const [caseData, setCaseData] = useState(null);
-  const [activeTab, setActiveTab] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(null);
+  const [activeSubTab, setActiveSubTab] = useState(null);
   const [caseLoading, setCaseLoading] = useState(true);
   const [error, setError] = useState('');
   const [leftWidth, setLeftWidth] = useState(35);
@@ -47,8 +48,15 @@ export default function InvestigationPage() {
         setCaseData(caseDetail);
 
         const ppd = caseDetail.preprocessed_data || {};
-        const firstKey = Object.keys(ppd).find((k) => ppd[k]);
-        if (firstKey) setActiveTab(firstKey);
+        // Find the first group that has data and set it as active
+        for (const group of TAB_GROUPS) {
+          const firstTab = group.tabs.find((t) => ppd[t.key]);
+          if (firstTab) {
+            setActiveGroup(group.id);
+            setActiveSubTab(firstTab.key);
+            break;
+          }
+        }
 
         // Case data is ready — render left panel immediately
         setCaseLoading(false);
@@ -152,6 +160,16 @@ export default function InvestigationPage() {
 
   const preprocessedData = caseData?.preprocessed_data || {};
 
+  function handleGroupChange(groupId) {
+    setActiveGroup(groupId);
+    // Auto-select first available sub-tab in the new group
+    const group = TAB_GROUPS.find((g) => g.id === groupId);
+    if (group) {
+      const firstAvailable = group.tabs.find((t) => preprocessedData[t.key]);
+      setActiveSubTab(firstAvailable ? firstAvailable.key : null);
+    }
+  }
+
   return (
     <AppLayout
       caseInfo={caseData ? { case_id: caseData.case_id, case_type: caseData.case_type } : null}
@@ -165,12 +183,14 @@ export default function InvestigationPage() {
           <CaseHeader caseData={caseData} />
           <CaseDataTabs
             preprocessedData={preprocessedData}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
+            activeGroup={activeGroup}
+            activeSubTab={activeSubTab}
+            onGroupChange={handleGroupChange}
+            onSubTabChange={setActiveSubTab}
           />
           <CaseDataPanel
-            content={activeTab ? preprocessedData[activeTab] : null}
-            activeTab={activeTab}
+            content={activeSubTab ? preprocessedData[activeSubTab] : null}
+            activeTab={activeSubTab}
           />
         </div>
 

@@ -48,6 +48,33 @@ ASSEMBLY_ORDER = [
     ('investigator_notes', 'Investigator Notes', 'No additional notes.'),
 ]
 
+# C360 sub-sections for expanded assembly markdown and preprocessed_data mapping.
+# (ai_outputs key, preprocessed_data key, markdown heading)
+C360_AI_TO_PREPROCESSED = [
+    ('tx_summary',   'tx_summary',     'Transaction Summary'),
+    ('privacy_coin', 'privacy_coin',   'Privacy Coin Breakdown'),
+    ('counterparty', 'counterparty',   'Counterparty Analysis'),
+    ('device',       'device_ip',      'Device & IP Analysis'),
+    ('fiat',         'failed_fiat',    'Failed Fiat Withdrawals'),
+    ('ctm',          'ctm_alerts',     'CTM Alerts'),
+    ('ftm',          'ftm_alerts',     'FTM Alerts'),
+    ('blocks',       'account_blocks', 'Account Blocks'),
+]
+
+# Standalone ingestion section → preprocessed_data key
+SECTION_TO_PREPROCESSED = {
+    'elliptic':           'elliptic',
+    'hexa_dump':          'l1_referral',
+    'raw_hex_dump':       'haoDesk',
+    'kyc':                'kyc',
+    'previous_icrs':      'prior_icr',
+    'rfis':               'rfi',
+    'kodex':              'kodex',
+    'l1_victim':          'l1_victim',
+    'l1_suspect':         'l1_suspect',
+    'investigator_notes': 'investigator_notes',
+}
+
 
 def _empty_sections():
     """Build the initial sections object with all sections set to 'empty'."""
@@ -1025,16 +1052,20 @@ async def reset_case(case_id: str) -> dict:
 
 async def assemble_case_data(case_id: str) -> dict:
     """
-    Assemble all section outputs into the final case data markdown.
+    Assemble all section outputs into the final case data markdown,
+    create a case document in the `cases` collection for investigation,
+    and mark the ingestion case as completed.
 
-    All sections appear in the output in a fixed order. Sections
-    marked 'none' produce an explicit absence statement. The AI
-    never has to guess whether data is missing or not loaded.
+    C360 is expanded into individual sub-processor sections in both
+    the assembled markdown and the preprocessed_data dict.
 
-    Raises ValueError if any required section is not in terminal state.
+    Raises ValueError if any required section is not in terminal state
+    or if a case with this ID already exists in investigations.
 
-    Returns {assembled_case_data, sections_included, sections_none}.
+    Returns {case_id, assembled_case_data, sections_included, sections_none}.
     """
+    from server.services import case_service
+
     doc = await _collection().find_one({'_id': case_id})
     if not doc:
         raise ValueError(f'Case not found: {case_id}')
@@ -1051,7 +1082,9 @@ async def assemble_case_data(case_id: str) -> dict:
     if incomplete:
         raise ValueError(f'incomplete:{",".join(incomplete)}')
 
-    # Build the markdown
+    # ── Build preprocessed_data and assembled markdown ──────────
+
+    preprocessed_data = {}
     parts = []
     sections_included = []
     sections_none = []
@@ -1065,7 +1098,64 @@ async def assemble_case_data(case_id: str) -> dict:
         ))
     parts.append('')
 
+    # ── C360 expanded sub-sections ──
+    c360 = sections.get('c360', {})
+    c360_status = c360.get('status', 'empty')
+
+    if c360_status == 'complete':
+        ai_outputs = c360.get('ai_outputs', {})
+        processor_outputs = c360.get('processor_outputs', {})
+
+        # AI-processed sub-sections
+        for ai_key, pp_key, heading in C360_AI_TO_PREPROCESSED:
+            ai_entry = ai_outputs.get(ai_key, {})
+            ai_output = ai_entry.get('ai_output')
+            if ai_output:
+                preprocessed_data[pp_key] = ai_output
+                parts.append('## {}'.format(heading))
+                parts.append('')
+                parts.append(ai_output)
+                parts.append('')
+                sections_included.append(pp_key)
+
+        # user_profile — raw processor output, no AI
+        up = processor_outputs.get('user_profile', {})
+        if up.get('content'):
+            preprocessed_data['user_profile'] = up['content']
+            parts.append('## User Profile')
+            parts.append('')
+            parts.append(up['content'])
+            parts.append('')
+            sections_included.append('user_profile')
+
+        # address_xref
+        if c360.get('address_xref'):
+            preprocessed_data['address_xref'] = c360['address_xref']
+            parts.append('## Address Cross-Reference')
+            parts.append('')
+            parts.append(c360['address_xref'])
+            parts.append('')
+            sections_included.append('address_xref')
+
+        # uid_search
+        if c360.get('uid_search'):
+            preprocessed_data['uid_search'] = c360['uid_search']
+            parts.append('## UID Search Results')
+            parts.append('')
+            parts.append(c360['uid_search'])
+            parts.append('')
+            sections_included.append('uid_search')
+    else:
+        parts.append('## C360 Transaction Summary')
+        parts.append('')
+        parts.append('C360 data not provided.')
+        parts.append('')
+        sections_none.append('c360')
+
+    # ── Standalone sections ──
     for section_key, heading, none_statement in ASSEMBLY_ORDER:
+        if section_key == 'c360':
+            continue  # Already handled above
         section = sections.get(section_key, {})
         sec_status = section.get('status', 'empty')
         output = section.get('output')
@@ -1074,12 +1164,8 @@ async def assemble_case_data(case_id: str) -> dict:
         parts.append('')
 
         if sec_status == 'complete' and output:
-            # For C360, append cross-reference narratives
-            if section_key == 'c360':
-                if section.get('address_xref'):
-                    output += '\n\n' + section['address_xref']
-                if section.get('uid_search'):
-                    output += '\n\n' + section['uid_search']
+            pp_key = SECTION_TO_PREPROCESSED.get(section_key, section_key)
+            preprocessed_data[pp_key] = output
             parts.append(output)
             sections_included.append(section_key)
         else:
@@ -1090,13 +1176,35 @@ async def assemble_case_data(case_id: str) -> dict:
 
     assembled = '\n'.join(parts)
 
-    # Store the assembled output and purge UOL raw data
+    # ── Create the cases collection document ──────────────────
+
     now = _utcnow()
+    cases_doc = {
+        '_id': case_id,
+        'case_name': case_id,
+        'case_type': 'investigation',
+        'status': 'open',
+        'assigned_to': doc.get('created_by', ''),
+        'subject_user_id': doc.get('subject_uid', ''),
+        'summary': '',
+        'conversation_id': None,
+        'preprocessed_data': preprocessed_data,
+        'assembled_case_data': assembled,
+        'created_at': now,
+        'updated_at': now,
+    }
+
+    await case_service.create_case(cases_doc)
+
+    # ── Mark ingestion case as completed ─────────────────────
+
     await _collection().update_one(
         {'_id': case_id},
         {
             '$set': {
+                'status': 'completed',
                 'assembled_case_data': assembled,
+                'completed_at': now,
                 'updated_at': now,
             },
             '$unset': {'uol_raw_data': 1},
@@ -1104,6 +1212,7 @@ async def assemble_case_data(case_id: str) -> dict:
     )
 
     return {
+        'case_id': case_id,
         'assembled_case_data': assembled,
         'sections_included': sections_included,
         'sections_none': sections_none,

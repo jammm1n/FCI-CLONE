@@ -155,6 +155,33 @@ export function imageUrl(conversationId, imageId) {
 }
 
 // ---------------------------------------------------------------------------
+// Case Export
+// ---------------------------------------------------------------------------
+
+export async function exportCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/export`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Export failed: ${res.status}`);
+  }
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+  const filename = filenameMatch ? filenameMatch[1] : `${caseId}.md`;
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
 // Admin (demo only)
 // ---------------------------------------------------------------------------
 

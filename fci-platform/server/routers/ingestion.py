@@ -1457,12 +1457,17 @@ async def delete_case(case_id: str, current_user: dict = Depends(get_current_use
 
 @router.post('/cases/{case_id}/assemble')
 async def assemble_case(case_id: str, current_user: dict = Depends(get_current_user)):
-    """Assemble all section outputs into the final case data markdown."""
+    """Assemble section outputs, create investigation case, mark ingestion completed."""
     await _get_case_or_404(case_id)
 
     try:
         result = await ingestion_service.assemble_case_data(case_id)
-        return result
+        return {
+            'case_id': result['case_id'],
+            'status': 'completed',
+            'sections_included': result['sections_included'],
+            'sections_none': result['sections_none'],
+        }
     except ValueError as e:
         msg = str(e)
         if msg.startswith('incomplete:'):
@@ -1474,4 +1479,6 @@ async def assemble_case(case_id: str, current_user: dict = Depends(get_current_u
                     'incomplete_sections': incomplete,
                 },
             )
+        if 'already exists in investigations' in msg:
+            raise HTTPException(status_code=409, detail=msg)
         raise HTTPException(status_code=400, detail=str(e))

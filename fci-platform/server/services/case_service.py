@@ -14,6 +14,25 @@ from server.database import get_database
 logger = logging.getLogger(__name__)
 
 
+async def create_case(case_doc: dict) -> dict:
+    """
+    Insert a new case document into the cases collection.
+
+    Raises ValueError on duplicate _id.
+    """
+    db = get_database()
+    try:
+        await db.cases.insert_one(case_doc)
+    except Exception as e:
+        if "duplicate key" in str(e).lower() or "E11000" in str(e):
+            raise ValueError(
+                "A case with this ID already exists in investigations."
+            )
+        raise
+    logger.info("Created case %s", case_doc["_id"])
+    return case_doc
+
+
 async def get_cases(user_id: str | None = None) -> list[dict]:
     """
     Return all cases, optionally filtered by assigned user.
@@ -30,8 +49,8 @@ async def get_cases(user_id: str | None = None) -> list[dict]:
     cursor = db.cases.find(
         query,
         {
-            # Project only the fields needed for the case list
             "_id": 1,
+            "case_name": 1,
             "case_type": 1,
             "status": 1,
             "subject_user_id": 1,
@@ -45,6 +64,7 @@ async def get_cases(user_id: str | None = None) -> list[dict]:
     async for doc in cursor:
         cases.append({
             "case_id": doc["_id"],
+            "case_name": doc.get("case_name", ""),
             "case_type": doc.get("case_type", "unknown"),
             "status": doc.get("status", "open"),
             "subject_user_id": doc.get("subject_user_id", ""),
@@ -70,6 +90,7 @@ async def get_case(case_id: str) -> dict | None:
 
     return {
         "case_id": doc["_id"],
+        "case_name": doc.get("case_name", ""),
         "case_type": doc.get("case_type", "unknown"),
         "status": doc.get("status", "open"),
         "subject_user_id": doc.get("subject_user_id", ""),
@@ -77,6 +98,7 @@ async def get_case(case_id: str) -> dict | None:
         "conversation_id": doc.get("conversation_id"),
         "created_at": _format_dt(doc.get("created_at")),
         "preprocessed_data": doc.get("preprocessed_data", {}),
+        "assembled_case_data": doc.get("assembled_case_data"),
     }
 
 

@@ -51,6 +51,7 @@ class ToolUsedInfo(BaseModel):
 class CaseSummary(BaseModel):
     """Single case entry in the case list."""
     case_id: str
+    case_name: str = ""
     case_type: str
     subject_user_id: str
     status: str
@@ -65,27 +66,40 @@ class CaseListResponse(BaseModel):
 
 
 class PreprocessedData(BaseModel):
-    """Pre-staged case data fields matching the case package template.
-    All optional — not every case has every section."""
+    """Pre-staged case data fields populated from ingestion assembly.
+    All optional — only sections with data are populated."""
     model_config = ConfigDict(extra="allow")
 
-    l1_referral_narrative: str | None = None
-    hexa_dump: str | None = None
-    kyc_id_document: str | None = None
-    c360_transaction_summary: str | None = None
-    web_app_outputs: str | None = None
-    elliptic_screening: str | None = None
-    prior_icr_summary: str | None = None
-    le_kodex_extraction: str | None = None
-    rfi_user_communication: str | None = None
-    case_intake_extraction: str | None = None
-    osint_results: str | None = None
+    # C360 sub-processors
+    tx_summary: str | None = None
+    user_profile: str | None = None
+    privacy_coin: str | None = None
+    counterparty: str | None = None
+    device_ip: str | None = None
+    failed_fiat: str | None = None
+    ctm_alerts: str | None = None
+    ftm_alerts: str | None = None
+    account_blocks: str | None = None
+    address_xref: str | None = None
+    uid_search: str | None = None
+
+    # Standalone sections
+    elliptic: str | None = None
+    l1_referral: str | None = None
+    haoDesk: str | None = None
+    kyc: str | None = None
+    prior_icr: str | None = None
+    rfi: str | None = None
+    kodex: str | None = None
+    l1_victim: str | None = None
+    l1_suspect: str | None = None
     investigator_notes: str | None = None
 
 
 class CaseDetailResponse(BaseModel):
     """GET /api/cases/{case_id} response body."""
     case_id: str
+    case_name: str = ""
     case_type: str
     status: str
     subject_user_id: str
@@ -93,6 +107,7 @@ class CaseDetailResponse(BaseModel):
     conversation_id: str | None = None
     created_at: datetime
     preprocessed_data: PreprocessedData
+    assembled_case_data: str | None = None
 
 
 # --- Conversations ---

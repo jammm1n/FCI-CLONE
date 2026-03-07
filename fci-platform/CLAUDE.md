@@ -3,9 +3,9 @@
 ## Project Overview
 AI-assisted financial crime investigation platform. Investigators log in, view assigned cases, and conduct AI-powered investigations via a chat interface with access to case data and a knowledge base.
 
-There are two active workstreams:
-1. **Existing platform (Phase 1 MVP)** — fully working. Do not modify existing files unless the task explicitly requires it.
-2. **Data Ingestion Dashboard (active build)** — new feature slice being added to this codebase. See PRD below.
+The platform has two integrated subsystems:
+1. **Investigation platform** — investigators view assigned cases and conduct AI-powered investigations via chat
+2. **Data Ingestion Dashboard** — investigators create cases, upload/process data, then assemble and promote to investigations
 
 ---
 
@@ -31,7 +31,7 @@ fci-platform/
       cases.py                   # GET /api/cases, GET /api/cases/{id}
       conversations.py           # Conversation CRUD, streaming, PDF export, images
       admin.py                   # POST /api/admin/reseed
-      ingestion.py               # [TO BUILD] All ingestion endpoints
+      ingestion.py               # Ingestion endpoints (case CRUD, section processing, assembly)
     services/
       ai_client.py               # Anthropic API wrapper (streaming + tool loop)
       conversation_manager.py    # Conversation lifecycle orchestration
@@ -55,46 +55,46 @@ fci-platform/
           ctm_alerts.py, device.py, elliptic.py, failed_fiat.py
           ftm_alerts.py, privacy_coin.py, transaction_summary.py
           user_info_extended.py
-      ingestion/                 # [TO BUILD] Ingestion service layer
+      ingestion/                 # Ingestion service layer
         __init__.py
-        ingestion_service.py     # Case CRUD + status management
+        ingestion_service.py     # Case CRUD, section management, assembly + case promotion
         c360_processor.py        # Toolkit pipeline async wrapper
         elliptic_processor.py    # Elliptic API async wrapper
+        ai_processor.py          # AI prompt dispatch for all sections
+        kodex_processor.py       # Kodex PDF extraction + AI pipeline
     models/
-      schemas.py                 # Existing Pydantic models (do not modify)
-      ingestion_schemas.py       # [TO BUILD] Ingestion Pydantic models
+      schemas.py                 # Pydantic models (PreprocessedData, CaseSummary, etc.)
+      ingestion_schemas.py       # Ingestion-specific Pydantic models
 
   client/
     src/
       main.jsx, App.jsx
       context/AuthContext.jsx
       services/
-        api.js                   # Existing API calls (do not modify)
-        ingestion_api.js         # [TO BUILD] All ingestion API calls
+        api.js                   # Investigation API calls + case export
+        ingestion_api.js         # Ingestion API calls
       hooks/
-        useStreamingChat.js      # Existing hook
-        useIngestionStatus.js    # [TO BUILD] Polling hook
+        useStreamingChat.js      # Streaming chat hook
+        useIngestionStatus.js    # Ingestion polling hook
       utils/formatters.js
       pages/
         LoginPage.jsx
         CaseListPage.jsx
         InvestigationPage.jsx
         FreeChatPage.jsx
-        IngestionPage.jsx        # [TO BUILD]
+        IngestionPage.jsx        # Ingestion dashboard (single page, inline components)
       components/
-        AppLayout.jsx            # Needs nav link added (one line)
+        AppLayout.jsx
         ProtectedRoute.jsx
         shared/                  # LoadingSpinner, MarkdownRenderer, ImageUpload, etc.
-        cases/CaseCard.jsx
-        investigation/           # All existing investigation components
-        ingestion/               # [TO BUILD]
-          CaseCreationForm.jsx
-          IngestionHeader.jsx
-          IngestionSection.jsx
-          C360Section.jsx
-          EllipticSection.jsx
-          NotesSection.jsx
-          AssembledOutputModal.jsx
+        cases/CaseCard.jsx       # Case card with export button
+        investigation/
+          CaseDataTabs.jsx       # Two-tier tab system (groups + sub-tabs for C360)
+          CaseDataPanel.jsx
+          CaseHeader.jsx
+          ChatMessageList.jsx
+          ChatInput.jsx
+          StreamingIndicator.jsx
 
   knowledge_base/
     core/                        # Tier 1 — loaded on startup
@@ -114,17 +114,13 @@ fci-platform/
 
 ---
 
-## Data Ingestion Dashboard — Active Build
+## Data Ingestion Dashboard
 
-**Read `FCI-Ingestion-Dashboard-PRD.md` before doing any ingestion work.**
+The ingestion dashboard is fully built. All sections work with AI processing. Assembly creates a `cases` collection document and redirects to investigations.
 
-The PRD is the authoritative source for everything ingestion-related:
-- Phase definitions and build order (Section 3 and 6.2)
-- Database schema for `ingestion_cases` collection (Section 4)
-- Full API contract with request/response shapes (Section 5)
-- Detailed implementation specs including code patterns (Section 6)
+**Flow:** Create case → upload/process sections → assemble → case appears in investigations list → open for AI-assisted investigation.
 
-**Current phase:** Phase 1 — Infrastructure + Toolkit Port
+**Reference:** `FCI-Ingestion-Dashboard-PRD.md` for original requirements.
 
 **Key rules for ingestion work:**
 - The toolkit code in `server/services/icr/` is already copied and must not be modified
@@ -136,45 +132,40 @@ The PRD is the authoritative source for everything ingestion-related:
 
 ---
 
-## Existing Platform — Do Not Break
-
-The existing investigation platform is fully working. The blast radius of the ingestion build on existing files is deliberately minimal:
-
-| File | Allowed Change |
-|------|---------------|
-| `server/main.py` | Register ingestion router (one line) |
-| `server/config.py` | Add `ELLIPTIC_API_KEY: str = ""` |
-| `client/src/App.jsx` | Add `/ingest` route (one line) |
-| `client/src/components/AppLayout.jsx` | Add "Ingest" nav link |
-| `requirements.txt` | Add `openpyxl>=3.1.0` if not present |
-| `.env.example` | Add `ELLIPTIC_API_KEY=` placeholder |
-
-**No other existing files should be modified.**
-
----
-
 ## Case Data Schema (preprocessed_data)
 
-Cases store a `preprocessed_data` dict. These keys map to UI tabs and markdown headers in the AI's `[CASE DATA]` injection.
+Cases store a `preprocessed_data` dict populated by ingestion assembly. These keys map to UI tabs and markdown headers in the AI's `[CASE DATA]` injection.
 
 ```
-l1_referral_narrative    → "L1 Referral Narrative"
-hexa_dump                → "HEXA Dump (Full)"
-kyc_id_document          → "KYC / ID Document"
-c360_transaction_summary → "C360 Transaction Summary"
-web_app_outputs          → "Web App Outputs"
-elliptic_screening       → "Elliptic Screening"
-prior_icr_summary        → "Prior ICR Summary"
-le_kodex_extraction      → "LE / Kodex Extraction"
-rfi_user_communication   → "RFI / User Communication"
-case_intake_extraction   → "Case Intake Extraction"
-osint_results            → "OSINT Results"
-investigator_notes       → "Investigator Notes"
+# C360 sub-processors (from ingestion C360 pipeline)
+tx_summary       → "Transaction Summary"
+user_profile     → "User Profile"
+privacy_coin     → "Privacy Coin Breakdown"
+counterparty     → "Counterparty Analysis"
+device_ip        → "Device & IP Analysis"
+failed_fiat      → "Failed Fiat Withdrawals"
+ctm_alerts       → "CTM Alerts"
+ftm_alerts       → "FTM Alerts"
+account_blocks   → "Account Blocks"
+address_xref     → "Address Cross-Reference"
+uid_search       → "UID Search Results"
+
+# Standalone sections
+elliptic         → "Elliptic Wallet Screening"
+l1_referral      → "L1 Referral Narrative"
+haoDesk          → "HaoDesk Case Data"
+kyc              → "KYC Document Summary"
+prior_icr        → "Prior ICR Summary"
+rfi              → "RFI Summary"
+kodex            → "Law Enforcement / Kodex"
+l1_victim        → "L1 Victim Communications"
+l1_suspect       → "L1 Suspect Communications"
+investigator_notes → "Investigator Notes"
 ```
 
-Defined in: `server/models/schemas.py` → `PreprocessedData`, `server/services/conversation_manager.py` → `_build_case_data_markdown()`, `client/src/components/investigation/CaseDataTabs.jsx` → `TAB_LABELS`
+Defined in: `server/models/schemas.py` → `PreprocessedData`, `server/services/conversation_manager.py` → `_build_case_data_markdown()`, `client/src/components/investigation/CaseDataTabs.jsx` → `TAB_GROUPS`
 
-The ingestion dashboard assembles and writes these fields when Phase 5 integration is built. See PRD Section 4.6 for the field mapping from `ingestion_cases` to `preprocessed_data`.
+The investigation page uses two-tier tabs: top-level groups (C360 expands into sub-tabs, others are single-content) showing only groups with data.
 
 ---
 
@@ -209,5 +200,5 @@ python scripts/seed_demo_data.py
 ## Seed Data
 
 - 2 users: `ben.investigator` (user_001), `demo.investigator` (user_002)
-- 3 demo cases assigned to user_001
-- To add cases: see `scripts/seed_demo_data.py` or insert directly into MongoDB `fci_platform.cases`
+- Cases are created through the ingestion pipeline (no demo cases seeded)
+- Run `python scripts/seed_demo_data.py` to seed users only

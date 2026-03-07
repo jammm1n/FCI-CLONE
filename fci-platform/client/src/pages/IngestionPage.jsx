@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AppLayout from '../components/AppLayout';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
@@ -3334,72 +3335,50 @@ function FutureSectionCard({ sectionKey, caseData }) {
   );
 }
 
-// ── Assembled Output Modal ───────────────────────────────────────
+// ── Assembly Confirmation Modal ──────────────────────────────────
 
-function AssembledOutputModal({ caseId, markdown, onClose }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(markdown);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  function handleDownload() {
-    const blob = new Blob([markdown], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${caseId}_case_document.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
+function AssemblyConfirmModal({ onConfirm, onCancel, assembling }) {
   useEffect(() => {
     function handleKey(e) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !assembling) onCancel();
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose]);
+  }, [onCancel, assembling]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={assembling ? undefined : onCancel}>
       <div
-        className="bg-white dark:bg-surface-800 rounded-2xl w-[90%] max-w-4xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl"
+        className="bg-white dark:bg-surface-800 rounded-2xl w-[90%] max-w-md flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100">
-            Assembled Case Data
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100 mb-3">
+            Finalize Case
           </h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDownload}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gold-500 hover:bg-gold-600 text-surface-900 transition-colors"
-            >
-              Download .md
-            </button>
-            <button
-              onClick={handleCopy}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
-            >
-              {copied ? 'Copied!' : 'Copy Markdown'}
-            </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center text-surface-500"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-              </svg>
-            </button>
-          </div>
+          <p className="text-sm text-surface-600 dark:text-surface-300 leading-relaxed">
+            This will assemble all ingested data into an investigation case. The ingestion data will be
+            finalized and you will not be able to edit it after this point.
+          </p>
+          <p className="text-sm text-surface-600 dark:text-surface-300 mt-2">
+            The case will appear in your Investigations list, ready to open and investigate.
+          </p>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">
-          <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
-            {markdown}
-          </pre>
+        <div className="flex items-center justify-end gap-3 px-6 pb-6">
+          <button
+            onClick={onCancel}
+            disabled={assembling}
+            className="px-4 py-2 rounded-xl text-sm font-medium border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={assembling}
+            className="px-5 py-2 rounded-xl text-sm font-bold bg-gold-500 hover:bg-gold-600 text-surface-900 transition-colors disabled:opacity-70"
+          >
+            {assembling ? 'Assembling...' : 'Confirm & Finalize'}
+          </button>
         </div>
       </div>
     </div>
@@ -3410,10 +3389,11 @@ function AssembledOutputModal({ caseId, markdown, onClose }) {
 
 export default function IngestionPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [caseData, setCaseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [assembledMarkdown, setAssembledMarkdown] = useState(null);
+  const [showAssemblyConfirm, setShowAssemblyConfirm] = useState(false);
   const [assembling, setAssembling] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -3494,10 +3474,11 @@ export default function IngestionPage() {
   async function handleAssemble() {
     setAssembling(true);
     try {
-      const result = await ingestionApi.assembleCase(token, caseData.case_id);
-      setAssembledMarkdown(result.assembled_case_data);
+      await ingestionApi.assembleCase(token, caseData.case_id);
+      navigate('/cases');
     } catch (err) {
       setError(err.message);
+      setShowAssemblyConfirm(false);
     } finally {
       setAssembling(false);
     }
@@ -3682,11 +3663,11 @@ export default function IngestionPage() {
             {/* Assembly */}
             <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
               <button
-                onClick={handleAssemble}
+                onClick={() => setShowAssemblyConfirm(true)}
                 disabled={!canAssemble || assembling}
                 className="w-full px-5 py-3 rounded-xl bg-gold-500 hover:bg-gold-600 text-surface-900 font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {assembling ? 'Assembling...' : 'Assemble Case Data'}
+                Assemble Case Data
               </button>
               {!canAssemble && caseData.sections && (
                 <p className="text-xs text-surface-400 mt-2 text-center">
@@ -3698,12 +3679,12 @@ export default function IngestionPage() {
         )}
       </div>
 
-      {/* Assembled output modal */}
-      {assembledMarkdown && (
-        <AssembledOutputModal
-          caseId={caseData?.case_id || 'case'}
-          markdown={assembledMarkdown}
-          onClose={() => setAssembledMarkdown(null)}
+      {/* Assembly confirmation modal */}
+      {showAssemblyConfirm && (
+        <AssemblyConfirmModal
+          onConfirm={handleAssemble}
+          onCancel={() => setShowAssemblyConfirm(false)}
+          assembling={assembling}
         />
       )}
     </AppLayout>

@@ -655,19 +655,30 @@ def _build_case_data_markdown(case: dict) -> str:
     if not preprocessed:
         return "(No preprocessed data available for this case.)"
 
-    # Map field names to display headers (matches case package template)
+    # Map field names to display headers (matches ingestion assembly output)
     section_map = {
-        "l1_referral_narrative": "L1 Referral Narrative",
-        "hexa_dump": "HEXA Dump (Full)",
-        "kyc_id_document": "KYC / ID Document",
-        "c360_transaction_summary": "C360 Transaction Summary",
-        "web_app_outputs": "Web App Outputs",
-        "elliptic_screening": "Elliptic Screening",
-        "prior_icr_summary": "Prior ICR Summary",
-        "le_kodex_extraction": "LE / Kodex Extraction",
-        "rfi_user_communication": "RFI / User Communication",
-        "case_intake_extraction": "Case Intake Extraction",
-        "osint_results": "OSINT Results",
+        # C360 sub-processors
+        "tx_summary": "Transaction Summary",
+        "user_profile": "User Profile",
+        "privacy_coin": "Privacy Coin Breakdown",
+        "counterparty": "Counterparty Analysis",
+        "device_ip": "Device & IP Analysis",
+        "failed_fiat": "Failed Fiat Withdrawals",
+        "ctm_alerts": "CTM Alerts",
+        "ftm_alerts": "FTM Alerts",
+        "account_blocks": "Account Blocks",
+        "address_xref": "Address Cross-Reference",
+        "uid_search": "UID Search Results",
+        # Standalone sections
+        "elliptic": "Elliptic Wallet Screening",
+        "l1_referral": "L1 Referral Narrative",
+        "haoDesk": "HaoDesk Case Data",
+        "kyc": "KYC Document Summary",
+        "prior_icr": "Prior ICR Summary",
+        "rfi": "RFI Summary",
+        "kodex": "Law Enforcement / Kodex",
+        "l1_victim": "L1 Victim Communications",
+        "l1_suspect": "L1 Suspect Communications",
         "investigator_notes": "Investigator Notes",
     }
 
