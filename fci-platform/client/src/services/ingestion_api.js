@@ -314,6 +314,36 @@ export async function resetKYC(token, caseId) {
   return handleResponse(res);
 }
 
+// ── Kodex / LE (PDF batch upload) ────────────────────────────────
+
+export async function uploadKodex(token, caseId, files) {
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex`, {
+    method: 'POST',
+    headers: bearerOnly(token),
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
+export async function getKodexOutput(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function resetKodex(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex/reset`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 // ── Assembly ─────────────────────────────────────────────────────
 
 export async function assembleCase(token, caseId) {

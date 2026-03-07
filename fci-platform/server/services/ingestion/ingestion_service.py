@@ -85,6 +85,10 @@ def _empty_sections():
     # Iterative entry sections
     sections['previous_icrs']['entries'] = []
     sections['rfis']['entries'] = []
+    # Kodex / LE batch upload
+    sections['kodex']['pdf_files'] = []
+    sections['kodex']['per_case'] = []
+    sections['kodex']['case_count'] = 0
     return sections
 
 

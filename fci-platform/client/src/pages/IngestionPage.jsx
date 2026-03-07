@@ -2883,6 +2883,397 @@ function KYCPreviewModal({ data, caseId, onClose }) {
 }
 
 
+// ── Kodex / LE Section (PDF batch upload) ────────────────────────
+
+function KodexSection({ caseData, onSaved }) {
+  const sectionKey = 'kodex';
+  const { token } = useAuth();
+  const section = caseData.sections?.[sectionKey] || {};
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
+  const isComplete = status === 'complete';
+  const isNone = status === 'none';
+  const isProcessing = status === 'processing';
+  const isError = status === 'error';
+  const hasSubjectUid = !!caseData.subject_uid;
+
+  const fileInputRef = useRef(null);
+
+  function handleFilesSelected(e) {
+    const files = Array.from(e.target.files || []);
+    const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    setSelectedFiles((prev) => [...prev, ...pdfs]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeSelectedFile(idx) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    if (pdfs.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...pdfs]);
+    }
+  }
+
+  async function handleUploadAndProcess() {
+    if (selectedFiles.length === 0) return;
+    setUploading(true);
+    try {
+      await ingestionApi.uploadKodex(token, caseData.case_id, selectedFiles);
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to upload Kodex PDFs:', err);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleReset() {
+    try {
+      await ingestionApi.resetKodex(token, caseData.case_id);
+      setSelectedFiles([]);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to reset Kodex:', err);
+    }
+  }
+
+  async function handlePreview() {
+    try {
+      const data = await ingestionApi.getKodexOutput(token, caseData.case_id);
+      setPreviewData(data);
+      setShowPreview(true);
+    } catch (err) {
+      console.error('Failed to load Kodex preview:', err);
+    }
+  }
+
+  async function handleMarkNone() {
+    try {
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to mark Kodex N/A:', err);
+    }
+  }
+
+  if (isNone) {
+    async function handleReopen() {
+      try {
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        if (onSaved) onSaved();
+      } catch (err) {
+        console.error('Failed to reopen Kodex:', err);
+      }
+    }
+    return (
+      <div className="bg-surface-100/50 dark:bg-surface-800/50 rounded-xl p-5 border border-surface-200/50 dark:border-surface-700/50">
+        <div className="flex items-center justify-between">
+          <h4 className="text-base font-semibold text-surface-500 dark:text-surface-400">
+            {SECTION_LABELS[sectionKey]}
+          </h4>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleReopen}
+              className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+            >
+              Reopen
+            </button>
+            <StatusDot status="none" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+          {SECTION_LABELS[sectionKey]}
+        </h4>
+        <div className="flex items-center gap-2">
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed' : ''}
+            </span>
+          )}
+          <StatusDot status={status} />
+        </div>
+      </div>
+
+      {/* Gate: need subject UID */}
+      {!hasSubjectUid && !isComplete && !isProcessing && !isError && (
+        <div className="text-sm text-surface-400 py-3 flex items-center gap-2">
+          <svg className="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          C360 must be processed first to identify the subject UID.
+        </div>
+      )}
+
+      {/* Upload area (visible when UID present and section is empty/error) */}
+      {hasSubjectUid && !isComplete && !isProcessing && (
+        <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
+              dragOver
+                ? 'border-gold-500 bg-gold-500/5'
+                : 'border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500'
+            }`}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              multiple
+              onChange={handleFilesSelected}
+              className="hidden"
+            />
+            <svg className="w-8 h-8 mx-auto mb-2 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              Click to select or drag &amp; drop Kodex case PDFs
+            </p>
+            <p className="text-[10px] text-surface-400 mt-1">
+              Drop all LE case PDFs at once — they will be processed in parallel
+            </p>
+          </div>
+
+          {isError && section.error_message && (
+            <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              {section.error_message}
+            </div>
+          )}
+
+          {/* Selected file list */}
+          {selectedFiles.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {selectedFiles.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-surface-200/50 dark:bg-surface-700/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <svg className="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span className="text-xs text-surface-600 dark:text-surface-300 truncate">{file.name}</span>
+                    <span className="text-[10px] text-surface-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeSelectedFile(idx); }}
+                    className="text-surface-400 hover:text-red-400 text-sm ml-2 shrink-0"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 mt-3">
+            {selectedFiles.length > 0 && (
+              <button
+                onClick={handleUploadAndProcess}
+                disabled={uploading}
+                className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {uploading ? 'Processing...' : `Upload & Process (${selectedFiles.length} PDF${selectedFiles.length > 1 ? 's' : ''})`}
+              </button>
+            )}
+            {selectedFiles.length === 0 && (status === 'empty' || status === 'error') && (
+              <button
+                onClick={handleMarkNone}
+                className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                No Data
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* No Data button when no UID and section is empty */}
+      {!hasSubjectUid && status === 'empty' && (
+        <div className="mt-2">
+          <button
+            onClick={handleMarkNone}
+            className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          >
+            No Data
+          </button>
+        </div>
+      )}
+
+      {/* Processing indicator */}
+      {isProcessing && (
+        <div className="flex items-center gap-3 py-4">
+          <LoadingSpinner size="sm" />
+          <span className="text-sm text-surface-400">Processing LE case PDFs...</span>
+        </div>
+      )}
+
+      {/* Actions when complete */}
+      {isComplete && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePreview}
+            className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+          >
+            Preview
+          </button>
+          <button
+            onClick={handleReset}
+            className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {showPreview && previewData && (
+        <KodexPreviewModal
+          data={previewData}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+
+// ── Kodex Preview Modal ──────────────────────────────────────────
+
+function KodexPreviewModal({ data, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const [expandedCase, setExpandedCase] = useState(null);
+  const perCase = data.per_case || [];
+
+  function handleCopy() {
+    if (data.output) {
+      navigator.clipboard.writeText(data.output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
+          <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">
+            {SECTION_LABELS.kodex} — {data.case_count || 0} case(s)
+          </h3>
+          <div className="flex items-center gap-3">
+            <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
+              {copied ? 'Copied!' : 'Copy Summary'}
+            </button>
+            <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          {data.ai_error && (
+            <div className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+              Error: {data.ai_error}
+            </div>
+          )}
+
+          {/* Cross-case summary */}
+          {data.output && (
+            <div>
+              <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
+                Cross-Case Summary
+              </h4>
+              <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed bg-surface-50 dark:bg-surface-900/50 rounded-lg p-4">
+                {data.output}
+              </pre>
+            </div>
+          )}
+
+          {/* Per-case extractions (accordion) */}
+          {perCase.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
+                Per-Case Extractions
+              </h4>
+              <div className="space-y-2">
+                {perCase.map((pc, idx) => (
+                  <div key={idx} className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedCase(expandedCase === idx ? null : idx)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-900/80 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-mono text-gold-500">Case {idx + 1}</span>
+                        <span className="text-sm text-surface-700 dark:text-surface-300 truncate">{pc.filename}</span>
+                        <span className="text-[10px] text-surface-400 shrink-0">{pc.page_count}p</span>
+                        {pc.uid_count > 0 && (
+                          <span className="text-[10px] text-emerald-400 shrink-0">UID: {pc.uid_count}x</span>
+                        )}
+                        {pc.uid_count === 0 && (
+                          <span className="text-[10px] text-amber-400 shrink-0">UID not found</span>
+                        )}
+                      </div>
+                      <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedCase === idx ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {expandedCase === idx && (
+                      <div className="px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+                        {pc.error && !pc.ai_output && (
+                          <div className="text-xs text-red-400 mb-2">{pc.error}</div>
+                        )}
+                        <pre className="text-xs text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
+                          {pc.ai_output || 'No extraction available.'}
+                        </pre>
+                        <div className="mt-2 flex gap-3 text-[10px] text-surface-400">
+                          <span>Original: {(pc.original_length / 1024).toFixed(1)}KB</span>
+                          <span>Cleaned: {(pc.cleaned_length / 1024).toFixed(1)}KB</span>
+                          <span>Reduction: {pc.original_length > 0 ? Math.round((1 - pc.cleaned_length / pc.original_length) * 100) : 0}%</span>
+                          <span>Other UIDs: ~{pc.approx_other_uids}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* PDF metadata */}
+          {(data.pdf_files || []).length > 0 && perCase.length === 0 && (
+            <div className="text-xs text-surface-400">
+              {data.pdf_files.length} PDF(s) processed
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ── Future Section Placeholder ───────────────────────────────────
 
 function FutureSectionCard({ sectionKey, caseData }) {
@@ -3263,10 +3654,10 @@ export default function IngestionPage() {
               onSaved={handleProcessingStarted}
             />
 
-            {/* Kodex (future phase) */}
-            <FutureSectionCard
-              sectionKey="kodex"
+            {/* Kodex / LE Cases */}
+            <KodexSection
               caseData={caseData}
+              onSaved={handleProcessingStarted}
             />
 
             {/* L1 Victim Communications */}

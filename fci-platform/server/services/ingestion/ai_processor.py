@@ -51,6 +51,8 @@ SECTION_PROMPT_MAP = {
     'kyc':          'prompt-13-kyc-document.md',
     'l1_victim':    'prompt-23-l1-communications.md',
     'l1_suspect':   'prompt-23-l1-communications.md',
+    'kodex_per_case': 'prompt-15e-kodex-per-case.md',
+    'kodex_summary':  'prompt-15e-kodex-summary.md',
 }
 
 # ── Prompt Loading ───────────────────────────────────────────────

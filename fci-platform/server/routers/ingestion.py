@@ -1169,6 +1169,176 @@ async def reset_kyc(
     return {'section': 'kyc', 'status': 'empty'}
 
 
+# ── Kodex / LE (PDF batch upload + 3-stage pipeline) ─────────────
+
+
+_ALLOWED_PDF_TYPES = {'application/pdf'}
+
+
+@router.post('/cases/{case_id}/kodex')
+async def upload_kodex(
+    case_id: str,
+    files: List[UploadFile] = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Upload Kodex/LE case PDFs and run the three-stage processing pipeline.
+
+    Accepts multiple PDF files. Requires subject_uid to be set on the case
+    (populated by C360 processing). Processing runs in the foreground:
+      1. Per-PDF: text extraction + cleaning + UID counting
+      2. Per-PDF: parallel AI extraction
+      3. Cross-case summary AI call
+    """
+    case = await _get_case_or_404(case_id)
+
+    # Hard gate: subject UID must be present
+    subject_uid = case.get('subject_uid', '')
+    if not subject_uid:
+        raise HTTPException(
+            status_code=400,
+            detail='Subject UID is required for Kodex processing. '
+                   'Upload C360 data first to identify the subject.',
+        )
+
+    # Guard: don't reprocess if already complete or processing
+    kodex_status = case.get('sections', {}).get('kodex', {}).get('status', 'empty')
+    if kodex_status == 'processing':
+        raise HTTPException(status_code=409, detail='Kodex section is currently processing.')
+    if kodex_status == 'complete':
+        raise HTTPException(
+            status_code=409,
+            detail='Kodex section is already complete. Reset before reprocessing.',
+        )
+
+    if not files:
+        raise HTTPException(status_code=400, detail='At least one PDF file is required.')
+
+    # Read and validate PDF files (MUST read bytes before any async work)
+    files_bytes = []
+    for f in files:
+        content_type = f.content_type or ''
+        filename = f.filename or 'document.pdf'
+        # Accept application/pdf or files ending in .pdf
+        if content_type not in _ALLOWED_PDF_TYPES and not filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=400,
+                detail=f'Only PDF files accepted. Got: {content_type} for {filename}',
+            )
+        content = await f.read()
+        files_bytes.append((filename, content))
+
+    # Mark as processing
+    await ingestion_service.update_section(
+        case_id, 'kodex', 'processing',
+        extra_fields={'ai_status': 'processing'},
+    )
+
+    # Run the three-stage pipeline (foreground)
+    from server.services.ingestion.kodex_processor import process_kodex_batch
+
+    try:
+        result = await process_kodex_batch(files_bytes, subject_uid)
+    except Exception as e:
+        logger.exception('Kodex processing failed for %s', case_id)
+        await ingestion_service.update_section(
+            case_id, 'kodex', 'error',
+            error=str(e),
+            extra_fields={'ai_status': 'error'},
+        )
+        raise HTTPException(status_code=500, detail=f'Processing failed: {e}')
+
+    # Build pdf_files metadata (without raw text/AI output)
+    pdf_files = []
+    for r in result['per_case']:
+        pdf_files.append({
+            'filename': r['filename'],
+            'page_count': r['page_count'],
+            'original_length': r['original_length'],
+            'cleaned_length': r['cleaned_length'],
+            'uid_count': r['uid_count'],
+            'approx_other_uids': r['approx_other_uids'],
+        })
+
+    # Determine final status
+    if result.get('summary'):
+        status = 'complete'
+        ai_status = 'complete'
+        output = result['summary']
+        error = None
+    elif result.get('errors'):
+        status = 'error'
+        ai_status = 'error'
+        output = None
+        error = '; '.join(result['errors'])
+    else:
+        status = 'error'
+        ai_status = 'error'
+        output = None
+        error = 'No summary generated'
+
+    await ingestion_service.update_section(
+        case_id, 'kodex', status,
+        output=output,
+        error=error,
+        extra_fields={
+            'ai_status': ai_status,
+            'pdf_files': pdf_files,
+            'per_case': result['per_case'],
+            'case_count': result['case_count'],
+        },
+    )
+
+    return {
+        'status': status,
+        'case_count': result['case_count'],
+        'pdf_files': pdf_files,
+        'ai_status': ai_status,
+        'errors': result.get('errors', []),
+    }
+
+
+@router.get('/cases/{case_id}/kodex')
+async def get_kodex_output(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return Kodex section data including per-case extractions and summary."""
+    case = await _get_case_or_404(case_id)
+    section = case.get('sections', {}).get('kodex', {})
+    return {
+        'status': section.get('status', 'empty'),
+        'output': section.get('output'),
+        'pdf_files': section.get('pdf_files', []),
+        'per_case': section.get('per_case', []),
+        'case_count': section.get('case_count', 0),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('error_message'),
+        'updated_at': section.get('updated_at'),
+    }
+
+
+@router.post('/cases/{case_id}/kodex/reset')
+async def reset_kodex(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Reset Kodex section to empty, clearing all PDF data and AI output."""
+    await _get_case_or_404(case_id)
+    await ingestion_service.update_section(
+        case_id, 'kodex', 'empty',
+        extra_fields={
+            'output': None,
+            'error_message': None,
+            'pdf_files': [],
+            'per_case': [],
+            'case_count': 0,
+            'ai_status': None,
+        },
+    )
+    return {'section': 'kodex', 'status': 'empty'}
+
+
 # ── Entry with Images (RFI) ───────────────────────────────────────
 
 _IMAGE_SECTIONS = {'rfis'}
