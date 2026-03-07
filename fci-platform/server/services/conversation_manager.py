@@ -222,7 +222,7 @@ async def send_message(
     api_messages.append({"role": "user", "content": user_content})
 
     # 4. Call the AI
-    system_prompt = knowledge_base.get_system_prompt()
+    system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
     ai_result = await get_ai_response(
         system_prompt=system_prompt,
         messages=api_messages,
@@ -338,7 +338,7 @@ async def send_message_streaming(
         api_messages.append({"role": "user", "content": user_content})
 
     # Stream the AI response
-    system_prompt = knowledge_base.get_system_prompt()
+    system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
     async for event in get_ai_response_streaming(
         system_prompt=system_prompt,
         messages=api_messages,

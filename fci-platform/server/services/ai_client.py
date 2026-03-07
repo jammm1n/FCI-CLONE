@@ -52,7 +52,32 @@ TOOLS = [
             },
             "required": ["document_id"]
         }
-    }
+    },
+    {
+        "name": "get_prompt",
+        "description": (
+            "Retrieve a data processing prompt from the prompt library. "
+            "Use this tool when you need to process raw data pasted by "
+            "the investigator (e.g., C360 transaction data, device/IP "
+            "output, Elliptic screenshots, communications). The prompt "
+            "will include formatting rules automatically. Consult the "
+            "processing prompt index in your system prompt to identify "
+            "the correct prompt_id."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "prompt_id": {
+                    "type": "string",
+                    "description": (
+                        "The unique identifier of the processing prompt "
+                        "to retrieve, as listed in the processing prompt index."
+                    )
+                }
+            },
+            "required": ["prompt_id"]
+        }
+    },
 ]
 
 
@@ -125,6 +150,31 @@ def _process_tool_calls(
                     "Tool call: get_reference_document(%s) — %s",
                     doc_id,
                     doc_meta["title"] if doc_meta else "unknown document"
+                )
+            elif block.name == "get_prompt":
+                prompt_id = block.input.get("prompt_id", "")
+                prompt_content = knowledge_base.get_prompt(prompt_id)
+
+                prompt_meta = next(
+                    (p for p in knowledge_base.prompt_index if p["id"] == prompt_id),
+                    None
+                )
+                tools_used.append({
+                    "tool": "get_prompt",
+                    "document_id": prompt_id,
+                    "document_title": prompt_meta["title"] if prompt_meta else prompt_id,
+                })
+
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": prompt_content,
+                })
+
+                logger.info(
+                    "Tool call: get_prompt(%s) — %s",
+                    prompt_id,
+                    prompt_meta["title"] if prompt_meta else "unknown prompt"
                 )
             else:
                 # Unknown tool — return an error so the model can recover

@@ -1,0 +1,142 @@
+# Prompt Index
+# Available to the AI via get_prompt tool calls.
+# Global rules (_global-rules.md) are automatically prepended.
+
+processing_prompts:
+
+  - id: tx-analysis
+    title: "Transaction Analysis / Pass-Through & Rapid Movement"
+    filename: "prompt-01-transaction-analysis.md"
+    covers:
+      - C360 transaction summary data processing
+      - Fund movement narrative, velocity assessment, negative confirmations
+      - Single paragraph ~80-100 words for ICR Transaction Overview
+    token_estimate: 500
+
+  - id: account-blocks
+    title: "Account Blocks Summary"
+    filename: "prompt-03-account-blocks.md"
+    covers:
+      - Lifetime block/unblock details from C360
+      - Chronological block/unblock actions with timestamps
+    token_estimate: 300
+
+  - id: prior-icr
+    title: "Prior ICR Analysis"
+    filename: "prompt-04-prior-icr.md"
+    covers:
+      - Prior and in-progress ICR review data
+      - Consolidated summary paragraph ~60-75 words
+    token_estimate: 300
+
+  - id: ctm-alerts
+    title: "CTM Alerts (Standard)"
+    filename: "prompt-06-ctm-alerts.md"
+    covers:
+      - Lifetime CTM alert details from C360
+      - Single paragraph 60-80 words with entity attributions
+    token_estimate: 400
+
+  - id: privacy-coin
+    title: "Privacy Coin Analysis"
+    filename: "prompt-07-privacy-coin.md"
+    covers:
+      - Privacy coin transaction data (XMR, ZEC, DASH)
+      - Summary paragraph 50-70 words with AML/CFT risk statement
+    token_estimate: 300
+
+  - id: failed-fiat
+    title: "Failed Fiat Transactions"
+    filename: "prompt-08-failed-fiat.md"
+    covers:
+      - Failed fiat withdrawal/deposit data
+      - Analysis paragraph with error reasons and fraud flags
+    token_estimate: 300
+
+  - id: rfi-summary
+    title: "RFI Summary"
+    filename: "prompt-10-rfi-summary.md"
+    covers:
+      - RFI history data from Hexa template
+      - 50-60 word summary of RFI types and responses
+    token_estimate: 300
+
+  - id: kyc-document
+    title: "KYC Document Extraction"
+    filename: "prompt-13-kyc-document.md"
+    covers:
+      - KYC document images (passport, ID, POA)
+      - Structured extraction of identity and address details
+    token_estimate: 400
+
+  - id: kodex-per-case
+    title: "Kodex Per-Case Extraction"
+    filename: "prompt-15e-kodex-per-case.md"
+    covers:
+      - Individual Kodex/LE case PDF extraction
+      - Structured case data (authority, dates, targets, request type)
+    token_estimate: 500
+
+  - id: kodex-summary
+    title: "Kodex Cross-Case Summary"
+    filename: "prompt-15e-kodex-summary.md"
+    covers:
+      - Summary across multiple Kodex cases
+      - LE case table and risk classification
+    token_estimate: 400
+
+  - id: device-ip
+    title: "Device & IP Analysis"
+    filename: "prompt-17-device-ip-ingestion.md"
+    covers:
+      - Web app device/IP output processing
+      - Six-section structured extraction (headline figures, location, language, VPN, shared devices, sanctioned jurisdictions)
+    token_estimate: 600
+
+  - id: ftm-alerts
+    title: "FTM Alerts"
+    filename: "prompt-18-ftm-alerts-ingestion.md"
+    covers:
+      - Fiat Transaction Monitoring alert data
+      - Alert summary with patterns and risk indicators
+    token_estimate: 400
+
+  - id: counterparty-ingestion
+    title: "Counterparty Analysis (Ingestion)"
+    filename: "prompt-19-counterparty-ingestion.md"
+    covers:
+      - C360 counterparty spreadsheet processing
+      - Risk flag extraction, clean CP summary, P2P totals
+    token_estimate: 500
+
+  - id: l1-referral
+    title: "L1 Referral Narrative Cleanup"
+    filename: "prompt-20-l1-referral.md"
+    covers:
+      - Raw L1 referral text (hexa_dump) cleanup
+      - Organized, readable English summary
+    token_estimate: 300
+
+  - id: haoDesk-cleanup
+    title: "HaoDesk Case Data Cleanup"
+    filename: "prompt-21-haoDesk-cleanup.md"
+    covers:
+      - Raw HaoDesk hex dump cleanup
+      - Structured case data extraction
+    token_estimate: 300
+
+  - id: rfi-document-review
+    title: "RFI Document Review"
+    filename: "prompt-22-rfi-document-review.md"
+    covers:
+      - RFI response document analysis (images + text)
+      - Evidence assessment and compliance relevance
+    token_estimate: 400
+
+  - id: l1-communications
+    title: "L1 Communications Processing"
+    filename: "prompt-23-l1-communications.md"
+    covers:
+      - Victim and suspect communications (text + screenshots)
+      - Translation, chronological summary, scam/fraud enhancement
+    token_estimate: 400
