@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '' }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -94,6 +94,74 @@ export default function ChatInput({ onSend, disabled, maxWidth = '' }) {
       style={{ paddingLeft: '5%', paddingRight: '5%' }}
     >
       <div className={maxWidth ? `${maxWidth} mx-auto` : ''}>
+        {/* Step complete — approval mode: replaces the text input */}
+        {stepComplete && currentStep >= 1 && currentStep <= 4 && (
+          <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              This step is complete. Review the output above, then approve or continue the discussion.
+            </p>
+            <div className="flex items-center gap-3">
+              {currentStep <= 3 ? (
+                <button
+                  onClick={onAdvanceStep}
+                  disabled={stepLoading}
+                  className="px-5 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 active:scale-[0.98] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 flex items-center gap-2"
+                >
+                  {stepLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-surface-950/30 border-t-surface-950 rounded-full animate-spin" />
+                      Generating summary...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                      </svg>
+                      Approve and Continue
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={onQCCheck}
+                  disabled={stepLoading}
+                  className="px-5 py-2.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 active:scale-[0.98] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 flex items-center gap-2"
+                >
+                  {stepLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-surface-950/30 border-t-surface-950 rounded-full animate-spin" />
+                      Generating summary...
+                    </>
+                  ) : (
+                    'QC Check'
+                  )}
+                </button>
+              )}
+              <button
+                onClick={onContinueDiscussion}
+                disabled={stepLoading}
+                className="px-5 py-2.5 text-sm font-medium rounded-lg border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 active:scale-[0.98] disabled:opacity-50"
+              >
+                Continue Discussion
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Manual override — only when step is NOT yet signalled complete */}
+        {!stepComplete && currentStep >= 1 && currentStep <= 4 && !disabled && (
+          <div className="flex justify-center mb-1">
+            <button
+              onClick={onManualStepComplete}
+              className="text-xs text-surface-400 hover:text-gold-500 transition-colors"
+            >
+              Mark step complete
+            </button>
+          </div>
+        )}
+
+        {/* Normal chat input — hidden when in approval mode */}
+        {(!stepComplete || !currentStep || currentStep > 4) && <>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here
@@ -136,6 +204,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '' }) {
             </button>
           </div>
         </div>
+        </>}
       </div>
     </div>
   );

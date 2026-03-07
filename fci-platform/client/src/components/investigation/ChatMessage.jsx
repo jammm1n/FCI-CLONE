@@ -158,22 +158,44 @@ export default function ChatMessage({ message, conversationId }) {
         )}
 
         {/* Tools used footer */}
-        {toolsUsed.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-surface-100 dark:border-surface-700">
-            <span className="text-sm text-surface-500">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 inline mr-1 opacity-60">
-                <path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v8a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V4a.5.5 0 00-.5-.5H4z" />
-              </svg>
-              Referenced:{' '}
-            </span>
-            {toolsUsed.map((t, i) => (
-              <span key={i} className="text-sm text-gold-600 dark:text-gold-400 font-medium">
-                {t.document_title}
-                {i < toolsUsed.length - 1 ? ', ' : ''}
-              </span>
-            ))}
-          </div>
-        )}
+        {toolsUsed.length > 0 && (() => {
+          const injected = toolsUsed.filter((t) => t.tool === 'system_injected');
+          const fetched = toolsUsed.filter((t) => t.tool !== 'system_injected');
+          return (
+            <div className="mt-3 pt-3 border-t border-surface-100 dark:border-surface-700 space-y-1">
+              {injected.length > 0 && (
+                <div>
+                  <span className="text-xs text-surface-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 inline mr-1 opacity-50">
+                      <path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v8a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V4a.5.5 0 00-.5-.5H4z" />
+                    </svg>
+                    Context:{' '}
+                  </span>
+                  {injected.map((t, i) => (
+                    <span key={i} className="text-xs text-surface-500 dark:text-surface-400">
+                      {t.document_title}{i < injected.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {fetched.length > 0 && (
+                <div>
+                  <span className="text-sm text-surface-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 inline mr-1 opacity-60">
+                      <path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v8a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V4a.5.5 0 00-.5-.5H4z" />
+                    </svg>
+                    Referenced:{' '}
+                  </span>
+                  {fetched.map((t, i) => (
+                    <span key={i} className="text-sm text-gold-600 dark:text-gold-400 font-medium">
+                      {t.document_title}{i < fetched.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Lightbox — portalled to body, all inline styles */}

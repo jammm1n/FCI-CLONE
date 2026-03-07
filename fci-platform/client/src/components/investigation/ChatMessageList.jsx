@@ -1,11 +1,22 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import ChatMessage from './ChatMessage';
 
 export default function ChatMessageList({ messages, aiLoading = false, emptyStateText = 'Starting investigation...', maxWidth = '', conversationId = null }) {
   const bottomRef = useRef(null);
+  const containerRef = useRef(null);
+  const isNearBottom = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    // Consider "near bottom" if within 150px of the bottom
+    isNearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+  }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isNearBottom.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   if (messages.length === 0) {
@@ -46,11 +57,21 @@ export default function ChatMessageList({ messages, aiLoading = false, emptyStat
   }
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar py-5 bg-surface-100 dark:bg-surface-850 scroll-smooth" style={{ paddingLeft: '5%', paddingRight: '5%' }}>
+    <div ref={containerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto custom-scrollbar py-5 bg-surface-100 dark:bg-surface-850 scroll-smooth" style={{ paddingLeft: '5%', paddingRight: '5%' }}>
       <div className={`space-y-5 ${maxWidth ? `${maxWidth} mx-auto` : ''}`}>
-        {messages.map((msg) => (
-          <ChatMessage key={msg.message_id} message={msg} conversationId={conversationId} />
-        ))}
+        {messages.map((msg) =>
+          msg.role === 'step_divider' ? (
+            <div key={msg.message_id} className="flex items-center gap-3 py-3 animate-fade-in">
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+              <span className="text-xs font-medium text-gold-600 dark:text-gold-400 whitespace-nowrap px-1">
+                {msg.content}
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+            </div>
+          ) : (
+            <ChatMessage key={msg.message_id} message={msg} conversationId={conversationId} />
+          )
+        )}
         <div ref={bottomRef} />
       </div>
     </div>

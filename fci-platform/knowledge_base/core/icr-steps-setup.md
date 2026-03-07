@@ -114,7 +114,7 @@ Each block output must be clearly labelled with step numbers and ICR section nam
 At the end of each block, append a "BLOCK QC" section. For every step in the block, list QC checks from the step guide documents and confirm each is satisfied or flag what needs attention. Format as a markdown table:
 "BLOCK [X] QC:"
 | Step | Check | Status |
-One row per QC check. Status: PASS or FLAG. If flagged, add short reason (max 10 words). No separate commentary — table is the complete QC output.
+One row per QC check. Status: ✅ PASS or ⚠️ FLAG. If flagged, add short reason (max 10 words). No separate commentary — table is the complete QC output.
 **EXPRESS MODE CONSTRAINTS:**
 - Phase 0 is ALWAYS presented first and confirmed before Block 1 begins. Hard Stop still applies.
 - If case is unusually complex (5+ prior ICRs, 10+ LE cases, multi-jurisdiction, corporate with extensive KYB), recommend Standard Mode.

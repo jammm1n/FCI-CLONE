@@ -13,6 +13,8 @@ import StreamingIndicator from '../components/investigation/StreamingIndicator';
 import Skeleton from '../components/shared/Skeleton';
 import DownloadPdfButton from '../components/shared/DownloadPdfButton';
 import TokenUsageDisplay from '../components/shared/TokenUsageDisplay';
+import StepIndicator from '../components/shared/StepIndicator';
+import QCPasteModal from '../components/shared/QCPasteModal';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
@@ -23,7 +25,13 @@ export default function InvestigationPage() {
   const [activeSubTab, setActiveSubTab] = useState(null);
   const [caseLoading, setCaseLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stepError, setStepError] = useState('');
   const [leftWidth, setLeftWidth] = useState(35);
+  const [currentStep, setCurrentStep] = useState(null);
+  const [stepPhase, setStepPhase] = useState(null);
+  const [stepLoading, setStepLoading] = useState(false);
+  const [showQCModal, setShowQCModal] = useState(false);
+  const [stepSignalled, setStepSignalled] = useState(false);
   const dragging = useRef(false);
 
   const {
@@ -34,6 +42,8 @@ export default function InvestigationPage() {
     sending,
     aiLoading,
     tokenUsage,
+    stepComplete,
+    setStepComplete,
     loadHistory,
     sendMessage,
     triggerInitialAssessment,
@@ -66,7 +76,11 @@ export default function InvestigationPage() {
         if (caseDetail.conversation_id) {
           // Existing conversation — load history
           setConversationId(caseDetail.conversation_id);
-          await loadHistory(caseDetail.conversation_id);
+          const history = await loadHistory(caseDetail.conversation_id);
+          if (history?.investigation_state) {
+            setCurrentStep(history.investigation_state.current_step);
+            setStepPhase(history.investigation_state.phase);
+          }
         } else {
           // New conversation — two-step: create (instant) then stream assessment
           const result = await api.createConversation(token, caseId, 'case');
@@ -77,6 +91,8 @@ export default function InvestigationPage() {
             conversation_id: result.conversation_id,
             status: 'in_progress',
           }));
+          setCurrentStep(1);
+          setStepPhase('setup');
 
           // Check if this conversation already has messages (e.g. race condition)
           const history = await api.getConversationHistory(token, result.conversation_id);
@@ -98,6 +114,22 @@ export default function InvestigationPage() {
 
     return () => { cancelled = true; };
   }, [token, caseId]);
+
+  // Track when the AI first signals step complete
+  useEffect(() => {
+    if (stepComplete) setStepSignalled(true);
+  }, [stepComplete]);
+
+  // After AI finishes responding, re-show approval buttons if step was signalled
+  const wasSending = useRef(false);
+  useEffect(() => {
+    if (sending) {
+      wasSending.current = true;
+    } else if (wasSending.current && stepSignalled && !stepComplete) {
+      wasSending.current = false;
+      setStepComplete(true);
+    }
+  }, [sending, stepSignalled, stepComplete, setStepComplete]);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -125,6 +157,68 @@ export default function InvestigationPage() {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   }, []);
+
+  const handleAdvanceStep = useCallback(async () => {
+    if (!conversationId || stepLoading) return;
+    setStepLoading(true);
+    setStepError('');
+    try {
+      const result = await api.advanceStep(token, conversationId);
+      setCurrentStep(result.step);
+      setStepPhase(result.phase);
+      const prevStep = result.step - 1;
+      const PHASE_LABELS = { setup: 'Setup', analysis: 'Analysis', decision: 'Decision', post: 'Post-Decision', qc_check: 'QC Check' };
+      const STEP_PHASES = { 1: 'setup', 2: 'analysis', 3: 'decision', 4: 'post', 5: 'qc_check' };
+      const prevPhaseLabel = PHASE_LABELS[STEP_PHASES[prevStep]] || prevStep;
+      const nextPhaseLabel = PHASE_LABELS[result.phase] || result.phase;
+      setMessages((prev) => [
+        ...prev,
+        {
+          message_id: `divider_${Date.now()}`,
+          role: 'step_divider',
+          content: `Step ${prevStep} (${prevPhaseLabel}) complete. Moving to Step ${result.step}: ${nextPhaseLabel}.`,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      setStepComplete(false);
+      setStepSignalled(false);
+      setStepLoading(false);
+      // Auto-trigger the AI to begin the new step
+      const PHASE_LABELS_FULL = { setup: 'Setup', analysis: 'Analysis', decision: 'Decision', post: 'Post-Decision', qc_check: 'QC Check' };
+      await sendMessage(`Begin Step ${result.step}: ${PHASE_LABELS_FULL[result.phase] || result.phase}. Your step document is loaded. Proceed in express mode.`);
+    } catch (err) {
+      setStepError(err.message);
+      setStepLoading(false);
+    }
+  }, [conversationId, token, stepLoading, setMessages, setStepComplete, sendMessage]);
+
+  const handleQCSubmit = useCallback(async (pastedText) => {
+    if (!conversationId) return;
+    setStepLoading(true);
+    setStepError('');
+    try {
+      const result = await api.qcCheck(token, conversationId);
+      setCurrentStep(result.step);
+      setStepPhase(result.phase);
+      setMessages((prev) => [
+        ...prev,
+        {
+          message_id: `divider_${Date.now()}`,
+          role: 'step_divider',
+          content: 'Step 4 (Post-Decision) complete. Moving to Step 5: QC Check.',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      setShowQCModal(false);
+      setStepComplete(false);
+      setStepSignalled(false);
+      await sendMessage(pastedText);
+    } catch (err) {
+      setStepError(err.message);
+    } finally {
+      setStepLoading(false);
+    }
+  }, [conversationId, token, setMessages, sendMessage, setStepComplete]);
 
   if (caseLoading) {
     return (
@@ -215,7 +309,10 @@ export default function InvestigationPage() {
           style={{ animationDelay: '100ms' }}
         >
           <div className="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
-            <TokenUsageDisplay tokenUsage={tokenUsage} />
+            <div className="flex items-center gap-4">
+              <TokenUsageDisplay tokenUsage={tokenUsage} />
+              <StepIndicator currentStep={currentStep} phase={stepPhase} />
+            </div>
             <DownloadPdfButton
               conversationId={conversationId}
               disabled={sending || aiLoading}
@@ -223,9 +320,32 @@ export default function InvestigationPage() {
           </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
           {sending && <StreamingIndicator />}
-          <ChatInput onSend={sendMessage} disabled={sending} />
+          {stepError && (
+            <div className="mx-4 mb-2 px-4 py-2 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
+              <span>{stepError}</span>
+              <button onClick={() => setStepError('')} className="text-red-400 hover:text-red-300 ml-3 shrink-0">&times;</button>
+            </div>
+          )}
+          <ChatInput
+            onSend={sendMessage}
+            disabled={sending}
+            currentStep={currentStep}
+            stepComplete={stepComplete}
+            onAdvanceStep={handleAdvanceStep}
+            onQCCheck={() => setShowQCModal(true)}
+            onContinueDiscussion={() => setStepComplete(false)}
+            onManualStepComplete={() => setStepComplete(true)}
+            stepLoading={stepLoading}
+          />
         </div>
       </div>
+      {showQCModal && (
+        <QCPasteModal
+          onSubmit={handleQCSubmit}
+          onCancel={() => setShowQCModal(false)}
+          loading={stepLoading}
+        />
+      )}
     </AppLayout>
   );
 }

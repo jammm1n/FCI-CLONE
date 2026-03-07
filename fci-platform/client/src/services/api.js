@@ -128,6 +128,33 @@ export async function deleteConversation(token, conversationId) {
 }
 
 // ---------------------------------------------------------------------------
+// Investigation Step Transitions
+// ---------------------------------------------------------------------------
+
+export async function advanceStep(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/advance-step`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function qcCheck(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/qc-check`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function getInvestigationState(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/state`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------------------------------------------------------------------------
 // PDF Export
 // ---------------------------------------------------------------------------
 

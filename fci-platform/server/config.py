@@ -56,11 +56,11 @@ settings = Settings()
 
 STEP_CONFIG = {
     1: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-setup"]},
-    2: {"model": "claude-opus-4-6", "docs": ["icr-steps-analysis"]},
+    2: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-analysis"]},  # TODO: revert to opus for production
     3: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
     4: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
-    5: {"model": "claude-opus-4-6", "docs": ["qc-full-checklist"]},
-    "summary": {"model": "claude-opus-4-6"},
+    5: {"model": "claude-sonnet-4-6", "docs": ["qc-full-checklist"]},  # TODO: revert to opus for production
+    "summary": {"model": "claude-sonnet-4-6"},  # TODO: revert to opus for production
 }
 
 STEP_PHASES = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}

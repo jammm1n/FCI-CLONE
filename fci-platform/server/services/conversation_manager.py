@@ -530,13 +530,39 @@ async def store_streamed_response(
             msg["step"] = current_step
         all_new_messages.append(msg)
 
+    # Build full tools_used: injected step docs + AI-fetched references
+    all_tools_used = list(tools_used)
+    if current_step:
+        step_doc_titles = {
+            "icr-steps-setup": "ICR Steps: Setup & Context",
+            "icr-steps-analysis": "ICR Steps: Analysis",
+            "icr-steps-decision": "ICR Steps: Decision",
+            "icr-steps-post": "ICR Steps: Post-Decision",
+            "decision-matrix": "Decision Matrix",
+            "mlro-escalation-matrix": "MLRO Escalation Matrix",
+            "qc-quick-reference": "QC Quick Reference",
+            "qc-full-checklist": "QC Submission Checklist",
+            "icr-general-rules": "ICR General Rules",
+        }
+        # Always-included docs for this step
+        injected = []
+        injected.append({"tool": "system_injected", "document_id": "system-prompt-case", "document_title": "System Prompt"})
+        injected.append({"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"})
+        if current_step <= 4:
+            injected.append({"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"})
+        # Step-specific docs
+        for doc_id in STEP_CONFIG.get(current_step, {}).get("docs", []):
+            title = step_doc_titles.get(doc_id, doc_id)
+            injected.append({"tool": "system_injected", "document_id": doc_id, "document_title": title})
+        all_tools_used = injected + all_tools_used
+
     # Assistant message
     assistant_msg_id = _generate_id("msg")
     assistant_message = {
         "message_id": assistant_msg_id,
         "role": "assistant",
         "content": ai_content,
-        "tools_used": tools_used,
+        "tools_used": all_tools_used,
         "token_usage": token_usage,
         "timestamp": now,
         "visible": True,

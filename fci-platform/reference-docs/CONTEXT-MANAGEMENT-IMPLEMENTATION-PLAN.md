@@ -579,4 +579,44 @@ If step conversation exceeds configurable token threshold, show advisory: "This 
 
 ---
 
+## 13. Phase D Handoff Notes (from Phases B–C implementation)
+
+These details were decided during Phase B–C implementation and are needed for Phase D.
+
+### Backend API details
+
+- **`POST /api/conversations/{id}/advance-step`** — generates step summary (Opus, can take 5-10s), returns `{step, phase, summary}`. Frontend needs a loading state during this call.
+- **`POST /api/conversations/{id}/qc-check`** — state-only. Generates step 4 summary and advances to step 5. Does NOT accept or store pasted case text. Returns `{step, phase}`. After this returns, the frontend sends the pasted text as a regular message via `POST /api/conversations/{id}/messages`.
+- **`GET /api/conversations/{id}/state`** — returns `{current_step, phase, steps: [...]}`.
+
+### History response changes
+
+`GET /api/conversations/{id}/history` now includes:
+- `investigation_state: {current_step, phase, steps: [...]}` at the top level (only for case conversations)
+- Each message includes `step: int` (the step it belongs to)
+- Messages with `role: "step_divider"` appear in visible history — render as visual separators, not chat bubbles
+
+### Button logic
+
+| Current step | Show |
+|---|---|
+| 1, 2, 3 | "Approve and Continue" button |
+| 4 | "QC Check" button (opens paste modal) |
+| 5 | Neither (investigation complete after QC) |
+
+### QC paste flow
+
+1. Investigator clicks "QC Check" button
+2. Modal opens with large textarea: "Paste your case file from HaoDesk"
+3. Investigator pastes and clicks Submit
+4. Frontend calls `POST /qc-check` (loading state while summary generates)
+5. On success, frontend calls `POST /messages` with `{content: pastedText, stream: true}` to trigger QC analysis
+6. AI streams its QC check response
+
+### ai_client.py was NOT changed
+
+Per-step model routing was already supported via the `model` parameter. `conversation_manager.py` passes `model=STEP_CONFIG[step]["model"]` to `ai_client`. No changes to `ai_client.py` were needed (contrary to what Section 11 Phase C predicted).
+
+---
+
 *This document captures the implementation plan as of 7 March 2026. It supersedes `CONTEXT-MANAGEMENT-PLAN.md` which is retained as historical reference.*

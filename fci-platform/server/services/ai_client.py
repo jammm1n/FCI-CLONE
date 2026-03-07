@@ -29,6 +29,30 @@ logger = logging.getLogger(__name__)
 
 TOOLS = [
     {
+        "name": "signal_step_complete",
+        "description": (
+            "Signal that you have completed all sections and blocks in the "
+            "current investigation step. Call this tool ONLY when you have "
+            "finished producing all ICR-ready text for every section covered "
+            "by your current step document. After calling this tool, stop — "
+            "do not proceed to the next block or step. The investigator will "
+            "review your work and advance when ready."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {
+                    "type": "string",
+                    "description": (
+                        "Brief summary of what was completed in this step "
+                        "(e.g., 'Block 1 complete: Phase 0 + Steps 1-6')"
+                    )
+                }
+            },
+            "required": ["summary"]
+        }
+    },
+    {
         "name": "get_reference_document",
         "description": (
             "Retrieve a reference document from the knowledge base. "
@@ -125,7 +149,20 @@ def _process_tool_calls(
 
     for block in response_content:
         if block.type == "tool_use":
-            if block.name == "get_reference_document":
+            if block.name == "signal_step_complete":
+                summary = block.input.get("summary", "")
+                # Not added to tools_used — it's not a document reference
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": (
+                        "Step completion acknowledged. The investigator has been notified. "
+                        "Do not proceed to the next block or step. Wait for the investigator "
+                        "to advance."
+                    ),
+                })
+                logger.info("Tool call: signal_step_complete — %s", summary)
+            elif block.name == "get_reference_document":
                 doc_id = block.input.get("document_id", "")
                 doc_content = knowledge_base.get_reference_document(doc_id)
 
@@ -476,6 +513,16 @@ async def get_ai_response_streaming(
                     "document_id": tool_info["document_id"],
                     "document_title": tool_info["document_title"],
                 }
+
+            # Check for step_complete signal (emitted separately, not stored as tools_used)
+            for block in final_message.content:
+                if block.type == "tool_use" and block.name == "signal_step_complete":
+                    yield {
+                        "type": "tool_use",
+                        "tool": "signal_step_complete",
+                        "document_id": None,
+                        "document_title": block.input.get("summary", ""),
+                    }
 
             # Append to working messages for the next API call
             serialized_assistant = _serialize_content(final_message.content)
