@@ -181,6 +181,31 @@ class ConversationHistoryResponse(BaseModel):
     messages: list[MessageResponse]
 
 
+# --- Investigation State ---
+
+class StepInfo(BaseModel):
+    """State of a single investigation step."""
+    step_number: int
+    phase: str
+    status: str
+    summary: str | None = None
+    completed_at: datetime | None = None
+
+
+class InvestigationStateResponse(BaseModel):
+    """GET /api/conversations/{id}/state response."""
+    current_step: int
+    phase: str
+    steps: list[StepInfo]
+
+
+class AdvanceStepResponse(BaseModel):
+    """POST /api/conversations/{id}/advance-step response."""
+    step: int
+    phase: str
+    summary: str
+
+
 # --- System / Utility ---
 
 class HealthResponse(BaseModel):

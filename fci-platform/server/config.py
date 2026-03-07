@@ -46,3 +46,21 @@ class Settings(BaseSettings):
 
 # Singleton instance
 settings = Settings()
+
+
+# ---------------------------------------------------------------------------
+# Step configuration — per-step model and document injection list
+# Used by knowledge_base.get_step_system_prompt() to assemble the correct
+# system prompt for each investigation step.
+# ---------------------------------------------------------------------------
+
+STEP_CONFIG = {
+    1: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-setup"]},
+    2: {"model": "claude-opus-4-6", "docs": ["icr-steps-analysis"]},
+    3: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
+    4: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
+    5: {"model": "claude-opus-4-6", "docs": ["qc-full-checklist"]},
+    "summary": {"model": "claude-opus-4-6"},
+}
+
+STEP_PHASES = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}

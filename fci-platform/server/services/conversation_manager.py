@@ -4,6 +4,7 @@ FCI Platform — Conversation Manager Service
 Manages the full lifecycle of investigation conversations:
 - Creating conversations (with initial case data injection + AI assessment)
 - Sending messages (context assembly → AI call → storage)
+- Step-based investigation flow (step transitions, summaries)
 - Retrieving conversation history (visible messages only)
 - Assembling the API payload for each Anthropic API call
 
@@ -16,13 +17,26 @@ MongoDB document structure (conversations collection):
     "case_id": "CASE-2026-0451",
     "user_id": "user_001",
     "status": "active",
+    "investigation_state": {
+        "current_step": 1,
+        "steps": [
+            {
+                "step_number": 1,
+                "phase": "setup",
+                "status": "active",
+                "summary": null,
+                ...
+            }
+        ]
+    },
     "messages": [
         {
             "message_id": "msg_001",
-            "role": "system_injected",   # or "user", "assistant", "tool_exchange"
+            "role": "system_injected",
             "content": "...",
+            "step": 1,
             "timestamp": datetime,
-            "visible": false,            # hidden from frontend
+            "visible": false,
             ...
         },
     ],
@@ -33,12 +47,11 @@ MongoDB document structure (conversations collection):
 
 import logging
 import uuid
-import os
 import base64
 from datetime import datetime, timezone
 from pathlib import Path
 
-from server.config import settings
+from server.config import settings, STEP_CONFIG, STEP_PHASES
 from server.database import get_database
 from server.services.ai_client import (
     get_ai_response,
@@ -48,6 +61,66 @@ from server.services.ai_client import (
 from server.services.knowledge_base import KnowledgeBase
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+INITIAL_ASSESSMENT_INSTRUCTION = (
+    "Case data loaded. Provide a brief initial summary: case type classification, "
+    "top 3 risk indicators, and suggested investigation approach. "
+    "Do NOT use the get_reference_document tool for this initial assessment — "
+    "work only with the case data and your core knowledge. Keep it concise."
+)
+
+SUMMARY_SYSTEM_PROMPT = """\
+You are summarizing one step of a financial crime investigation. Your summary will
+be provided to a fresh AI instance that continues the investigation in the next step.
+The fresh instance will NOT have access to this step's conversation — only this summary.
+
+MUST PRESERVE:
+- All factual findings: transaction amounts, dates, addresses, counterparties, risk
+  indicators, patterns identified
+- All decisions and their rationale
+- Key conclusions from reference documents consulted
+- What investigation steps have been completed and what remains
+- Open questions, flags, or items deferred for later steps
+- Investigator instructions or preferences stated during this step
+- KYC verification results and identity discrepancies
+- Specific numerical thresholds or values that informed decisions
+
+MUST NOT PRESERVE:
+- Full text of retrieved SOPs — only the relevant findings and rules applied
+- Conversational filler, acknowledgments
+- Redundant restatement of case data (the AI always has fresh case data)
+- Step-by-step reasoning process if the conclusion is clear
+
+FORMAT: Use the structured template below. Target 1,000-2,500 tokens.
+Up to 3,000 for complex steps with many findings.
+
+## Step {step_number} Summary: {phase_name}
+
+### Case Classification
+[Current case type, any changes or refinements from this step]
+
+### Key Findings
+[Bullet points: most important facts, risk indicators, and conclusions]
+
+### Decisions Made
+[What was decided or confirmed: KYC status, classification, risk level, etc.]
+
+### Evidence Reviewed
+[Which data sources were examined, what was found, what was ruled out]
+
+### Documents Consulted
+[Which SOPs/guidelines were retrieved and the specific guidance applied]
+
+### Open Questions
+[Anything flagged for investigation in subsequent steps]
+
+### Case Form Sections Completed
+[Which sections of the case template were drafted and approved]"""
 
 
 def _generate_id(prefix: str = "msg") -> str:
@@ -74,8 +147,9 @@ async def create_conversation(
     Create a new conversation — lightweight, no AI call.
 
     For mode="case": loads case, builds case data, pre-stores system_injected
-    message, updates case status. AI assessment triggered separately via
-    send_message_streaming with is_initial_assessment=True.
+    message, initializes investigation_state, updates case status.
+    AI assessment triggered separately via send_message_streaming
+    with is_initial_assessment=True.
 
     For mode="free_chat": creates empty conversation doc, no case data.
 
@@ -109,16 +183,14 @@ async def create_conversation(
         case_data_markdown = _build_case_data_markdown(case)
         initial_user_content = (
             f"[CASE DATA]\n\n{case_data_markdown}\n\n"
-            "Case data loaded. Provide a brief initial summary: case type classification, "
-            "top 3 risk indicators, and suggested investigation approach. "
-            "Do NOT use the get_reference_document tool for this initial assessment — "
-            "work only with the case data and your core knowledge. Keep it concise."
+            f"{INITIAL_ASSESSMENT_INSTRUCTION}"
         )
 
         case_data_message = {
             "message_id": _generate_id("msg"),
             "role": "system_injected",
             "content": initial_user_content,
+            "step": 1,
             "timestamp": now,
             "visible": False,
         }
@@ -130,6 +202,21 @@ async def create_conversation(
             "mode": "case",
             "title": "",
             "status": "active",
+            "investigation_state": {
+                "current_step": 1,
+                "steps": [
+                    {
+                        "step_number": 1,
+                        "phase": "setup",
+                        "status": "active",
+                        "summary": None,
+                        "summary_model": None,
+                        "summary_token_usage": None,
+                        "completed_at": None,
+                        "approved_by": None,
+                    }
+                ],
+            },
             "messages": [case_data_message],
             "created_at": now,
             "updated_at": now,
@@ -148,7 +235,7 @@ async def create_conversation(
             }
         )
 
-        logger.info("Created case conversation %s for case %s", conversation_id, case_id)
+        logger.info("Created case conversation %s for case %s (step 1)", conversation_id, case_id)
 
     else:  # free_chat
         conversation_doc = {
@@ -185,22 +272,8 @@ async def send_message(
     """
     Send a new message in an existing conversation.
 
-    Steps:
-        1. Retrieve the conversation from MongoDB
-        2. Rebuild the API messages array from stored history
-        3. Add the new user message (with images if any)
-        4. Call the AI
-        5. Store the user message, tool exchanges, and AI response
-        6. Return the response
-
-    Args:
-        conversation_id: The conversation to send the message in.
-        content: The user's message text.
-        knowledge_base: KnowledgeBase instance.
-        images: Optional list of {"base64": "...", "media_type": "..."}.
-
-    Returns:
-        dict with message_id, role, content, tools_used, token_usage, timestamp.
+    Branches on investigation_state: step-based conversations use per-step
+    system prompts, models, and filtered message history.
     """
     db = get_database()
 
@@ -209,11 +282,21 @@ async def send_message(
     if conversation is None:
         raise ValueError(f"Conversation not found: {conversation_id}")
 
-    # 2. Rebuild API messages from history
-    api_messages = _rebuild_api_messages(conversation["messages"])
+    # 2. Build system prompt and API messages based on mode
+    if conversation.get("investigation_state"):
+        step = conversation["investigation_state"]["current_step"]
+        system_prompt = knowledge_base.get_step_system_prompt(step)
+        model = STEP_CONFIG[step]["model"]
+        case = None
+        if step <= 4 and conversation.get("case_id"):
+            case = await db.cases.find_one({"_id": conversation["case_id"]})
+        api_messages = _rebuild_step_api_messages(conversation, case)
+    else:
+        system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
+        model = None
+        api_messages = _rebuild_api_messages(conversation["messages"])
 
     # 3. Build and append the new user message
-    # Save images to disk if present
     stored_images = []
     if images:
         stored_images = await _store_images(conversation_id, images)
@@ -222,17 +305,17 @@ async def send_message(
     api_messages.append({"role": "user", "content": user_content})
 
     # 4. Call the AI
-    system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
     ai_result = await get_ai_response(
         system_prompt=system_prompt,
         messages=api_messages,
         knowledge_base=knowledge_base,
+        model=model,
     )
 
     # 5. Store messages
     now = _now()
+    current_step = conversation.get("investigation_state", {}).get("current_step")
 
-    # User message (visible)
     user_message = {
         "message_id": _generate_id("msg"),
         "role": "user",
@@ -241,20 +324,23 @@ async def send_message(
         "timestamp": now,
         "visible": True,
     }
+    if current_step:
+        user_message["step"] = current_step
 
-    # Tool exchanges (hidden)
     tool_messages = []
     for tc_msg in ai_result.get("tool_call_messages", []):
-        tool_messages.append({
+        msg = {
             "message_id": _generate_id("msg"),
             "role": "tool_exchange",
             "content": tc_msg["content"],
             "original_role": tc_msg["role"],
             "timestamp": now,
             "visible": False,
-        })
+        }
+        if current_step:
+            msg["step"] = current_step
+        tool_messages.append(msg)
 
-    # Assistant response (visible)
     assistant_message = {
         "message_id": _generate_id("msg"),
         "role": "assistant",
@@ -264,6 +350,8 @@ async def send_message(
         "timestamp": now,
         "visible": True,
     }
+    if current_step:
+        assistant_message["step"] = current_step
 
     all_new_messages = [user_message] + tool_messages + [assistant_message]
     await db.conversations.update_one(
@@ -309,14 +397,13 @@ async def send_message_streaming(
     stored — just rebuild API messages from history and stream (no new user
     message appended).
 
+    Branches on investigation_state: step-based conversations use per-step
+    system prompts, models, and filtered message history with fresh case
+    data injection.
+
     Yields the same event dicts as ai_client.get_ai_response_streaming().
     After the stream completes (the "done" event), the caller should call
     store_streamed_response() to persist everything to MongoDB.
-
-    Yields:
-        {"type": "content_delta", "text": "..."}
-        {"type": "tool_use", "tool": "...", "document_id": "..."}
-        {"type": "done", "content": "...", "tools_used": [...], ...}
     """
     db = get_database()
 
@@ -325,24 +412,44 @@ async def send_message_streaming(
     if conversation is None:
         raise ValueError(f"Conversation not found: {conversation_id}")
 
-    # Rebuild API messages from stored history
-    api_messages = _rebuild_api_messages(conversation["messages"])
+    # Build system prompt and API messages based on mode
+    has_step_state = bool(conversation.get("investigation_state"))
+
+    if has_step_state:
+        step = conversation["investigation_state"]["current_step"]
+        system_prompt = knowledge_base.get_step_system_prompt(step)
+        model = STEP_CONFIG[step]["model"]
+        case = None
+        if step <= 4 and conversation.get("case_id"):
+            case = await db.cases.find_one({"_id": conversation["case_id"]})
+        api_messages = _rebuild_step_api_messages(conversation, case)
+    else:
+        system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
+        model = None
+        api_messages = _rebuild_api_messages(conversation["messages"])
 
     if not is_initial_assessment:
-        # Store images if present
+        # Normal message
         if images:
             await _store_images(conversation_id, images)
-
-        # Build and append user message
         user_content = build_user_message_content(content, images)
         api_messages.append({"role": "user", "content": user_content})
+    elif has_step_state:
+        # Step-based initial assessment: case data is already injected by
+        # _rebuild_step_api_messages (with ack). Add the instruction as
+        # the last user message so the API payload ends with a user turn.
+        api_messages.append({
+            "role": "user",
+            "content": INITIAL_ASSESSMENT_INSTRUCTION,
+        })
+    # else: non-step initial assessment — system_injected already has instruction
 
     # Stream the AI response
-    system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
     async for event in get_ai_response_streaming(
         system_prompt=system_prompt,
         messages=api_messages,
         knowledge_base=knowledge_base,
+        model=model,
     ):
         yield event
 
@@ -360,9 +467,9 @@ async def store_streamed_response(
     """
     Store a streamed conversation turn in MongoDB.
 
-    When is_initial_assessment=True, skip storing a user message (the
-    system_injected message was already stored at creation time). Only
-    store tool exchanges + assistant message.
+    When is_initial_assessment=True on the step path, stores a hidden
+    instruction message so that subsequent rebuilds maintain proper
+    user/assistant alternation.
 
     Called by the router after the streaming generator is fully consumed.
     Returns the assistant message metadata.
@@ -370,15 +477,33 @@ async def store_streamed_response(
     db = get_database()
     now = _now()
 
+    # Read conversation for step and mode info
+    conv = await db.conversations.find_one(
+        {"_id": conversation_id},
+        {"investigation_state.current_step": 1, "mode": 1, "title": 1},
+    )
+    current_step = conv.get("investigation_state", {}).get("current_step") if conv else None
+
     all_new_messages = []
 
-    if not is_initial_assessment:
-        # Store images references
+    if is_initial_assessment and current_step:
+        # Step-based initial assessment: store the instruction as a hidden
+        # user message so _rebuild_step_api_messages can replay it
+        instruction_msg = {
+            "message_id": _generate_id("msg"),
+            "role": "user",
+            "content": INITIAL_ASSESSMENT_INSTRUCTION,
+            "step": current_step,
+            "timestamp": now,
+            "visible": False,
+        }
+        all_new_messages.append(instruction_msg)
+    elif not is_initial_assessment:
+        # Regular message — store user message
         stored_images = []
         if user_images:
             stored_images = await _store_images(conversation_id, user_images)
 
-        # User message
         user_message = {
             "message_id": _generate_id("msg"),
             "role": "user",
@@ -387,18 +512,23 @@ async def store_streamed_response(
             "timestamp": now,
             "visible": True,
         }
+        if current_step:
+            user_message["step"] = current_step
         all_new_messages.append(user_message)
 
     # Tool exchanges (hidden)
     for tc_msg in tool_call_messages:
-        all_new_messages.append({
+        msg = {
             "message_id": _generate_id("msg"),
             "role": "tool_exchange",
             "content": tc_msg["content"],
             "original_role": tc_msg["role"],
             "timestamp": now,
             "visible": False,
-        })
+        }
+        if current_step:
+            msg["step"] = current_step
+        all_new_messages.append(msg)
 
     # Assistant message
     assistant_msg_id = _generate_id("msg")
@@ -411,6 +541,8 @@ async def store_streamed_response(
         "timestamp": now,
         "visible": True,
     }
+    if current_step:
+        assistant_message["step"] = current_step
     all_new_messages.append(assistant_message)
 
     await db.conversations.update_one(
@@ -422,12 +554,8 @@ async def store_streamed_response(
     )
 
     # Auto-generate title for free_chat conversations on first user message
-    if not is_initial_assessment and user_content:
-        conversation = await db.conversations.find_one(
-            {"_id": conversation_id},
-            {"mode": 1, "title": 1},
-        )
-        if conversation and conversation.get("mode") == "free_chat" and not conversation.get("title"):
+    if not is_initial_assessment and user_content and conv:
+        if conv.get("mode") == "free_chat" and not conv.get("title"):
             title = _generate_title(user_content)
             await db.conversations.update_one(
                 {"_id": conversation_id},
@@ -442,14 +570,11 @@ async def store_streamed_response(
 
 def _generate_title(content: str) -> str:
     """Generate a conversation title from the first user message (heuristic)."""
-    # Take first sentence or first 50 chars
     text = content.strip()
-    # Try to find first sentence end
     for sep in [". ", "? ", "! ", "\n"]:
         idx = text.find(sep)
         if 0 < idx < 60:
             return text[:idx + 1]
-    # Fallback: first 50 chars
     if len(text) > 50:
         return text[:50].rstrip() + "..."
     return text
@@ -465,6 +590,7 @@ async def get_history(conversation_id: str) -> dict:
 
     Filters out hidden messages (case data injection, tool exchanges).
     Returns messages in chronological order.
+    Includes investigation_state if present.
     """
     db = get_database()
 
@@ -489,16 +615,29 @@ async def get_history(conversation_id: str) -> dict:
             entry["tools_used"] = msg["tools_used"]
         if msg.get("images"):
             entry["images"] = msg["images"]
+        if msg.get("step") is not None:
+            entry["step"] = msg["step"]
 
         visible_messages.append(entry)
 
-    return {
+    result = {
         "conversation_id": conversation_id,
         "case_id": conversation.get("case_id"),
         "mode": conversation.get("mode", "case"),
         "title": conversation.get("title", ""),
         "messages": visible_messages,
     }
+
+    # Include investigation state if present
+    state = conversation.get("investigation_state")
+    if state:
+        result["investigation_state"] = {
+            "current_step": state["current_step"],
+            "phase": STEP_PHASES.get(state["current_step"], "unknown"),
+            "steps": state["steps"],
+        }
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -568,10 +707,8 @@ def _rebuild_api_messages(stored_messages: list[dict]) -> list[dict]:
     """
     Rebuild the Anthropic API messages array from stored conversation history.
 
-    This is called on every new turn to reconstruct the full context.
-    The stored messages include hidden context (case data, tool exchanges)
-    that must be included in the API payload even though they're not
-    shown to the user.
+    Used for free_chat mode and legacy case conversations without
+    investigation_state. Includes ALL messages regardless of step.
 
     Mapping from stored roles to API roles:
         system_injected  → role: "user" (the initial case data injection)
@@ -636,6 +773,94 @@ def _rebuild_api_messages(stored_messages: list[dict]) -> list[dict]:
                 "role": original_role,
                 "content": msg["content"],
             })
+
+    return api_messages
+
+
+def _rebuild_step_api_messages(
+    conversation: dict,
+    case: dict | None,
+) -> list[dict]:
+    """
+    Build API messages for the current investigation step.
+
+    Unlike _rebuild_api_messages (which includes all messages), this:
+    1. Injects completed step summaries as a synthetic user/assistant pair
+    2. Injects fresh case data from the case document (steps 1-4 only)
+    3. Filters stored messages to current step only
+    4. Excludes system_injected (case data is injected fresh above)
+    5. Excludes step_divider (never sent to API)
+    """
+    state = conversation["investigation_state"]
+    current_step = state["current_step"]
+    api_messages = []
+
+    # 1. Inject summaries from completed steps
+    completed_summaries = [
+        s["summary"] for s in state["steps"]
+        if s["status"] == "completed" and s.get("summary")
+    ]
+    if completed_summaries:
+        summary_text = "\n\n---\n\n".join(completed_summaries)
+        api_messages.append({
+            "role": "user",
+            "content": f"[PREVIOUS STEP SUMMARIES]\n\n{summary_text}",
+        })
+        api_messages.append({
+            "role": "assistant",
+            "content": "Understood. I have the context from previous steps.",
+        })
+
+    # 2. Inject fresh case data (steps 1-4 only, not step 5)
+    if current_step <= 4 and case:
+        case_data_md = _build_case_data_markdown(case)
+        api_messages.append({
+            "role": "user",
+            "content": f"[CASE DATA]\n\n{case_data_md}",
+        })
+        api_messages.append({
+            "role": "assistant",
+            "content": "Case data received. Ready to proceed with this step.",
+        })
+
+    # 3. Filter messages to current step, excluding system_injected and step_divider
+    for msg in conversation.get("messages", []):
+        if msg.get("step") != current_step:
+            continue
+
+        role = msg["role"]
+
+        if role in ("system_injected", "step_divider"):
+            continue
+
+        if role == "user":
+            if msg.get("images"):
+                content_blocks = []
+                for img_ref in msg["images"]:
+                    try:
+                        img_bytes = Path(img_ref["stored_path"]).read_bytes()
+                        img_b64 = base64.b64encode(img_bytes).decode("ascii")
+                        content_blocks.append({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": img_ref["media_type"],
+                                "data": img_b64,
+                            }
+                        })
+                    except Exception as e:
+                        logger.warning("Could not reload image %s: %s", img_ref.get("stored_path"), e)
+                content_blocks.append({"type": "text", "text": msg["content"] or "Describe this image."})
+                api_messages.append({"role": "user", "content": content_blocks})
+            else:
+                api_messages.append({"role": "user", "content": msg["content"]})
+
+        elif role == "assistant":
+            api_messages.append({"role": "assistant", "content": msg["content"]})
+
+        elif role == "tool_exchange":
+            original_role = msg.get("original_role", "user")
+            api_messages.append({"role": original_role, "content": msg["content"]})
 
     return api_messages
 
@@ -717,13 +942,6 @@ async def _store_images(
     Store uploaded images to disk and return reference metadata.
 
     Images are saved to: {IMAGES_DIR}/{conversation_id}/{image_id}.{ext}
-
-    Args:
-        conversation_id: The conversation these images belong to.
-        images: List of {"base64": "...", "media_type": "..."}.
-
-    Returns:
-        List of {"image_id": "...", "media_type": "...", "stored_path": "..."}.
     """
     image_dir = Path(settings.IMAGES_DIR) / conversation_id
     image_dir.mkdir(parents=True, exist_ok=True)
@@ -733,7 +951,6 @@ async def _store_images(
         image_id = _generate_id("img")
         media_type = img["media_type"]
 
-        # Determine file extension from media type
         ext_map = {
             "image/jpeg": "jpg",
             "image/png": "png",
@@ -745,7 +962,6 @@ async def _store_images(
         filename = f"{image_id}.{ext}"
         filepath = image_dir / filename
 
-        # Decode and write
         try:
             image_bytes = base64.b64decode(img["base64"])
             filepath.write_bytes(image_bytes)
@@ -761,3 +977,300 @@ async def _store_images(
         })
 
     return stored
+
+
+# ---------------------------------------------------------------------------
+# Step summary generation
+# ---------------------------------------------------------------------------
+
+async def _generate_step_summary(
+    conversation: dict,
+    step: int,
+    knowledge_base: KnowledgeBase,
+) -> dict:
+    """
+    Generate a structured summary of a completed investigation step.
+
+    Makes a separate non-streaming API call with the summary system prompt
+    and all messages from the step as context.
+
+    Returns:
+        dict with summary (str), model (str), token_usage (dict).
+    """
+    # Extract step messages and rebuild as API-format messages
+    step_api_messages = []
+    for msg in conversation.get("messages", []):
+        if msg.get("step") != step:
+            continue
+        role = msg["role"]
+        if role == "step_divider":
+            continue
+        if role == "system_injected":
+            step_api_messages.append({"role": "user", "content": msg["content"]})
+        elif role == "user":
+            step_api_messages.append({"role": "user", "content": msg["content"]})
+        elif role == "assistant":
+            step_api_messages.append({"role": "assistant", "content": msg["content"]})
+        elif role == "tool_exchange":
+            step_api_messages.append({
+                "role": msg.get("original_role", "user"),
+                "content": msg["content"],
+            })
+
+    if not step_api_messages:
+        raise ValueError(f"No messages found for step {step}")
+
+    # Ensure the messages end with a user message (API requirement)
+    if step_api_messages[-1]["role"] != "user":
+        step_api_messages.append({
+            "role": "user",
+            "content": (
+                f"Generate a structured summary of Step {step} "
+                f"({STEP_PHASES[step].replace('_', ' ').title()}) "
+                "using the template provided in your instructions."
+            ),
+        })
+
+    # Build summary system prompt with step info
+    phase_name = STEP_PHASES[step].replace("_", " ").title()
+    system_prompt = SUMMARY_SYSTEM_PROMPT.format(
+        step_number=step,
+        phase_name=phase_name,
+    )
+
+    summary_model = STEP_CONFIG["summary"]["model"]
+
+    result = await get_ai_response(
+        system_prompt=system_prompt,
+        messages=step_api_messages,
+        knowledge_base=knowledge_base,
+        model=summary_model,
+    )
+
+    return {
+        "summary": result["content"],
+        "model": summary_model,
+        "token_usage": result["token_usage"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Step transitions
+# ---------------------------------------------------------------------------
+
+async def approve_and_continue(
+    conversation_id: str,
+    user_id: str,
+    knowledge_base: KnowledgeBase,
+) -> dict:
+    """
+    Complete the current step and advance to the next one.
+
+    1. Generate a structured summary of the current step
+    2. Mark the step as completed with summary
+    3. Create the next step entry
+    4. Insert a step_divider message
+    5. Return the new step info and summary
+
+    Valid for steps 1→2, 2→3, 3→4. Use qc_check() for 4→5.
+    """
+    db = get_database()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    state = conversation.get("investigation_state")
+    if not state:
+        raise ValueError("Conversation has no investigation state")
+
+    current_step = state["current_step"]
+    if current_step > 3:
+        raise ValueError(
+            f"Cannot advance from step {current_step}. "
+            "Use QC check for step 4→5."
+        )
+
+    # Generate summary
+    summary_result = await _generate_step_summary(
+        conversation, current_step, knowledge_base
+    )
+
+    now = _now()
+    next_step = current_step + 1
+    next_phase = STEP_PHASES[next_step]
+
+    # Build updated steps array
+    steps = [dict(s) for s in state["steps"]]
+    steps[current_step - 1].update({
+        "status": "completed",
+        "summary": summary_result["summary"],
+        "summary_model": summary_result["model"],
+        "summary_token_usage": summary_result["token_usage"],
+        "completed_at": now,
+        "approved_by": user_id,
+    })
+    steps.append({
+        "step_number": next_step,
+        "phase": next_phase,
+        "status": "active",
+        "summary": None,
+        "summary_model": None,
+        "summary_token_usage": None,
+        "completed_at": None,
+        "approved_by": None,
+    })
+
+    # Step divider message
+    divider_msg = {
+        "message_id": _generate_id("msg"),
+        "role": "step_divider",
+        "content": (
+            f"Step {current_step} ({STEP_PHASES[current_step].replace('_', ' ').title()}) "
+            f"complete. Moving to Step {next_step}: {next_phase.replace('_', ' ').title()}."
+        ),
+        "step": current_step,
+        "timestamp": now,
+        "visible": True,
+    }
+
+    # Update conversation
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {
+            "$set": {
+                "investigation_state.steps": steps,
+                "investigation_state.current_step": next_step,
+                "updated_at": now,
+            },
+            "$push": {"messages": divider_msg},
+        }
+    )
+
+    logger.info(
+        "Advanced conversation %s from step %d to step %d. Summary: %d chars",
+        conversation_id, current_step, next_step, len(summary_result["summary"]),
+    )
+
+    return {
+        "step": next_step,
+        "phase": next_phase,
+        "summary": summary_result["summary"],
+    }
+
+
+async def qc_check(
+    conversation_id: str,
+    user_id: str,
+    knowledge_base: KnowledgeBase,
+) -> dict:
+    """
+    Transition from step 4 (Post-Decision) to step 5 (QC Check).
+
+    Generates a summary for step 4, advances state to step 5.
+    Does NOT store the pasted case text — the frontend sends it
+    as a regular message via the messages endpoint afterward.
+    """
+    db = get_database()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    state = conversation.get("investigation_state")
+    if not state:
+        raise ValueError("Conversation has no investigation state")
+
+    current_step = state["current_step"]
+    if current_step != 4:
+        raise ValueError(
+            f"QC check can only be initiated from step 4, "
+            f"currently on step {current_step}"
+        )
+
+    # Generate summary for step 4
+    summary_result = await _generate_step_summary(
+        conversation, current_step, knowledge_base
+    )
+
+    now = _now()
+
+    # Build updated steps array
+    steps = [dict(s) for s in state["steps"]]
+    steps[current_step - 1].update({
+        "status": "completed",
+        "summary": summary_result["summary"],
+        "summary_model": summary_result["model"],
+        "summary_token_usage": summary_result["token_usage"],
+        "completed_at": now,
+        "approved_by": user_id,
+    })
+    steps.append({
+        "step_number": 5,
+        "phase": "qc_check",
+        "status": "active",
+        "summary": None,
+        "summary_model": None,
+        "summary_token_usage": None,
+        "completed_at": None,
+        "approved_by": None,
+    })
+
+    # Step divider message
+    divider_msg = {
+        "message_id": _generate_id("msg"),
+        "role": "step_divider",
+        "content": "Step 4 (Post) complete. Moving to Step 5: QC Check.",
+        "step": 4,
+        "timestamp": now,
+        "visible": True,
+    }
+
+    # Update conversation
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {
+            "$set": {
+                "investigation_state.steps": steps,
+                "investigation_state.current_step": 5,
+                "updated_at": now,
+            },
+            "$push": {"messages": divider_msg},
+        }
+    )
+
+    logger.info(
+        "QC check initiated for conversation %s. Step 4 summary: %d chars",
+        conversation_id, len(summary_result["summary"]),
+    )
+
+    return {
+        "step": 5,
+        "phase": "qc_check",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Investigation state
+# ---------------------------------------------------------------------------
+
+async def get_investigation_state(conversation_id: str) -> dict:
+    """Return the current investigation state for a conversation."""
+    db = get_database()
+
+    conversation = await db.conversations.find_one(
+        {"_id": conversation_id},
+        {"investigation_state": 1},
+    )
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    state = conversation.get("investigation_state")
+    if not state:
+        raise ValueError("Conversation has no investigation state")
+
+    return {
+        "current_step": state["current_step"],
+        "phase": STEP_PHASES.get(state["current_step"], "unknown"),
+        "steps": state["steps"],
+    }

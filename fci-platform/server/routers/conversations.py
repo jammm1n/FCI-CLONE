@@ -338,6 +338,78 @@ async def get_image(
 
 
 # ---------------------------------------------------------------------------
+# Step transitions
+# ---------------------------------------------------------------------------
+
+@router.post("/{conversation_id}/advance-step")
+async def advance_step(
+    conversation_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Complete the current step and advance to the next one.
+
+    Generates a structured summary of the completed step, stores it,
+    and advances investigation_state.current_step.
+
+    Valid for steps 1→2, 2→3, 3→4. Use /qc-check for step 4→5.
+    """
+    kb = _get_knowledge_base(request)
+
+    try:
+        result = await conversation_manager.approve_and_continue(
+            conversation_id=conversation_id,
+            user_id=current_user["user_id"],
+            knowledge_base=kb,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
+@router.post("/{conversation_id}/qc-check")
+async def qc_check(
+    conversation_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Transition from step 4 to step 5 (QC Check).
+
+    Generates step 4 summary and advances state. The pasted case text
+    should be sent as a regular message via POST /messages afterward.
+    """
+    kb = _get_knowledge_base(request)
+
+    try:
+        result = await conversation_manager.qc_check(
+            conversation_id=conversation_id,
+            user_id=current_user["user_id"],
+            knowledge_base=kb,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
+@router.get("/{conversation_id}/state")
+async def get_state(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """Return the current investigation state for a conversation."""
+    try:
+        state = await conversation_manager.get_investigation_state(conversation_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return state
+
+
+# ---------------------------------------------------------------------------
 # Delete conversation
 # ---------------------------------------------------------------------------
 

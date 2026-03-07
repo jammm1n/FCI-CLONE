@@ -5,14 +5,33 @@ Implements the two-tier knowledge base architecture:
   Tier 1 (Core): Loaded into memory on startup, injected into every system prompt
   Tier 2 (Reference): Available on demand via get_reference_document tool call
 
-Additionally supports mode-aware system prompts (case vs free_chat) and
-a processing prompt library accessible via get_prompt tool call.
+Additionally supports mode-aware system prompts (case vs free_chat),
+step-aware system prompts for investigation steps, and a processing
+prompt library accessible via get_prompt tool call.
 """
 
 import yaml
 from pathlib import Path
 
-from server.config import settings
+from server.config import settings, STEP_CONFIG
+
+
+# ---------------------------------------------------------------------------
+# Document registry — maps doc_id to file path relative to KB root
+# Used by get_document() and get_step_system_prompt()
+# ---------------------------------------------------------------------------
+
+DOCUMENT_REGISTRY = {
+    "icr-steps-setup": "core/icr-steps-setup.md",
+    "icr-steps-analysis": "core/icr-steps-analysis.md",
+    "icr-steps-decision": "core/icr-steps-decision.md",
+    "icr-steps-post": "core/icr-steps-post.md",
+    "decision-matrix": "core/decision-matrix.md",
+    "mlro-escalation-matrix": "core/mlro-escalation-matrix.md",
+    "qc-quick-reference": "qc-quick-reference.md",
+    "qc-full-checklist": "core/qc-submission-checklist.md",
+    "icr-general-rules": "core/icr-general-rules.md",
+}
 
 
 class KnowledgeBase:
@@ -25,7 +44,10 @@ class KnowledgeBase:
         self.free_chat_system_prompt: str = ""
         self.prompt_index: list[dict] = []
         self.prompt_index_text: str = ""
-        self.global_rules: str = ""
+        self.global_rules: str = ""  # prompts/_global-rules.md (prepended to prompts)
+        self.general_rules: str = ""  # core/icr-general-rules.md (step system prompt)
+        self.qc_quick_reference: str = ""  # qc-quick-reference.md (steps 1-4)
+        self._documents: dict[str, str] = {}  # doc_id → content
 
     def load_on_startup(self):
         """Load system prompts, core documents, reference index, and prompt index."""
@@ -38,7 +60,7 @@ class KnowledgeBase:
         if free_sp.exists():
             self.free_chat_system_prompt = free_sp.read_text(encoding="utf-8")
 
-        # 2. Load shared core documents (everything in core/)
+        # 2. Load shared core documents (everything in core/) — backward compat
         core_parts = []
         core_dir = self.base_path / "core"
         if core_dir.exists():
@@ -109,8 +131,22 @@ class KnowledgeBase:
         if global_rules_path.exists():
             self.global_rules = global_rules_path.read_text(encoding="utf-8")
 
+        # 6. Pre-load all registered documents for step system prompts
+        for doc_id, rel_path in DOCUMENT_REGISTRY.items():
+            filepath = self.base_path / rel_path
+            if filepath.exists():
+                self._documents[doc_id] = filepath.read_text(encoding="utf-8")
+
+        # Convenience attributes for always-loaded step components
+        self.general_rules = self._documents.get("icr-general-rules", "")
+        self.qc_quick_reference = self._documents.get("qc-quick-reference", "")
+
     def get_system_prompt(self, mode: str = "case") -> str:
-        """Return the complete system prompt for the given mode."""
+        """Return the complete system prompt for the given mode.
+
+        Used by the existing (pre-step) architecture. Kept for backward
+        compatibility until Phase C wires in step-based routing.
+        """
         if mode == "free_chat":
             return (
                 f"{self.free_chat_system_prompt}\n\n---\n\n"
@@ -124,6 +160,41 @@ class KnowledgeBase:
                 f"{self.core_content}\n\n---\n\n"
                 f"{self.reference_index_text}"
             )
+
+    def get_step_system_prompt(self, step: int) -> str:
+        """Assemble the system prompt for a specific investigation step.
+
+        Uses STEP_CONFIG to determine which documents to include.
+        Always includes: case system prompt, general rules, reference index.
+        Steps 1-4 also get the QC quick reference.
+        Step-specific docs are appended per the injection map.
+        """
+        parts = [
+            self.case_system_prompt,
+            self.general_rules,
+            self.qc_quick_reference if step <= 4 else "",
+            self.reference_index_text,
+        ]
+
+        step_docs = STEP_CONFIG[step].get("docs", [])
+        for doc_id in step_docs:
+            parts.append(self.get_document(doc_id))
+
+        return "\n\n---\n\n".join(p for p in parts if p)
+
+    def get_document(self, doc_id: str) -> str:
+        """Retrieve a document by ID from the pre-loaded registry.
+
+        Covers step docs, QC files, decision matrix, escalation matrix.
+        """
+        if doc_id not in DOCUMENT_REGISTRY:
+            return f"Error: Unknown document ID '{doc_id}'. Valid IDs: {', '.join(DOCUMENT_REGISTRY.keys())}"
+
+        content = self._documents.get(doc_id)
+        if content is None:
+            return f"Error: Document file not found for '{doc_id}'."
+
+        return content
 
     def get_reference_document(self, document_id: str) -> str:
         """Retrieve a reference document by ID. Called by the tool handler."""
