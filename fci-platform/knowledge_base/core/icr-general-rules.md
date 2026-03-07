@@ -225,6 +225,8 @@ narrative.
   escalation, and offboarding require Full Review
   phase.
 
+---
+
 ## RFI Response Check Before Closure
 - **RFI Response Check:** Before submitting any case
   for closure, verify whether any outstanding RFIs
@@ -232,57 +234,6 @@ narrative.
   before the case is closed, it must be reviewed and
   incorporated. A response received before closure
   cannot be disregarded.
-
----
-
-## Pre-Submission Requirements
-- **Pre-Submission Requirements:** Before final
-  submission, ensure: (1) the operation log is
-  completed, and (2) "Save All and Generate" has been
-  used in the case status section to automatically
-  attach all necessary documents and details. All 
-  supporting documentation must be uploaded directly
-  to HaoDesk. The previously-used B-Office upload system
-  is deprecated and applies only to legacy cases
-  predating the migration.
-
-**TEMPLATE CLEANUP:** Before submission, scan the
-entire ICR for bracketed or parenthesised
-instructional text (e.g., "[delete this]",
-"_(delete: provide summary...)_",
-"_(delete: manual review required...)_"). These are
-template guidance comments and must be removed. They
-commonly appear as suffixes to section headings in
-the older full-page ICR format. Leaving them in the
-final report is a QC finding (8.5, -1 point). The
-AI should flag any remaining instances during QC
-pre-submission checks by scanning for patterns:
-"(delete:", "[delete", "_(delete", "please delete",
-and any italic text containing instructions.
-Additionally, scan for HaoDesk default instructional
-text that appears in editable sections but is not
-part of the case narrative. Known instances include:
-"Click the refresh button in this section if RFIs
-are issued" (RFI Analysis Summary section),
-"Manual summary required" (multiple sections), and
-"Manual review required" (multiple sections). When
-no RFI was issued, retain only the substantive
-default text ("No RFIs were issued during this
-investigation, and no RFI analysis is available")
-and delete any instructional text that follows it.
-When a section has been populated with analysis,
-delete all "Manual summary required" or "Manual
-review required" placeholder text. Any system-
-generated instructional text remaining in the final
-report is a QC finding.
-
-**OLDER FORMAT ICR — SAVE WARNING:** The older
-full-page ICR format (used for multi-user cases and
-some legacy case types) does NOT auto-save. The
-investigator must manually click "Save" at the
-bottom of the page after every significant edit.
-Drafting in a Word document and pasting in is an
-acceptable alternative workflow to avoid data loss.
 
 ---
 
@@ -297,117 +248,6 @@ acceptable alternative workflow to avoid data loss.
   system status term. Use "while awaiting the outcome
   of," "upon completion of," or "following the
   resolution of."
-
----
-
-## Case Rejection Rules
-- **Case Rejection — Limited Scenarios:** Cases may
-  only be rejected (returned without investigation)
-  in three scenarios:
-  1. Employee account — ask TL to reassign to the
-     appropriate team.
-  2. Two completely identical ICRs submitted by L1
-     by mistake — review one, reject the duplicate.
-  3. Following an explicit L1 request to reject due
-     to a submission error.
-  No other scenario justifies case rejection.
-  Specifically:
-  - Pending RFI from prior case: review the case and
-    retain with reference to the ICR containing the
-    pending RFI. Do not reject.
-  - Open LE ticket: review the case. If retaining,
-    proceed normally. If offboarding, seek Case Team
-    confirmation. Do not reject.
-  - Active freeze: review the case and escalate to
-    MLRO. Do not reject.
-
----
-
-## SLA Framework
-- **Standard SLA Tiers:** Standard DDM-agreement
-  cases require completion within 5 days. Complex
-  investigations require completion within 10 days.
-  FTM/CTM alert review cases (FCI - Compliance L2
-  Crypto TM queue) have a 30-day SLA from case
-  creation date. Active SLA monitoring is in place —
-  cases approaching or exceeding the 30-day window
-  will generate reminders. Investigators should
-  prioritize completing assigned cases before
-  self-assigning new cases to avoid SLA breaches. If
-  a case appears to fall under a DDM SLA (e.g., VIP,
-  corporate, high-value), flag this to the
-  investigator at Phase 0.
-- **ADGM MLRO SLA Tiers:** When escalating to ADGM
-  MLRO, the complexity tag affects the MLRO's review
-  timeline:
-  - Standard: 35 business days from alert date
-  - Complex (multiple subpoenas, court-referred,
-    employee-related, multi-jurisdiction, extensive
-    tracing): 15 business days for first action, 30
-    business days for follow-up
-  - Priority (TF, CSAM, Proliferation Financing): 10
-    days review + 1-5 days reporting
-  Tag the case appropriately in HaoDesk when
-  submitting the L3 escalation.
-- **RFI Response Review SLA:** When a user responds
-  to an RFI, the response must be reviewed and
-  analysed within 3 business days of receipt.
-
----
-
-## Always Editable Fields
-**Mandatory Content (Always Editable Field):**
-This field must NEVER be empty. Must contain velocity
-assessment, ratios, and fund flow summary.
-
-**Mandatory Content (Always Editable — CRITICAL):**
-This field requires Elliptic screening. Must contain
-analysis or "0/10000" if genuinely no data.
-
-**Mandatory Content (Always Editable Field):**
-Must contain locations, consistency assessment, and
-shared device analysis. Never empty.
-
-**Mandatory Content (Always Editable Field):**
-Must contain specific findings OR:
-"Open source research has been performed but no specific
-/ negative news has been identified."
-
-**Mandatory Content (Always Editable Field):**
-Must contain analysis or the default statement.
-Never empty.
-
----
-
-## Scam/Fraud Case Intake Extraction
-**SCAM/FRAUD CASE INTAKE EXTRACTION:**
-For scam/fraud cases referred by SSO where the
-case package includes extensive customer services
-chat logs, victim/suspect evidence screenshots,
-and SSO case notes:
-
-The investigator may process these materials in
-a standalone chat using the case intake extraction
-prompt via `get_prompt("case-intake")`
-BEFORE starting Phase 0 in the main chat.
-
-If a case intake extraction is provided, it will contain
-nine structured sections: Allegation Summary,
-Victim Details, Suspect Details, Victim Evidence,
-Suspect Response, Suspect Evidence, CS/SSO Actions,
-Translation, and Established Facts vs Allegations.
-
-The main chat should use this structured briefing
-alongside the L1 referral to construct the Phase 0
-narrative theory. Pay particular attention to
-Section 9 (Established Facts vs Allegations) —
-this distinguishes what is proven from what is
-claimed and directly informs the investigation
-approach.
-
-If no case intake extraction is provided, proceed with
-Phase 0 using the L1 referral and whatever case
-materials the investigator provides directly.
 
 ---
 
@@ -496,8 +336,6 @@ despite multiple UIDs).
 
 ---
 
----
-
 ## Older Format ICR Rules
 
 **OLDER FORMAT ICR — SECTION ORDER:**
@@ -512,38 +350,3 @@ presentation order changes. The AI should ask the
 investigator to confirm the next section heading
 rather than assuming the standard sequence.
 
-## Fraud/Scam Case Template Cleanup
-For fraud/scam cases (SSO-referred scam, P2P fraud,
-single deposit risk), certain ICR sections are not
-applicable per the QC checklist (ref:
-qc-submission-checklist.md). These sections should be
-REMOVED from the template entirely rather than left
-blank or populated with placeholder text.
-Sections to remove for fraud/scam cases:
-- Previous blocks (QC #3.1: N/A for Fraud/Scam)
-- High-risk addresses / Top 10 exposed addresses
-  (QC #3.4: N/A for Fraud/Scam)
-- Counterparties (QC #3.5: N/A for Fraud/Scam)
-CRITICAL: If a non-required section is left in the
-template and populated with incorrect or incomplete
-analysis, QC will assess it as if it were required
-and deduct points for errors. The safest approach is
-to delete the section entirely. If retained, the
-content must be accurate — "not applicable" or
-removal is preferred over incorrect analysis.
-
-**FRC/C2C FREEZE HANDLING IN FRAUD CASES:**
-For fraud/scam cases where the suspect account has
-active Fund Recovery Case (FRC) freezes or C2C
-freezes from the P2P team:
-- The account can be offboarded with these freezes
-  in place after obtaining P2P team approval
-- Submit approval request via HaoDesk Helpdesk
-  (Category: P2P CS Support, Subcategory: P2P x FCI
-  Escalation)
-- If the user subsequently appeals or requests
-  withdrawal enablement, transfer the chat to the
-  P2P team — the user must resolve the FRC/C2C
-  dispute first
-
----

@@ -10,7 +10,8 @@
       "Bash(npx vite:*)",
       "Bash(pip install:*)",
       "Bash(mv:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(ls -lh /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/core/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/prompts/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/reference/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/system-prompt-*.md)"
     ]
   }
 }

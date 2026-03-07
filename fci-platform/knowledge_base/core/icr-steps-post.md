@@ -270,6 +270,133 @@ When the investigation outcome is a warning rather than offboarding, and the war
 These are templates — adjust the specific language to the case facts. Warnings are sent via HaoDesk, not Binance Admin back end.
 
 ---
+
+## Pre-Submission Requirements
+*Relocated from icr-general-rules.md — applies to this step only.*
+
+- **Pre-Submission Requirements:** Before final
+  submission, ensure: (1) the operation log is
+  completed, and (2) "Save All and Generate" has been
+  used in the case status section to automatically
+  attach all necessary documents and details. All
+  supporting documentation must be uploaded directly
+  to HaoDesk. The previously-used B-Office upload system
+  is deprecated and applies only to legacy cases
+  predating the migration.
+
+**TEMPLATE CLEANUP:** Before submission, scan the
+entire ICR for bracketed or parenthesised
+instructional text (e.g., "[delete this]",
+"_(delete: provide summary...)_",
+"_(delete: manual review required...)_"). These are
+template guidance comments and must be removed. They
+commonly appear as suffixes to section headings in
+the older full-page ICR format. Leaving them in the
+final report is a QC finding (8.5, -1 point). The
+AI should flag any remaining instances during QC
+pre-submission checks by scanning for patterns:
+"(delete:", "[delete", "_(delete", "please delete",
+and any italic text containing instructions.
+Additionally, scan for HaoDesk default instructional
+text that appears in editable sections but is not
+part of the case narrative. Known instances include:
+"Click the refresh button in this section if RFIs
+are issued" (RFI Analysis Summary section),
+"Manual summary required" (multiple sections), and
+"Manual review required" (multiple sections). When
+no RFI was issued, retain only the substantive
+default text ("No RFIs were issued during this
+investigation, and no RFI analysis is available")
+and delete any instructional text that follows it.
+When a section has been populated with analysis,
+delete all "Manual summary required" or "Manual
+review required" placeholder text. Any system-
+generated instructional text remaining in the final
+report is a QC finding.
+
+**OLDER FORMAT ICR — SAVE WARNING:** The older
+full-page ICR format (used for multi-user cases and
+some legacy case types) does NOT auto-save. The
+investigator must manually click "Save" at the
+bottom of the page after every significant edit.
+Drafting in a Word document and pasting in is an
+acceptable alternative workflow to avoid data loss.
+
+---
+
+## Mandatory Field Validation (The "Edit Button" Check)
+*Relocated from icr-general-rules.md — applies to this step only.*
+
+**Objective:** Ensure all mandatory fields in the Hexa report system are populated.
+
+**Logic:**
+- **Always Editable:** These sections *always* have an edit button and *must* contain analysis (even if it is just "0/10000" or "No data").
+- **Conditionally Editable:** These sections only show an edit button if Hexa pulls data. If no edit button exists, they are skipped.
+
+**Action:** Scan the final report. If any of the "Always Editable" fields below are **blank** or contain **error messages**, the report is **FAIL**.
+
+### 1. ALWAYS EDITABLE FIELDS (Must never be empty)
+
+| **ICR Section** | **Minimum Required Content** |
+| :--- | :--- |
+| **User Transaction Overview** | Must contain **Prompt #1 output** (Velocity, Ratios, Fund Flow summary). |
+| **Lifetime Top Addresses by Value** | **CRITICAL:** Requires Elliptic screening. Must contain analysis or "0/10000". |
+| **Internal Counterparty Analysis** | Must contain analysis of links or "No data". |
+| **Device and IP Analysis** | Must contain **Prompt #9 output** (Locations, Consistency, Shared Devices). |
+| **OSINT** | Must contain specific findings or "Open source research has been performed but no specific / negative news has been identified". |
+| **User Communication** | Must summarize chat history/responsiveness or state "No response received." |
+| **Any Other Unusual Activity** | Must contain "0/10000" or "None identified." |
+| **RFI Issued** | Must state "No RFI issued..." or provide RFI Summary. |
+| **RFI Analysis Summary** | **NEW:** Must contain analysis of the user's response to the *current* RFI. If no RFI was sent, must state: *"No RFIs were issued during this investigation, and no RFI analysis is available."* |
+| **Summary of Unusual Transactions** | Must calculate Total Value and Date Range (e.g., "TOTAL UNUSUAL TRANSACTIONS: X"). |
+| **Conclusion (IV)** | Must contain full narrative summary + Final Recommendation (Retain/Offboard/Refund). Must NOT contain: the word "pending," references to reporting/SAR/STR, or one-sided adverse narrative without mitigating context. All local currency amounts must include USD equivalent in square brackets. For offboarding recommendations: must explicitly state "offboarding with withdrawals enabled" or equivalent — omission is a rejection trigger. The only exceptions are active LE seizure/freeze or explicit Sanctions/SI team instruction to restrict withdrawals, which must be stated with the authority reference. For "close to avoid duplication" cases: must contain (1) what was reviewed, (2) key risks, (3) open RFI reference, (4) reason for closure. |
+
+### 2. CONDITIONALLY EDITABLE FIELDS (Check only if Edit Button is visible)
+
+- **Prior ICRs:** If editable, ensure the summary is accurate. If not editable (no data), skip.
+- **Privacy Coin Review:** If editable (Hexa detected usage), ensure **Prompt #7** is applied. If not editable, skip.
+- **Analysis of Facts (L1 Summary):** Check that the auto-populated text is **NOT** an error message (e.g., "AI generation failed"). If it is an error, manually paste the L1 summary.
+- **Counterparty Header Validation:** If the counterparty section is editable, verify the Hexa header count and dollar total against C360 spreadsheets: Internal Transfer + Binance Pay only. P2P figures must NOT be included in the header totals.
+
+---
+
+## Fraud/Scam Case Template Cleanup
+*Relocated from icr-general-rules.md — applies to this step only.*
+
+For fraud/scam cases (SSO-referred scam, P2P fraud,
+single deposit risk), certain ICR sections are not
+applicable per the QC checklist (ref:
+qc-submission-checklist.md). These sections should be
+REMOVED from the template entirely rather than left
+blank or populated with placeholder text.
+Sections to remove for fraud/scam cases:
+- Previous blocks (QC #3.1: N/A for Fraud/Scam)
+- High-risk addresses / Top 10 exposed addresses
+  (QC #3.4: N/A for Fraud/Scam)
+- Counterparties (QC #3.5: N/A for Fraud/Scam)
+CRITICAL: If a non-required section is left in the
+template and populated with incorrect or incomplete
+analysis, QC will assess it as if it were required
+and deduct points for errors. The safest approach is
+to delete the section entirely. If retained, the
+content must be accurate — "not applicable" or
+removal is preferred over incorrect analysis.
+
+**FRC/C2C FREEZE HANDLING IN FRAUD CASES:**
+For fraud/scam cases where the suspect account has
+active Fund Recovery Case (FRC) freezes or C2C
+freezes from the P2P team:
+- The account can be offboarded with these freezes
+  in place after obtaining P2P team approval
+- Submit approval request via HaoDesk Helpdesk
+  (Category: P2P CS Support, Subcategory: P2P x FCI
+  Escalation)
+- If the user subsequently appeals or requests
+  withdrawal enablement, transfer the chat to the
+  P2P team — the user must resolve the FRC/C2C
+  dispute first
+
+---
 ## APPENDIX B: BIFINITY UAB CHANNEL LIST
 For use at Step 13 — Fiat Transactions.
 Paysafe, Eternal, Mobilum, checkout, HzBankCard,

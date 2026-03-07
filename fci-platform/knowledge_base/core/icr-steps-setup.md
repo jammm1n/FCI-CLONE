@@ -1,6 +1,75 @@
 # ICR Steps: Setup & Context (Steps 1-6)
 ## Purpose
 This document covers Phase 0 (pre-investigation) and Steps 1 through 6 of the ICR form. These steps establish who the subject is, why the case exists, and what history is relevant. Cross-cutting rules in icr-general-rules.md apply to every step below.
+
+---
+
+## SLA Framework
+*Relocated from icr-general-rules.md — applies to this step only.*
+
+- **Standard SLA Tiers:** Standard DDM-agreement
+  cases require completion within 5 days. Complex
+  investigations require completion within 10 days.
+  FTM/CTM alert review cases (FCI - Compliance L2
+  Crypto TM queue) have a 30-day SLA from case
+  creation date. Active SLA monitoring is in place —
+  cases approaching or exceeding the 30-day window
+  will generate reminders. Investigators should
+  prioritize completing assigned cases before
+  self-assigning new cases to avoid SLA breaches. If
+  a case appears to fall under a DDM SLA (e.g., VIP,
+  corporate, high-value), flag this to the
+  investigator at Phase 0.
+- **ADGM MLRO SLA Tiers:** When escalating to ADGM
+  MLRO, the complexity tag affects the MLRO's review
+  timeline:
+  - Standard: 35 business days from alert date
+  - Complex (multiple subpoenas, court-referred,
+    employee-related, multi-jurisdiction, extensive
+    tracing): 15 business days for first action, 30
+    business days for follow-up
+  - Priority (TF, CSAM, Proliferation Financing): 10
+    days review + 1-5 days reporting
+  Tag the case appropriately in HaoDesk when
+  submitting the L3 escalation.
+- **RFI Response Review SLA:** When a user responds
+  to an RFI, the response must be reviewed and
+  analysed within 3 business days of receipt.
+
+---
+
+## Scam/Fraud Case Intake Extraction
+*Relocated from icr-general-rules.md — applies to this step only.*
+
+**SCAM/FRAUD CASE INTAKE EXTRACTION:**
+For scam/fraud cases referred by SSO where the
+case package includes extensive customer services
+chat logs, victim/suspect evidence screenshots,
+and SSO case notes:
+
+The investigator may process these materials in
+a standalone chat using the case intake extraction
+prompt via `get_prompt("case-intake")`
+BEFORE starting Phase 0 in the main chat.
+
+If a case intake extraction is provided, it will contain
+nine structured sections: Allegation Summary,
+Victim Details, Suspect Details, Victim Evidence,
+Suspect Response, Suspect Evidence, CS/SSO Actions,
+Translation, and Established Facts vs Allegations.
+
+The main chat should use this structured briefing
+alongside the L1 referral to construct the Phase 0
+narrative theory. Pay particular attention to
+Section 9 (Established Facts vs Allegations) —
+this distinguishes what is proven from what is
+claimed and directly informs the investigation
+approach.
+
+If no case intake extraction is provided, proceed with
+Phase 0 using the L1 referral and whatever case
+materials the investigator provides directly.
+
 ---
 ## PHASE 0: NARRATIVE FIRST (THE "HARD STOP")
 **Trigger:** Case data is loaded into the conversation. The AI receives the pre-processed case data automatically.
@@ -230,110 +299,7 @@ appear within the editable text area as part of the
 form structure. In the older format, retain them
 as-is — they are not duplicated because no separate
 system-displayed section exists.
-**CORPORATE ACCOUNTS (KYB):**
-If the account belongs to a company (detected by
-company name, entity tag, or merchant status):
-1. Do NOT delete the Hexa-generated KYC paragraph.
-   Modify it in-place with minimal changes:
-   - Change individual references to corporate
-     references (e.g., "the user" → "the company")
-   - Insert the company name as it appears in KYB
-   - Insert the company registration number
-   - Replace the address with the exact address from
-     the KYB section in Binance Admin (KYC Certificate
-     > Company KYC), including city and postal code
-   - If multiple addresses appear in the KYB, verify
-     which is the registered address and which is the
-     operating address. Use the operating address in
-     the main text. Note the registered address if it
-     differs.
-   The modified Hexa paragraph should read naturally
-   as a company profile. Example of minimum changes:
-   "According to KYC, [Company Name] is a company from
-   [Country]. The company registration number is [X]
-   and currently operates at [full address including
-   city and postal code]."
-2. Do NOT include VIP status, P2P Merchant Status,
-   Entity Tag, TNC Tag, or Fiat Channel information in
-   the rewritten paragraph. These fields are
-   pre-populated by the system below the editable
-   paragraph and including them creates duplication.
-   The modified paragraph should be a clean corporate
-   equivalent of what Hexa would have generated —
-   company name, jurisdiction, registration number,
-   address, and account metadata (registration date,
-   last login, balance) only.
-3. APPEND a separate paragraph below the modified Hexa
-   text. This supplementary paragraph covers details
-   Hexa does not capture. Include:
-   - Ultimate Beneficial Owner(s): names and roles
-     within the company (mandatory). Nationality, DOB,
-     country of residence, and other identifying details
-     are required only when adverse media is found on
-     the UBO and additional confirmation is needed that
-     the media subject is the same individual as the UBO.
-   - Company's stated business purpose
-   - Operational activities and how the company
-     generates revenue
-   - Any relevant details from the business description
-     that inform the risk assessment
-   This paragraph goes BELOW the Hexa text — never
-   merged into it or replacing it. Do not duplicate
-   information that appears in the modified Hexa
-   paragraph above (company name, registration number,
-   address).
-   Format: single paragraph, 60-80 words, passive
-   compliance voice. No bullets, no headings.
-4. Look up the company details in Binance Admin > KYC
-   Certificate > Company KYC section. Available fields:
-   - Company name
-   - Date of incorporation
-   - Registry/registration number
-   - Registered address
-   - Operating address (if different)
-   - Ultimate Beneficial Owners (UBOs)
-   - Nature of business / business description
-5. If Hexa output is an error message or completely
-   blank (no text generated at all), THEN and only
-   then generate a full replacement using this
-   template:
-   "Binance Account UID [X] is registered in the name
-   of [Company Name], a [nationality] company
-   incorporated on [date] with registration number
-   [X]. The company is registered at [address] and
-   operates from [address if different]. The Ultimate
-   Beneficial Owner(s) of the company are [Name(s)]
-   ([Nationality/ies]). According to the KYB
-   documentation, [Company Name] operates as
-   [2-3 sentence summary of business function].
-   The account was registered on [date] and as of
-   [date], the most recent login was recorded on
-   [date] with current balance standing at [amount]."
-   This full template is a FALLBACK only — the default
-   approach is always to modify Hexa in-place.
-   WORKED KYB EXAMPLE (QC Reference):
-   "Binance Account UID 37456337 is registered in the name of Airfill Prepaid Ab with email address binance@bitrefill.com. According to the Know-Your-Business (KYB) details submitted with the application, Airfill Prepaid Ab is a company from Sweden with Date Of Incorporation: 2015-01-26. The company holds Register No 559001-6035 and currently located at ATT: Operations Desk, Airfill Mailbox 2333, Stockholm, SE, 111 75. Nature of Business (Company Type) Retail Trade - Others: The company sells phone refills, e-sims, gift cards and other products on the website www.bitrefill.com, mainly to end consumers. The account was registered on Aug 9, 2019, and as of Sep 17, 2025, the most recent login was recorded on Sep 17, 2025 with current balance standing at $314,612.97 USD. The UBO is Sergej Kotliar, of Swedish nationality."
-   This example demonstrates QC expectations: company name, email, KYB source reference, country, incorporation date, registration number, full address, nature of business with operational detail, registration date, last login, balance, and UBO name with nationality — all in a single flowing paragraph.
-6. The section header stays as "II-1 PEOPLE INVOLVED"
-   but the content must reflect corporate identity
-   throughout.
-7. Note the UBOs — they must be analyzed in the main
-   body of the report (counterparty analysis, OSINT,
-   device analysis) alongside the company itself.
-**QC Check for Corporate (Ref: qc-submission-checklist.md
-#1.5):**
-- KYC section modified to reflect KYB content (Hexa
-  preserved and adjusted in-place, supplementary UBO/
-  business paragraph appended below, system-displayed
-  metadata fields not duplicated in the paragraph)
-- Includes: date of incorporation, registry number,
-  registered and operating addresses, UBOs
-- Nature of business briefly mentioned
-- UBOs and corporate activity analyzed in the main
-  body of the report
-- Failure to rewrite KYC to KYB = Moderate finding
-  (5 points)
-- UBO: name is mandatory. Nationality/DOB/residence required only when adverse media necessitates identity confirmation.
+**Corporate accounts (KYB):** See icr-general-rules.md § Corporate Account Rules for the canonical KYB procedure. Apply those rules when writing this section.
 **Formatting Rules:**
 - Expand all 2-letter country codes to full country
   names (e.g., "BR" → "Brazil") wherever they appear
