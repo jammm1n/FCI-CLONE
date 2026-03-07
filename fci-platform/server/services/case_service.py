@@ -33,9 +33,14 @@ async def create_case(case_doc: dict) -> dict:
     return case_doc
 
 
-async def get_cases(user_id: str | None = None) -> list[dict]:
+async def get_cases(
+    user_id: str | None = None,
+    include_archived: bool = False,
+) -> list[dict]:
     """
     Return all cases, optionally filtered by assigned user.
+
+    By default excludes archived cases. Pass include_archived=True to see all.
 
     Returns a list of case summary dicts (without full preprocessed_data)
     suitable for the case list view.
@@ -45,6 +50,8 @@ async def get_cases(user_id: str | None = None) -> list[dict]:
     query = {}
     if user_id:
         query["assigned_to"] = user_id
+    if not include_archived:
+        query["status"] = {"$ne": "archived"}
 
     cursor = db.cases.find(
         query,
@@ -108,7 +115,7 @@ async def update_case_status(case_id: str, status: str) -> bool:
 
     Valid statuses for MVP: open, in_progress, completed.
     """
-    valid_statuses = {"open", "in_progress", "completed"}
+    valid_statuses = {"open", "in_progress", "completed", "archived"}
     if status not in valid_statuses:
         raise ValueError(f"Invalid status '{status}'. Must be one of: {valid_statuses}")
 

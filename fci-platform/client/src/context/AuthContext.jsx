@@ -20,8 +20,8 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(stored?.token || null);
   const navigate = useNavigate();
 
-  const login = useCallback(async (username) => {
-    const data = await api.login(username);
+  const login = useCallback(async (username, password) => {
+    const data = await api.login(username, password);
     const u = {
       user_id: data.user_id,
       username: data.username,

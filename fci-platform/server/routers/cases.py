@@ -15,13 +15,28 @@ router = APIRouter(prefix="/api/cases", tags=["cases"])
 
 
 @router.get("")
-async def list_cases(current_user: dict = Depends(get_current_user)):
+async def list_cases(
+    include_archived: bool = False,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Return all cases assigned to the current user.
-    Used by the Case List view.
+    Archived cases excluded by default; pass ?include_archived=true to include.
     """
-    cases = await case_service.get_cases(user_id=current_user["user_id"])
+    cases = await case_service.get_cases(
+        user_id=current_user["user_id"],
+        include_archived=include_archived,
+    )
     return {"cases": cases}
+
+
+@router.patch("/{case_id}/archive")
+async def archive_case(case_id: str, current_user: dict = Depends(get_current_user)):
+    """Set a case's status to archived."""
+    updated = await case_service.update_case_status(case_id, "archived")
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+    return {"status": "archived"}
 
 
 @router.get("/{case_id}")

@@ -19,11 +19,11 @@ async function handleResponse(res) {
 // Auth
 // ---------------------------------------------------------------------------
 
-export async function login(username) {
+export async function login(username, password) {
   const res = await fetch(`${BASE_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username }),
+    body: JSON.stringify({ username, password }),
   });
   return handleResponse(res);
 }
@@ -39,8 +39,17 @@ export async function getMe(token) {
 // Cases
 // ---------------------------------------------------------------------------
 
-export async function getCases(token) {
-  const res = await fetch(`${BASE_URL}/cases`, {
+export async function getCases(token, includeArchived = false) {
+  const params = includeArchived ? '?include_archived=true' : '';
+  const res = await fetch(`${BASE_URL}/cases${params}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function archiveCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/archive`, {
+    method: 'PATCH',
     headers: authHeaders(token),
   });
   return handleResponse(res);

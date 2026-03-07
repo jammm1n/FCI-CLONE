@@ -1,17 +1,18 @@
 """
-FCI Platform — Auth Router (Mock)
+FCI Platform — Auth Router
 
-Mock authentication for the prototype. No passwords, no expiry.
-Users are pre-seeded in MongoDB. Login returns a UUID session token
-stored in-memory (dict). The token is sent as Bearer in subsequent requests.
+Username + password authentication. Users are seeded in MongoDB with
+bcrypt-hashed passwords. Login returns a UUID session token stored
+in-memory (dict). The token is sent as Bearer in subsequent requests.
 
-For the MVP, this is intentionally simple. Real auth is deferred.
+Will be replaced by Okta OIDC in production.
 """
 
 import logging
 import uuid
 from typing import Annotated
 
+import bcrypt
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from server.database import get_database
@@ -59,18 +60,25 @@ async def get_current_user(
 @router.post("/login")
 async def login(body: dict):
     """
-    Mock login. Accepts {"username": "..."}, returns a session token.
-    No password required for the prototype.
+    Login with username and password. Returns a session token.
     """
     username = body.get("username")
-    if not username:
-        raise HTTPException(status_code=400, detail="Username is required")
+    password = body.get("password")
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
 
     db = get_database()
     user = await db.users.find_one({"username": username})
 
     if user is None:
-        raise HTTPException(status_code=404, detail=f"User not found: {username}")
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    # Verify password
+    stored_hash = user.get("password_hash", "")
+    if not stored_hash or not bcrypt.checkpw(
+        password.encode("utf-8"), stored_hash.encode("utf-8")
+    ):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
     # Generate session token
     token = str(uuid.uuid4())

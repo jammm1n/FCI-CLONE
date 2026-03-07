@@ -1,7 +1,7 @@
 """
 Seed script for FCI Investigation Platform.
 
-Populates MongoDB with mock user accounts.
+Populates MongoDB with user accounts (with bcrypt-hashed passwords).
 Cases are created through the ingestion pipeline, not seeded.
 
 Usage: python scripts/seed_demo_data.py
@@ -9,6 +9,7 @@ Usage: python scripts/seed_demo_data.py
 Requires: MongoDB running on localhost:27017
 """
 
+import bcrypt
 from pymongo import MongoClient
 from datetime import datetime, timezone
 
@@ -16,17 +17,23 @@ MONGO_URI = "mongodb://localhost:27017"
 DB_NAME = "fci_platform"
 
 
+def hash_pw(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
 USERS = [
     {
         "_id": "user_001",
         "username": "ben.investigator",
         "display_name": "Ben",
+        "password_hash": hash_pw("ben123"),
         "created_at": datetime(2026, 1, 15, tzinfo=timezone.utc),
     },
     {
         "_id": "user_002",
         "username": "demo.investigator",
         "display_name": "Demo User",
+        "password_hash": hash_pw("demo123"),
         "created_at": datetime(2026, 2, 1, tzinfo=timezone.utc),
     },
 ]
@@ -38,18 +45,21 @@ def seed():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
 
-    # Clear existing data
-    print("Dropping existing collections...")
+    # Only reseed users — preserve cases and conversations
+    print("Dropping users collection...")
     db.users.drop()
-    db.cases.drop()
-    db.conversations.drop()
 
     # Seed users
     db.users.insert_many(USERS)
     print(f"Seeded {len(USERS)} users")
 
+    # Print credentials for reference
+    print("\nCredentials:")
+    print("  ben.investigator / ben123")
+    print("  demo.investigator / demo123")
+
     # Verify
-    print("\nVerification:")
+    print(f"\nVerification:")
     print(f"  Users: {db.users.count_documents({})}")
     print(f"  Cases: {db.cases.count_documents({})}")
     print(f"  Conversations: {db.conversations.count_documents({})}")

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -11,12 +12,12 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!username.trim() || !password) return;
 
     setError('');
     setLoading(true);
     try {
-      await login(username.trim());
+      await login(username.trim(), password);
       navigate('/cases');
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -84,6 +85,21 @@ export default function LoginPage() {
               />
             </div>
 
+            <div
+              className="mt-4 animate-fade-in-up"
+              style={{ animationDelay: '400ms' }}
+            >
+              <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-11 px-4 text-base rounded-xl bg-surface-100 dark:bg-surface-900 border border-surface-200 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/30 focus:border-gold-500"
+              />
+            </div>
+
             {/* Error message */}
             {error && (
               <p className="mt-3 text-sm text-red-500 dark:text-red-400 animate-fade-in-up">
@@ -98,7 +114,7 @@ export default function LoginPage() {
             >
               <button
                 type="submit"
-                disabled={loading || !username.trim()}
+                disabled={loading || !username.trim() || !password}
                 className="w-full mt-5 h-11 text-base font-semibold rounded-xl bg-gradient-to-r from-gold-500 to-gold-400 text-surface-950 shadow-lg shadow-gold-500/25 hover:shadow-gold-500/40 active:scale-[0.98] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 disabled:shadow-none"
               >
                 {loading ? (

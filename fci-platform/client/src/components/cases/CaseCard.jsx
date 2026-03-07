@@ -4,11 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { capitalize, statusColor, caseTypeColor, formatTimestamp } from '../../utils/formatters';
 import * as api from '../../services/api';
 
-export default function CaseCard({ caseData, index = 0 }) {
+export default function CaseCard({ caseData, index = 0, onArchive }) {
   const navigate = useNavigate();
   const { token } = useAuth();
   const hasConversation = caseData.conversation_id !== null;
+  const isArchived = caseData.status === 'archived';
   const [exporting, setExporting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   async function handleExport(e) {
     e.stopPropagation();
@@ -22,10 +24,28 @@ export default function CaseCard({ caseData, index = 0 }) {
     }
   }
 
+  async function handleArchive(e) {
+    e.stopPropagation();
+    if (!confirm('Archive this case? It will be hidden from the active list.')) return;
+    setArchiving(true);
+    try {
+      await api.archiveCase(token, caseData.case_id);
+      onArchive?.(caseData.case_id);
+    } catch (err) {
+      console.error('Archive failed:', err);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   return (
     <div
       onClick={() => navigate(`/investigation/${caseData.case_id}`)}
-      className="animate-fade-in-up bg-surface-50 dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 border-l-2 border-l-gold-500/30 p-6 hover:border-gold-300 dark:hover:border-gold-500/50 hover:shadow-glow-gold hover:-translate-y-0.5 cursor-pointer group"
+      className={`animate-fade-in-up rounded-xl border border-l-2 p-6 cursor-pointer group ${
+        isArchived
+          ? 'bg-surface-50/50 dark:bg-surface-800/50 border-surface-200 dark:border-surface-700 border-l-surface-300/30 opacity-60'
+          : 'bg-surface-50 dark:bg-surface-800 border-surface-200 dark:border-surface-700 border-l-gold-500/30 hover:border-gold-300 dark:hover:border-gold-500/50 hover:shadow-glow-gold hover:-translate-y-0.5'
+      }`}
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className="flex items-start justify-between">
@@ -71,6 +91,19 @@ export default function CaseCard({ caseData, index = 0 }) {
 
         {/* Action buttons */}
         <div className="ml-4 shrink-0 flex items-center gap-2">
+          {!isArchived && (
+            <button
+              onClick={handleArchive}
+              disabled={archiving}
+              title="Archive case"
+              className="p-2 rounded-lg text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
+                <path fillRule="evenodd" d="M13 6H3v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6Zm-5.5 2a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1Z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={handleExport}
             disabled={exporting}

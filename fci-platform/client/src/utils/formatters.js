@@ -47,6 +47,8 @@ export function statusColor(status) {
     case 'completed':
     case 'closed':
       return `${BADGE_BASE} bg-surface-500/10 text-surface-600 dark:text-surface-400 ring-1 ring-surface-500/20`;
+    case 'archived':
+      return `${BADGE_BASE} bg-surface-500/5 text-surface-400 dark:text-surface-500 ring-1 ring-surface-500/10`;
     case 'escalated':
       return `${BADGE_BASE} bg-red-500/10 text-red-700 dark:text-red-400 ring-1 ring-red-500/20`;
     default:
