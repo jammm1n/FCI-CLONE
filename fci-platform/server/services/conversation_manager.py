@@ -70,10 +70,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 INITIAL_ASSESSMENT_INSTRUCTION = (
-    "Case data loaded. Provide a brief initial summary: case type classification, "
-    "top 3 risk indicators, and suggested investigation approach. "
-    "Do NOT use the get_reference_document tool for this initial assessment — "
-    "work only with the case data and your core knowledge. Keep it concise."
+    "Case data loaded. Execute Phase 0A from icr-steps-setup.md: "
+    "case type classification, data inventory (hard blockers, soft gaps, received), "
+    "anomalies in received data, and clarifying questions. "
+    "Do NOT produce a narrative or risk assessment yet — that comes in Phase 0B "
+    "after the investigator responds. Do NOT use the get_reference_document tool "
+    "for this initial assessment — work with the case data, your core knowledge, "
+    "and the Standard Hard Blockers Reference in the step document."
 )
 
 SUMMARY_SYSTEM_PROMPT = """\

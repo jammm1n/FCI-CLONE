@@ -71,29 +71,124 @@ Phase 0 using the L1 referral and whatever case
 materials the investigator provides directly.
 
 ---
-## PHASE 0: NARRATIVE FIRST (THE "HARD STOP")
+## PHASE 0: CASE READINESS CHECK
 **Trigger:** Case data is loaded into the conversation. The AI receives the pre-processed case data automatically.
-**Action:**
-1. Ingest ALL provided case data.
-2. Reconstruct the story — who did what to whom, when, for how much, and how.
-3. Classify the case type. State: "Case Type Identified: [Type]. Primary SOP: [Filename]."
-4. Present the Narrative Theory to the user.
-5. Generate a Data Inventory confirming what was received and what may still be needed:
-   - Received: [list each data type provided]
-   - Not received: [list any expected data types not present]
-   - May be needed at specific steps: [list anything not yet available]
-6. Generate an Attachment Checklist by referencing Appendix E (Standard Attachment Checklist) in icr-steps-post.md. List only 'Always required' and applicable 'Conditionally required' categories. For UOL export, state simply 'UOL export' — required on all cases.
-**Account Status Detection (Phase 0):**
-In addition to case type classification, Phase 0 must identify and flag:
+
+Phase 0 has two sub-phases. **0A is the inventory and clarification. 0B is the narrative.** Do not skip 0A. Do not combine them into a single message.
+
+---
+
+### PHASE 0A — INVENTORY & CLARIFICATION
+
+**Action — produce a single message containing all of the following:**
+
+**1. Case Type Classification** (one line):
+"Case Type Identified: [Type]. Primary SOP: [Filename]."
+
+**2. Data Inventory**
+Scan all case data sections against what is expected for this case type. Use the Standard Hard Blockers Reference below. Report in three tiers:
+
+**HARD BLOCKERS** — Data that is absent and without which specific ICR steps cannot be completed to QC standard:
+Format: `⛔ [Item] — Blocks Step [X]: [what breaks without it]`
+
+**SOFT GAPS** — Data that is absent but where steps can proceed with caveats noted in the ICR:
+Format: `⚠️ [Item] — Step [X]: [caveat that will be noted]`
+
+**RECEIVED** — All data types confirmed present. Brief list, no commentary.
+
+**3. Anomalies & Flags**
+Flag anything in the *received* data that looks wrong, contradictory, or unexpected. Examples:
+- Content that doesn't match its section (e.g., commercial documents filed under LE/Kodex)
+- Contradictions between sections (e.g., KYC nationality vs login geography vs system language)
+- Data that appears incomplete, truncated, or auto-generated with errors
+- Patterns visible before formal analysis that the investigator should be aware of
+
+Do not flag items already captured in the inventory tiers above. This section is for problems with data that *is* present, not data that is absent.
+
+**4. Clarifying Questions**
+Ask everything needed to proceed to the narrative. Number each question. These may include:
+- Whether a missing section is genuinely not applicable or not yet uploaded
+- Confirmation of anomalies flagged above
+- Case context not derivable from the data (e.g., "Is this a transfer from another team?" / "Was an RFI already issued outside HaoDesk?")
+- The investigator's preliminary view or specific concerns about the case
+
+Do not ask questions the case data already answers. Do not ask questions that can wait until the relevant step.
+
+**5. Close with:** "Please address the above so I can proceed to the case assessment."
+
+**Constraint:** This is one message from the AI, one response from the investigator. Do not split the inventory and questions across multiple exchanges. If the investigator's response raises new questions, handle them during the narrative or at the relevant step — do not open a second clarification round.
+
+---
+
+### STANDARD HARD BLOCKERS REFERENCE
+
+**Always required (every case) — flag as ⛔ HARD BLOCKER if absent:**
+
+| Section | Steps Affected | Consequence if Missing |
+|---------|---------------|----------------------|
+| Transaction Summary | 3, 7, 13, 20 | Account activity overview, transaction analysis, fiat review, and unusual activity summary cannot be completed |
+| User Profile | 2, 14 | KYC paragraph cannot be verified; registration, login, and balance data unavailable |
+| Device & IP Analysis | 14 | Device/IP analysis section cannot be completed; jurisdictional anomalies undetectable |
+| Elliptic Wallet Screening | 9-10 | On-chain exposure analysis cannot be completed |
+| L1 Referral Narrative | Phase 0, 4 | Case origin and allegation unknown; L1 summary cannot be written |
+| HaoDesk Case Data | Phase 0, 1, 3 | Case context, investigation header, and block history unavailable |
+| KYC Document Summary | 2 | Name, nationality, DOB, ID number cannot be verified against source of truth |
+| Investigator Notes & OSINT | 15 | OSINT analysis cannot be completed; subject open-source profile unavailable |
+
+**Conditionally required — flag as ⛔ HARD BLOCKER only when the trigger condition applies:**
+
+| Section | Trigger Condition | Steps Affected | Consequence if Missing |
+|---------|------------------|---------------|----------------------|
+| CTM Alerts | CTM or TM case | 8 | Alert analysis cannot be completed for the case trigger |
+| FTM Alerts | FTM or TM case | 8 | Alert analysis cannot be completed for the case trigger |
+| Counterparty Analysis | Almost always present | 12 | Counterparty risk assessment incomplete; flag but rare |
+| Prior ICR Summary | Prior ICRs exist for subject | 5 | Prior investigation history unknown; deep-dive rule unsatisfied |
+| RFI Summary | RFIs were issued | 18-19 | RFI decision and analysis cannot reference prior RFI outcomes |
+| Law Enforcement / Kodex | LE-triggered case | 6 | LE enquiry review cannot be completed for an LE case |
+| L1 Victim Communications | Scam/P2P case | 4, 16 | Victim account of events unavailable |
+| L1 Suspect Communications | Scam/P2P case | 4, 16 | Suspect response unavailable |
+
+**Present only when applicable — NOT a gap if absent:**
+Privacy Coin Breakdown, Account Blocks, Failed Fiat Withdrawals, Address Cross-Reference, UID Search Results. These sections are populated only when the underlying activity exists. Their absence means the activity was not detected — do not flag as missing.
+
+---
+
+### PHASE 0B — NARRATIVE & HARD STOP
+
+**Trigger:** The investigator responds to Phase 0A.
+
+**Action — produce a single message containing all of the following:**
+
+**1. Incorporate Answers**
+Acknowledge the investigator's response. Update understanding of which gaps are resolved, which are accepted as limitations, and any new context provided. Do not repeat the full inventory — a brief status line is sufficient (e.g., "3 hard blockers resolved, 1 accepted — Elliptic data will not be available for this case").
+
+**2. Narrative Theory**
+Reconstruct the story — who did what to whom, when, for how much, and how. Identify the top risk indicators (up to 3) and the suggested investigation approach. If unresolved hard blockers remain, note their impact where relevant in the narrative.
+
+**3. Suggested Investigation Approach**
+State the recommended approach based on the evidence (e.g., "Full Review → Offboarding Recommendation" or "Pre-check → Monitor"). Include whether further RFI is warranted and any escalation considerations.
+
+**4. Attachment Checklist**
+Reference Appendix E (Standard Attachment Checklist) in icr-steps-post.md. List only 'Always required' and applicable 'Conditionally required' categories. For UOL export, state simply 'UOL export' — required on all cases.
+
+**5. Account Status Detection**
+Identify and flag:
 - **Corporate account:** Company name in KYC/II-1 (Ltda, Ltd, LLC, Inc, S.A., GmbH, Corp), entity tag present, P2P Merchant Status, or KYB data visible. If detected, state: "Corporate account detected. Switching to company perspective." All output text from this point uses "the company" / "the entity" not "the user." Corporate-specific checks apply across steps — see Step 2 (KYB handling), and icr-general-rules.md (corporate rules).
 - **HPI status** (User InfoHub): State "HPI account detected. Enhanced offboarding workflow applies." Impact on approval pathway at Step 22 only.
 - **KOL status** (User InfoHub / VIP section): State "KOL account detected. Enhanced offboarding approval required (FCMI Manager + CCO + @KOLUserOffboardingBot notification + ELT Notification Form)." Impact on approval pathway at Step 22 only.
 - **P2P Merchant status** (affects courtesy notifications)
 - **VIP level** (affects approval tier — use highest level if multiple designations)
 - **Employee status** (requires enhanced approval pathway)
-State any detected special statuses at the end of the Phase 0 output. HPI, KOL, and employee status do not change the investigation methodology — all analytical steps proceed as normal.
-**HARD STOP:** Do NOT fill any ICR boxes yet. Ask: "Does this narrative accurately reflect the evidence? Shall we begin the ICR?"
-**System Constraint:** "Related Parent ICR" typically refers to the current case reference in HaoDesk/CICM. Do not treat as a missing document unless context explicitly suggests otherwise.
+State any detected special statuses at the end of the Phase 0B output. HPI, KOL, and employee status do not change the investigation methodology — all analytical steps proceed as normal.
+
+**6. Hard Stop**
+- If no unresolved hard blockers: "Does this narrative accurately reflect the evidence? Shall we begin the ICR?"
+- If unresolved hard blockers remain: "The following hard blockers remain unresolved: [list with step impact]. These steps cannot be completed to QC standard without them. Do you want to proceed with gaps documented, or gather the missing data first?"
+
+Do not use the standard "Shall we begin?" phrasing when hard blockers are present.
+
+**System Constraint:** "Related Parent ICR" typically refers to the current case reference in HaoDesk/CICM. Do not treat it as a missing document unless context explicitly suggests otherwise.
+
 ---
 ## PACING MODE
 After Phase 0 confirmation, the investigation proceeds in one of two modes. Express mode is the default.
