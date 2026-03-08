@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import useStreamingChat from '../hooks/useStreamingChat';
@@ -18,6 +18,7 @@ import QCPasteModal from '../components/shared/QCPasteModal';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
+  const navigate = useNavigate();
   const { token } = useAuth();
 
   const [caseData, setCaseData] = useState(null);
@@ -33,6 +34,7 @@ export default function InvestigationPage() {
   const [showQCModal, setShowQCModal] = useState(false);
   const [stepSignalled, setStepSignalled] = useState(false);
   const [autoExecuting, setAutoExecuting] = useState(false);
+  const autoAbortRef = useRef(null);
   const dragging = useRef(false);
 
   const {
@@ -237,6 +239,8 @@ export default function InvestigationPage() {
   // --- Auto-execute: run remaining steps without human approval ---
   const handleAutoExecute = useCallback(async (skipSummaries = false) => {
     if (!conversationId || autoExecuting) return;
+    const controller = new AbortController();
+    autoAbortRef.current = controller;
     setAutoExecuting(true);
     setStepComplete(false);
     setStepSignalled(false);
@@ -246,7 +250,7 @@ export default function InvestigationPage() {
     let currentToolsUsed = [];
 
     try {
-      const response = await api.autoExecute(token, conversationId, skipSummaries);
+      const response = await api.autoExecute(token, conversationId, skipSummaries, controller.signal);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -353,11 +357,32 @@ export default function InvestigationPage() {
         }
       }
     } catch (err) {
-      setStepError(err.message);
+      if (err.name !== 'AbortError') setStepError(err.message);
     } finally {
+      autoAbortRef.current = null;
       setAutoExecuting(false);
+      // Finalize any in-flight streaming message
+      if (currentStreamMsgId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === currentStreamMsgId
+              ? { ...msg, isStreaming: false }
+              : msg
+          )
+        );
+      }
     }
   }, [conversationId, token, autoExecuting, setMessages, setStepComplete, setTokenUsage]);
+
+  const handleResetCase = useCallback(async () => {
+    if (!conversationId || !window.confirm('Reset this investigation? The conversation will be deleted and the case will return to its initial state. This cannot be undone.')) return;
+    try {
+      await api.resetCase(token, conversationId);
+      navigate('/cases');
+    } catch (err) {
+      setStepError(err.message);
+    }
+  }, [conversationId, token, navigate]);
 
   if (caseLoading) {
     return (
@@ -452,13 +477,27 @@ export default function InvestigationPage() {
               <TokenUsageDisplay tokenUsage={tokenUsage} />
               <StepIndicator currentStep={currentStep} phase={stepPhase} />
             </div>
-            <DownloadPdfButton
-              conversationId={conversationId}
-              disabled={sending || aiLoading || autoExecuting}
-            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleResetCase}
+                disabled={sending || aiLoading || autoExecuting}
+                className="p-1.5 rounded-lg text-surface-400 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-colors"
+                title="Reset investigation"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H4.598a.75.75 0 00-.75.75v3.634a.75.75 0 001.5 0v-2.033l.312.311a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm-1.873-7.263a7 7 0 00-11.712 3.138.75.75 0 001.45.388 5.5 5.5 0 019.2-2.466l.312.311H10.256a.75.75 0 000 1.5h3.634a.75.75 0 00.75-.75V2.648a.75.75 0 00-1.5 0v2.033l-.312-.311a6.972 6.972 0 00-.389-.209z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <DownloadPdfButton
+                conversationId={conversationId}
+                disabled={sending || aiLoading || autoExecuting}
+              />
+            </div>
           </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
-          {(sending || autoExecuting) && <StreamingIndicator />}
+          {(sending || autoExecuting) && (
+            <StreamingIndicator onStop={autoExecuting ? () => autoAbortRef.current?.abort() : undefined} />
+          )}
           {stepError && (
             <div className="mx-4 mb-2 px-4 py-2 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
               <span>{stepError}</span>

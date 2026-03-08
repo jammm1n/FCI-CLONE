@@ -154,17 +154,26 @@ export async function getInvestigationState(token, conversationId) {
   return handleResponse(res);
 }
 
-export async function autoExecute(token, conversationId, skipSummaries = false) {
+export async function autoExecute(token, conversationId, skipSummaries = false, signal) {
   const res = await fetch(`${BASE_URL}/conversations/${conversationId}/auto-execute`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ skip_summaries: skipSummaries }),
+    signal,
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || `Auto-execute failed: ${res.status}`);
   }
   return res;
+}
+
+export async function resetCase(token, conversationId) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/reset`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
 }
 
 // ---------------------------------------------------------------------------

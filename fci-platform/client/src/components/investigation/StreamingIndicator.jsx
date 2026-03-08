@@ -1,4 +1,4 @@
-export default function StreamingIndicator() {
+export default function StreamingIndicator({ onStop }) {
   return (
     <div className="py-2 shrink-0" style={{ paddingLeft: '5%', paddingRight: '5%' }}>
       <div className="flex justify-start">
@@ -13,6 +13,17 @@ export default function StreamingIndicator() {
               <div className="w-2 h-2 rounded-full bg-gold-500 animate-pulse-subtle" style={{ animationDelay: '400ms' }} />
             </div>
             <span className="text-sm text-gold-500/70">Analyzing...</span>
+            {onStop && (
+              <button
+                onClick={onStop}
+                className="ml-1 w-5 h-5 rounded flex items-center justify-center bg-surface-200 dark:bg-surface-700 hover:bg-red-500/20 text-surface-500 hover:text-red-400 transition-colors"
+                title="Stop"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                  <rect x="3" y="3" width="10" height="10" rx="1" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>

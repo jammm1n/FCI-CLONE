@@ -731,6 +731,43 @@ async def delete_conversation(
     logger.info("Deleted conversation %s for user %s", conversation_id, user_id)
 
 
+async def reset_case_conversation(
+    conversation_id: str,
+    user_id: str,
+) -> dict:
+    """
+    Reset a case investigation by deleting the conversation and clearing
+    the case's conversation_id. The case returns to its pre-investigation state.
+    """
+    db = get_database()
+
+    conversation = await db.conversations.find_one(
+        {"_id": conversation_id, "user_id": user_id},
+        {"case_id": 1},
+    )
+    if conversation is None:
+        raise ValueError(f"Conversation not found or not owned by user: {conversation_id}")
+
+    case_id = conversation.get("case_id")
+
+    # Delete the conversation
+    await db.conversations.delete_one({"_id": conversation_id})
+
+    # Clear the case's conversation_id so it can be re-opened fresh
+    if case_id:
+        await db.cases.update_one(
+            {"_id": case_id},
+            {"$unset": {"conversation_id": ""}, "$set": {"status": "open"}},
+        )
+
+    logger.info(
+        "Reset case conversation %s (case %s) for user %s",
+        conversation_id, case_id, user_id,
+    )
+
+    return {"status": "reset", "case_id": case_id}
+
+
 # ---------------------------------------------------------------------------
 # API message reconstruction
 # ---------------------------------------------------------------------------

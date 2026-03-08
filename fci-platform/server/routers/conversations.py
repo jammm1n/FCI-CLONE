@@ -631,3 +631,23 @@ async def delete_conversation(
         raise HTTPException(status_code=404, detail=str(e))
 
     return {"status": "deleted"}
+
+
+@router.post("/{conversation_id}/reset")
+async def reset_case(
+    conversation_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Reset a case investigation — deletes the conversation and clears
+    the case's conversation_id so it can be re-opened fresh.
+    """
+    try:
+        result = await conversation_manager.reset_case_conversation(
+            conversation_id=conversation_id,
+            user_id=current_user["user_id"],
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    return result
