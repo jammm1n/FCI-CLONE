@@ -5,8 +5,22 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
+  const [showExperimental, setShowExperimental] = useState(false);
   const textareaRef = useRef(null);
   const dropRef = useRef(null);
+  const experimentalRef = useRef(null);
+
+  // Close experimental popover on click outside
+  useEffect(() => {
+    if (!showExperimental) return;
+    function handleClickOutside(e) {
+      if (experimentalRef.current && !experimentalRef.current.contains(e.target)) {
+        setShowExperimental(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExperimental]);
 
   const handleSend = useCallback(() => {
     if (!text.trim() && images.length === 0) return;
@@ -145,27 +159,73 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
                 Continue Discussion
               </button>
             </div>
-            {/* Auto-execute — easy to remove: delete this block */}
+            {/* Experimental features popover */}
             {onAutoExecute && currentStep <= 3 && (
-              <div className="flex items-center justify-center gap-3 mt-2">
+              <div className="relative mt-2 flex justify-center" ref={experimentalRef}>
                 <button
-                  onClick={() => onAutoExecute(false)}
+                  onClick={() => setShowExperimental((prev) => !prev)}
                   disabled={stepLoading || autoExecuting}
-                  className="text-xs text-surface-400 hover:text-gold-500 transition-colors flex items-center gap-1"
+                  className="text-xs text-surface-400 hover:text-amber-500 transition-colors flex items-center gap-1 disabled:opacity-40"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-                    <path d="M2 4.5A2.5 2.5 0 014.5 2h2.879a2.5 2.5 0 011.767.732l2.122 2.121A2.5 2.5 0 0112 6.622V11.5A2.5 2.5 0 019.5 14h-5A2.5 2.5 0 012 11.5v-7z" />
+                    <path d="M5.525 3.025a.75.75 0 01.05 1.06L4.136 5.72H9.5a4.25 4.25 0 014.25 4.25v.5a.75.75 0 01-1.5 0v-.5A2.75 2.75 0 009.5 7.22H4.136l1.439 1.635a.75.75 0 01-1.15.96l-2.5-2.84a.75.75 0 010-.96l2.5-2.84a.75.75 0 011.1-.15z" />
                   </svg>
-                  Auto-run remaining steps
+                  Experimental
                 </button>
-                <span className="text-surface-600">·</span>
-                <button
-                  onClick={() => onAutoExecute(true)}
-                  disabled={stepLoading || autoExecuting}
-                  className="text-xs text-surface-500 hover:text-gold-500 transition-colors"
-                >
-                  express (no summaries)
-                </button>
+
+                {showExperimental && (
+                  <div className="absolute bottom-full mb-2 w-72 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 shadow-xl z-20 animate-fade-in overflow-hidden">
+                    {/* Warning banner */}
+                    <div className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-start gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0">
+                        <path fillRule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 01-1.299 2.25H2.804a1.5 1.5 0 01-1.3-2.25l5.197-9zM8 4a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0v-2.5A.75.75 0 018 4zm0 6.5a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 leading-snug">
+                        These features bypass step-by-step approval. Output quality may vary.
+                      </p>
+                    </div>
+
+                    <div className="p-2 flex flex-col gap-1">
+                      {/* Auto-run remaining */}
+                      <button
+                        onClick={() => { setShowExperimental(false); onAutoExecute(false); }}
+                        disabled={stepLoading || autoExecuting}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors disabled:opacity-40 group"
+                      >
+                        <div className="text-sm font-medium text-surface-700 dark:text-surface-200 group-hover:text-gold-500 transition-colors">
+                          Auto-run remaining steps
+                        </div>
+                        <div className="text-xs text-surface-400 mt-0.5">
+                          Run all remaining steps with summaries between each
+                        </div>
+                      </button>
+
+                      {/* Express */}
+                      <button
+                        onClick={() => { setShowExperimental(false); onAutoExecute(true); }}
+                        disabled={stepLoading || autoExecuting}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors disabled:opacity-40 group"
+                      >
+                        <div className="text-sm font-medium text-surface-700 dark:text-surface-200 group-hover:text-gold-500 transition-colors">
+                          Express (no summaries)
+                        </div>
+                        <div className="text-xs text-surface-400 mt-0.5">
+                          Skip step summaries for faster execution
+                        </div>
+                      </button>
+
+                      {/* One-shot placeholder */}
+                      <div className="w-full text-left px-3 py-2 rounded-lg opacity-40 cursor-not-allowed">
+                        <div className="text-sm font-medium text-surface-500 dark:text-surface-500">
+                          One-shot (coming soon)
+                        </div>
+                        <div className="text-xs text-surface-400 mt-0.5">
+                          Full ICR in a single AI call with extended thinking
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
