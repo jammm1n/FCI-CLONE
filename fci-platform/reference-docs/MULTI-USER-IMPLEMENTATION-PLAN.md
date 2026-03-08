@@ -8,10 +8,11 @@ Multi-user cases involve multiple linked suspects investigated together in a sin
 - No hard cap on subject count (min 2, no max — practical limits determined by context window)
 - Ingestion is sequential: one complete subject at a time, same UI, same sections
 - Stepped investigation only — no autopilot/auto-execute for multi-user
-- 8 investigation blocks (vs 4 for single-user) with smaller scope per block
-- Filtered data injection per block to manage context window
+- 9 investigation blocks: 8 ICR blocks (vs 4 for single-user) + 1 QC block — smaller scope per block
+- Block 1 injects ALL case data (unfiltered) for Phase 0 inventory; blocks 2-8 inject filtered data per block to manage context window
 - Dedicated system prompt (`system-prompt-multi-user.md`)
 - Sections nested per-subject within the ingestion case document
+- For multi-user cases, `coconspirator_uids` is NOT used — the `subjects` array replaces it entirely. `coconspirator_uids` remains for single-user cases only (display in assembled markdown header).
 
 ---
 
@@ -95,7 +96,7 @@ The existing functions to modify (with their current names — not renamed):
 - `save_notes(case_id, notes_text)` — add `subject_index` parameter, update path.
 - `save_text_section(case_id, section_key, text)` — add `subject_index` parameter, update path.
 - `save_text_section_with_ai(case_id, section_key, text)` — add `subject_index` parameter, update path.
-- `get_case_status(case_id)` — for multi-user, return sections for the current subject only (or specified subject). Must also return `subjects` array with status for progress display.
+- `get_case_status(case_id)` — for multi-user, return sections for the **current subject only** (keyed by `current_subject_index`). This preserves the existing polling hook's terminal-state detection logic (it checks `sections[*].status !== 'processing'`). Also return `subjects` array with per-subject summary status, `current_subject_index`, and `case_mode` for the progress header display.
 
 Helper function to build the dot path:
 ```python
@@ -134,8 +135,9 @@ def _section_path(section_key: str, subject_index: int | None = None) -> str:
 
 **File:** `server/models/ingestion_schemas.py`
 
-- `CreateIngestionCaseRequest` — add `case_mode: str = "single"`, `total_subjects: int = 1`. Note: existing `coconspirator_uids` field is conceptually related but separate (used for display, not for multi-user ingestion flow).
-- `CaseStatusResponse` — add `subjects` list with per-subject status, `current_subject_index`, `case_mode`
+- `CreateIngestionCaseRequest` — add `case_mode: str = "single"`, `total_subjects: int = 1`. For multi-user cases, `coconspirator_uids` should NOT be populated — the `subjects` array replaces it.
+- Add `SubjectStatusSummary` model: `user_id: str | None`, `label: str`, `status: str` (pending / in_progress / complete), `sections_complete: int = 0`, `sections_total: int = 0`
+- `CaseStatusResponse` — add `case_mode: str = "single"`, `current_subject_index: int = 0`, `subjects: list[SubjectStatusSummary] = []`. The `sections` field continues to hold the current subject's sections (see 1.2).
 
 ### 1.7 Backward Compatibility
 
@@ -144,6 +146,9 @@ All changes must be backward compatible:
 - `subject_index=None` defaults to top-level `sections` path — existing code unchanged
 - No migration needed for existing data
 - All C360 processor, AI processor, Kodex processor functions receive `subject_index` and pass through — their internal logic doesn't change
+- `coconspirator_uids` field is untouched for single-user cases. For multi-user cases, it is left as an empty list — subject tracking is handled entirely by the `subjects` array
+
+**IMPORTANT — Key mapping indirection to be aware of:** Ingestion section keys (`previous_icrs`, `rfis`, `hexa_dump`, `raw_hex_dump`) differ from preprocessed_data keys (`prior_icr`, `rfi`, `l1_referral`, `haoDesk`). The mapping happens during assembly via `C360_AI_TO_PREPROCESSED` and `SECTION_TO_PREPROCESSED` in `ingestion_service.py`. This indirection is unchanged for multi-user — the same mappings apply per subject.
 
 ### Phase 1 Testing
 - Create a multi-user ingestion case via API
@@ -299,6 +304,7 @@ The `sections` parameter enables filtered injection:
 
 - Add `SubjectData` model: `user_id: str`, `label: str`, `preprocessed_data: PreprocessedData`
 - Update `CaseDetailResponse` to include `case_mode: str = "single"`, `total_subjects: int = 1`, `subjects: list[SubjectData] = []`
+- Update `CaseSummary` to include `case_mode: str = "single"`, `total_subjects: int = 1` — needed by CaseCard to show multi-user badge and hide Autopilot button
 
 ### 2.5 Case Service Updates
 
@@ -433,8 +439,7 @@ MULTI_USER_STEP_CONFIG = {
         "label": "Communications & OSINT",
         "steps_covered": [15, 16, 17, 18, 19],
         "model": "claude-opus-4-6",
-        "docs": ["icr-steps-analysis"],   # filtered to Steps 15-16
-                                          # + icr-steps-decision for 17-19
+        "docs": ["icr-steps-analysis", "icr-steps-decision"],  # Steps 15-16 from analysis, 17-19 from decision
     },
     7: {
         "phase": "summary",
@@ -450,17 +455,28 @@ MULTI_USER_STEP_CONFIG = {
         "model": "claude-opus-4-6",
         "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"],
     },
+    9: {
+        "phase": "qc_check",
+        "label": "QC Check",
+        "steps_covered": [],              # No ICR steps — QC is a review-only block
+        "model": "claude-opus-4-6",
+        "docs": ["qc-full-checklist"],    # Same as single-user step 5
+    },
+    "summary": {
+        "model": "claude-opus-4-6",       # Model for inter-block summary generation
+    },
 }
 
 MULTI_USER_STEP_PHASES = {
     1: "setup", 2: "setup", 3: "analysis", 4: "analysis",
-    5: "analysis", 6: "analysis", 7: "summary", 8: "decision",
+    5: "analysis", 6: "analysis", 7: "summary", 8: "decision", 9: "qc_check",
 }
 ```
 
-**Note:** Block 6 spans two step documents (`icr-steps-analysis` for Steps 15-16 and `icr-steps-decision` for Steps 17-19). The step doc filtering function must handle loading from multiple source docs when needed.
-
-All blocks default to Opus — multi-user cases need the stronger model due to complexity.
+**Notes:**
+- Block 6 spans two step documents (`icr-steps-analysis` for Steps 15-16 and `icr-steps-decision` for Steps 17-19). Both docs are listed in the `docs` array — `get_filtered_step_doc()` extracts only the `steps_covered` from each.
+- Block 9 (QC Check) mirrors single-user step 5: the investigator pastes their completed multi-user ICR text, and the AI reviews it against the QC checklist. The QC paste modal (`QCPasteModal`) is reused. The transition from block 8→9 uses the same `qc_check()` function as single-user (see Phase 5.5).
+- All blocks default to Opus — multi-user cases need the stronger model due to complexity.
 
 ### 4.2 Block-to-Data Mapping
 
@@ -468,18 +484,32 @@ All blocks default to Opus — multi-user cases need the stronger model due to c
 
 ```python
 MULTI_USER_BLOCK_DATA = {
-    1: ["user_profile", "kyc", "tx_summary", "account_blocks"],
+    1: None,                  # ALL data — unfiltered. Phase 0 (initial assessment) runs
+                              # within block 1 and needs a full data inventory for every
+                              # subject. The AI then uses the step doc to scope its
+                              # narrative to Steps 1-3 only. This matches single-user
+                              # behavior where all data is injected at every step.
     2: ["l1_referral", "haoDesk", "prior_icr", "kodex", "l1_victim", "l1_suspect"],
     3: ["tx_summary", "ctm_alerts", "ftm_alerts"],
     4: ["elliptic", "address_xref", "privacy_coin"],
     5: ["counterparty", "failed_fiat", "device_ip"],
     6: ["investigator_notes", "rfi"],
-    7: ["tx_summary"],       # light reference data for unusual activity summary
+    7: ["tx_summary"],       # light reference data for unusual activity summary;
+                              # summaries from blocks 1-6 are the primary context
     8: None,                  # decision block — summaries only, no raw data
+    9: None,                  # QC block — no case data injected (investigator pastes ICR text)
 }
 ```
 
-Block 8 receives no raw case data — only the rolling step summaries from blocks 1-7.
+**Semantics of `None`:**
+- Block 1: `None` = inject ALL sections (unfiltered) for Phase 0 inventory
+- Block 8: `None` = inject NO data (decision uses only step summaries)
+- Block 9: `None` = inject NO data (QC reviews pasted ICR text)
+
+**IMPORTANT:** These three `None` values have **different meanings**. The injection logic in `_rebuild_step_api_messages` (Phase 5.2) must distinguish between them:
+- Block 1 (`phase == "setup"` and first block): inject full unfiltered case data
+- Block 8 (`phase == "decision"`): no case data injection
+- Block 9 (`phase == "qc_check"`): no case data injection (investigator pastes text as a regular message)
 
 ### 4.3 Step Document Filtering
 
@@ -508,12 +538,25 @@ Step documents use `## STEP N:` as section delimiters (verified in `icr-steps-se
 
 Cache the parsed result per doc_id to avoid re-parsing on every call.
 
+**Wiring — how `steps_covered` flows to `get_filtered_step_doc`:**
+
+`get_step_system_prompt(step, multi_user=True)` reads `MULTI_USER_STEP_CONFIG[step]` to get both `"docs"` and `"steps_covered"`. For each doc_id in `"docs"`, it calls `get_filtered_step_doc(doc_id, steps_covered)` instead of `get_document(doc_id)`. The filtering function returns only the `## STEP` sections whose numbers intersect with `steps_covered`.
+
+For blocks that load from **multiple docs** (e.g., Block 6 loads from both `icr-steps-analysis` and `icr-steps-decision`), each doc is filtered by the same `steps_covered` list. Steps 15-16 will only match sections in `icr-steps-analysis`; Steps 17-19 will only match sections in `icr-steps-decision`. The preamble is included from the **first** doc only (to avoid duplicating Phase 0 / SLA preambles).
+
+For Block 9 (QC), `steps_covered` is empty and `docs` is `["qc-full-checklist"]`. Since `qc-full-checklist` has no `## STEP` headers, `get_filtered_step_doc` should fall back to returning the **full document** when `steps_covered` is empty — no filtering needed.
+
+For non-step docs (e.g., `decision-matrix`, `mlro-escalation-matrix`), these are injected via `get_document()` as-is — no filtering. Only docs that contain `## STEP` headers go through `get_filtered_step_doc`.
+
 ### Phase 4 Testing
-- Verify `MULTI_USER_STEP_CONFIG` loads correctly
+- Verify `MULTI_USER_STEP_CONFIG` loads correctly (9 blocks + summary)
 - Verify data mapping returns correct section keys per block
+- Verify Block 1 data mapping returns `None` (all data) and Block 8/9 return `None` (no data)
 - Verify step doc filtering extracts correct `## STEP` sections from each doc
-- Verify preamble (Phase 0, SLA, etc.) is always included
-- Verify Block 6 correctly loads from two source documents
+- Verify preamble (Phase 0, SLA, etc.) is included from first doc only
+- Verify Block 6 correctly loads from two source documents with correct step filtering
+- Verify Block 9 loads `qc-full-checklist` in full (no step filtering)
+- Verify non-step docs (`decision-matrix`, `mlro-escalation-matrix`) are loaded unfiltered
 - Verify single-user `STEP_CONFIG` is completely unaffected
 
 ---
@@ -528,9 +571,37 @@ Cache the parsed result per doc_id to avoid re-parsing on every call.
 
 `create_conversation` modifications:
 - Detect `case.get("case_mode") == "multi"` on the case document
-- Use `MULTI_USER_STEP_CONFIG` for investigation state initialization (8 blocks instead of 4)
+- Store `case_mode` on the conversation document itself — avoids needing to re-fetch the case doc on every message just to check mode:
+  ```python
+  conversation_doc["case_mode"] = "multi"  # or "single" for single-user
+  ```
+- Use `MULTI_USER_STEP_CONFIG` for investigation state initialization (9 blocks instead of 5)
+- Include `total_steps` and per-block labels in the investigation state — the frontend needs these for StepIndicator rendering without hardcoding block counts:
+  ```python
+  "investigation_state": {
+      "current_step": 1,
+      "total_steps": 9,           # 5 for single-user, 9 for multi-user
+      "step_labels": {             # block number → display label
+          "1": "Identity & Account Overview",
+          "2": "Case History & Context",
+          ...
+          "9": "QC Check",
+      },
+      "steps": [
+          {
+              "step_number": 1,
+              "phase": "setup",
+              "label": "Identity & Account Overview",
+              "status": "active",
+              "summary": None,
+              ...
+          }
+      ],
+  }
+  ```
+  For single-user, populate from existing `STEP_CONFIG` with the same pattern (5 steps, labels from phase names). This is a **non-breaking addition** — existing fields (`current_step`, `steps`) stay the same.
 - Use multi-user initial assessment instruction
-- Build full case data markdown (all subjects, all sections) for Phase 0 injection
+- Build full case data markdown (all subjects, all sections) for Phase 0 injection — `_build_case_data_markdown(case, sections=None)` (unfiltered)
 - System prompt selection happens in `get_step_system_prompt` / `get_system_prompt` — see 5.3
 
 ```python
@@ -541,6 +612,11 @@ MULTI_USER_INITIAL_ASSESSMENT = (
     "anomalies, connections between subjects, and clarifying questions. "
     "Do NOT produce a narrative yet — that comes in Phase 0B."
 )
+```
+
+The callers throughout `conversation_manager.py` (`send_message_streaming`, `approve_and_continue`, etc.) should read `case_mode` from the conversation document (not the case document) to determine which config to use:
+```python
+is_multi = conversation.get("case_mode") == "multi"
 ```
 
 ### 5.2 API Message Rebuilding — Data Injection
@@ -555,20 +631,39 @@ if current_step <= 4 and case:
     case_data_md = _build_case_data_markdown(case)
 ```
 
-For multi-user with 8 blocks, this must change to inject filtered data at all blocks except the decision block:
+For multi-user with 9 blocks, this must change. The three `None` values in `MULTI_USER_BLOCK_DATA` have different meanings (see Phase 4.2), so use explicit phase-based logic:
 
 ```python
-if case and case.get("case_mode") == "multi":
+is_multi = conversation.get("case_mode") == "multi"
+
+if is_multi and case:
+    phase = MULTI_USER_STEP_PHASES.get(current_step)
     block_data_keys = MULTI_USER_BLOCK_DATA.get(current_step)
-    if block_data_keys is not None:  # None = decision block, no data
+
+    if current_step == 1:
+        # Block 1: inject ALL data (unfiltered) — Phase 0 needs full inventory
+        case_data_md = _build_case_data_markdown(case, sections=None)
+        api_messages.append({"role": "user", "content": f"[CASE DATA]\n\n{case_data_md}"})
+        api_messages.append({"role": "assistant", "content": "Case data received..."})
+    elif block_data_keys is not None:
+        # Blocks 2-7: inject filtered data
         case_data_md = _build_case_data_markdown(case, sections=block_data_keys)
         api_messages.append({"role": "user", "content": f"[CASE DATA]\n\n{case_data_md}"})
         api_messages.append({"role": "assistant", "content": "Case data received..."})
-elif current_step <= 4 and case:
-    # Single-user — existing behavior
+    # else: Blocks 8-9 (decision, qc_check) — no case data, summaries only
+
+elif not is_multi and current_step <= 4 and case:
+    # Single-user — existing behavior, unchanged
     case_data_md = _build_case_data_markdown(case)
-    ...
+    api_messages.append({"role": "user", "content": f"[CASE DATA]\n\n{case_data_md}"})
+    api_messages.append({"role": "assistant", "content": "Case data received..."})
 ```
+
+This ensures:
+- **Block 1:** Full unfiltered data for all subjects (Phase 0 inventory + Steps 1-3)
+- **Blocks 2-7:** Only the sections relevant to that block's ICR steps
+- **Block 8 (Decision):** No raw data — relies on step summaries from blocks 1-7
+- **Block 9 (QC):** No case data — investigator pastes ICR text as a regular message
 
 ### 5.3 System Prompt & Step Document Injection
 
@@ -580,20 +675,41 @@ elif current_step <= 4 and case:
 3. Includes `general_rules` and `qc_quick_reference`
 
 For multi-user, this function needs to:
-1. Accept a `multi_user: bool = False` parameter (or `config_override`)
+1. Accept a `multi_user: bool = False` parameter
 2. Use `self.multi_user_system_prompt` instead of `self.case_system_prompt`
 3. Look up from `MULTI_USER_STEP_CONFIG` instead of `STEP_CONFIG`
-4. Call `get_filtered_step_doc()` to extract only the relevant steps from the doc
-5. Include `qc_quick_reference` for all blocks (not just steps 1-4) since multi-user blocks cover different step ranges
+4. Read `config[step]["steps_covered"]` and `config[step]["docs"]`; for each doc, call `get_filtered_step_doc(doc_id, steps_covered)` instead of `get_document(doc_id)`. Non-step docs (`decision-matrix`, etc.) are loaded via `get_document()` unfiltered. Distinguish by checking if the doc_id starts with `"icr-steps-"`.
+5. Include `qc_quick_reference` for **all** multi-user blocks (blocks 1-8), not just steps 1-4. The single-user gate `if step <= 4` becomes `if multi_user or step <= 4`.
+6. Always include `general_rules` and `reference_index_text` (same as single-user).
 
 ```python
 def get_step_system_prompt(self, step: int, multi_user: bool = False) -> str:
     config = MULTI_USER_STEP_CONFIG if multi_user else STEP_CONFIG
+    step_config = config[step]
     base_prompt = self.multi_user_system_prompt if multi_user else self.case_system_prompt
-    ...
+
+    parts = [base_prompt, self.general_rules]
+
+    # QC quick reference: all multi-user blocks, or single-user steps 1-4
+    if multi_user or step <= 4:
+        parts.append(self.qc_quick_reference)
+
+    parts.append(self.reference_index_text)
+
+    # Step-specific documents
+    steps_covered = step_config.get("steps_covered", [])
+    for doc_id in step_config.get("docs", []):
+        if doc_id.startswith("icr-steps-") and steps_covered:
+            # Filter to only the relevant ## STEP sections
+            parts.append(self.get_filtered_step_doc(doc_id, steps_covered))
+        else:
+            # Non-step docs (decision-matrix, qc-full-checklist, etc.) — load in full
+            parts.append(self.get_document(doc_id))
+
+    return "\n\n---\n\n".join(p for p in parts if p)
 ```
 
-The caller in `conversation_manager.py` determines `multi_user` from the case document and passes it through.
+The caller in `conversation_manager.py` reads `multi_user` from the conversation document (`conversation.get("case_mode") == "multi"`) and passes it through. This avoids an extra DB read for the case document.
 
 ### 5.4 Summary Generation
 
@@ -612,10 +728,43 @@ This ensures Block 8 receives structured per-subject summaries it can synthesize
 
 ### 5.5 Block Transitions
 
-`approve_and_continue` works the same — advances step counter, generates summary. The only differences:
-- 8 transitions instead of 4
+`approve_and_continue` currently has a hardcoded guard:
+```python
+if current_step > 3:
+    raise ValueError("Cannot advance from step {current_step}. Use QC check for step 4→5.")
+```
+
+This must be made mode-aware:
+```python
+is_multi = conversation.get("case_mode") == "multi"
+max_approve_step = 8 if is_multi else 3  # blocks 1-8 for multi, steps 1-3 for single
+if current_step > max_approve_step:
+    raise ValueError(
+        f"Cannot advance from step {current_step}. "
+        "Use QC check for the final transition."
+    )
+```
+
+The phase lookup must also switch config:
+```python
+step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+next_phase = step_phases[next_step]
+```
+
+**QC transition (block 8→9):** The existing `qc_check()` function handles the 4→5 transition for single-user. For multi-user, the same function handles 8→9. Update its guard:
+```python
+is_multi = conversation.get("case_mode") == "multi"
+expected_step = 8 if is_multi else 4
+if current_step != expected_step:
+    raise ValueError(f"QC check only valid at step {expected_step}, currently at {current_step}")
+```
+
+The QC paste modal (`QCPasteModal`) is reused — the investigator pastes their completed multi-user ICR text, and the AI reviews it against the full QC checklist. No changes needed to the modal itself.
+
+Other differences:
+- 9 transitions instead of 5
 - At each transition, the next block's data injection is filtered via `MULTI_USER_BLOCK_DATA`
-- Must use `MULTI_USER_STEP_CONFIG` for step count and labels
+- Must use `MULTI_USER_STEP_CONFIG` for step count, labels, and summary model
 
 ### 5.6 Disable Autopilot/Auto-Execute
 
@@ -626,12 +775,17 @@ For multi-user cases:
 
 ### Phase 5 Testing
 - Open a multi-user case for investigation
-- Verify Phase 0 receives full data for all subjects (unfiltered)
-- Verify Block 1 receives only `user_profile`, `kyc`, `tx_summary`, `account_blocks` for all subjects
+- Verify conversation document has `case_mode: "multi"` and `investigation_state.total_steps: 9`
+- Verify Block 1 receives full unfiltered data for all subjects (Phase 0 inventory needs everything)
+- Verify Blocks 2-7 receive only their filtered section subsets for all subjects
 - Verify Block 8 receives only step summaries, no raw data
+- Verify Block 9 (QC) receives no case data (investigator pastes ICR text)
 - Verify step summaries capture per-subject findings with UID labels
-- Step through all 8 blocks to completion
-- Verify single-user investigation flow is completely unaffected (regression test)
+- Verify `approve_and_continue` allows blocks 1→2 through 7→8 for multi-user
+- Verify `approve_and_continue` rejects block 8→9 (must use `qc_check`)
+- Verify `qc_check` works for block 8→9 transition
+- Step through all 9 blocks to completion
+- Verify single-user investigation flow is completely unaffected (regression test — same guards, same 5-step flow)
 - Verify autopilot/auto-execute return 400 for multi-user
 
 ---
@@ -665,9 +819,11 @@ The case data is pre-loaded — work through the steps using the data provided.
 - Proportionality: full analysis for all subjects, but depth matches
   available data. A subject with no activity at a given step gets a one-line
   confirmation, not a paragraph explaining the absence.
-- You will receive data for all subjects at Phase 0, then filtered by
-  relevant sections per block for subsequent steps. Each block contains
-  data for ALL subjects but only the sections relevant to that block's steps.
+- Block 1 includes ALL case data (unfiltered) for the Phase 0 inventory.
+  Blocks 2-7 inject only the sections relevant to that block's steps.
+  Each block's data covers ALL subjects but only the relevant section types.
+  Block 8 (Decision) receives no raw data — only step summaries.
+  Block 9 (QC) reviews the investigator's pasted ICR text.
 - Decision (Block 8): produce a combined recommendation. If subjects have
   divergent risk profiles, state the recommendation per subject with
   rationale for each.
@@ -695,6 +851,7 @@ controls which document you receive.
 - Block 6: Steps 15-19 (Communications & OSINT)
 - Block 7: Step 20 (Summary of Unusual Activity)
 - Block 8: Step 21 (Decision & Recommendation)
+- Block 9: QC Check (Review completed ICR against QC checklist)
 ---
 ### VOICE & TONE (STRICT)
 [Copied from system-prompt-case.md — identical content]
@@ -736,7 +893,7 @@ The existing Phase 0A/0B structure in `icr-steps-setup.md` works — the multi-u
 - Verify `get_step_system_prompt(step, multi_user=True)` returns correct prompt with filtered step doc
 - Verify Phase 0A produces per-subject inventory with UID labels
 - Verify Phase 0B narrative covers all subjects and their connections
-- Review AI output quality across all 8 blocks with multi-user prompt
+- Review AI output quality across all 9 blocks with multi-user prompt
 
 ---
 
@@ -763,9 +920,18 @@ For multi-user cases, display:
 
 ### 7.3 Step Indicator
 
-**File:** `client/src/components/investigation/StepIndicator.jsx`
+**File:** `client/src/components/shared/StepIndicator.jsx`
 
-Update to show 8 blocks with labels for multi-user. Read block count and labels from the investigation state (which is initialized from the step config). Single-user cases continue showing 4-5 steps.
+Currently hardcodes 5 dots via `[1,2,3,4,5].map()`. Must be made dynamic:
+- Read `total_steps` from `investigation_state` (populated by Phase 5.1): 5 for single-user, 9 for multi-user
+- Read step labels from `investigation_state.step_labels` for tooltip/display
+- Generate dots array dynamically: `Array.from({length: totalSteps}, (_, i) => i + 1).map(...)`
+- Phase label text uses the label from the investigation state instead of a hardcoded map
+- Props change: add `totalSteps` (default 5 for backward compat) and `stepLabel` (optional, falls back to phase name)
+
+**File:** `client/src/pages/InvestigationPage.jsx`
+
+Pass `totalSteps` and `stepLabel` from the loaded investigation state to `StepIndicator`. The `getInvestigationState()` API response must include these fields (update `InvestigationStateResponse` in `schemas.py` to include `total_steps: int = 5` and `step_labels: dict = {}`).
 
 ### 7.4 Case Data Panel / Tabs
 
@@ -780,24 +946,34 @@ Single-user cases: no change to tab structure.
 
 ### 7.5 Disable Experimental Features
 
-**File:** `client/src/pages/InvestigationPage.jsx`, `client/src/components/ChatInput.jsx`
+**File:** `client/src/pages/InvestigationPage.jsx`, `client/src/components/investigation/ChatInput.jsx`
 
-- Hide experimental popover (auto-execute, express) when multi-user
-- Chat input shows standard stepped controls only
-- Autopilot execution flow disabled
+- The experimental popover is already hidden by default when `onAutoExecute` is null — for multi-user, simply don't pass `onAutoExecute` to ChatInput. Add an explicit `case_mode !== "multi"` guard for clarity.
+- Chat input shows standard stepped controls only (approve/continue through blocks 1-8, QC paste for block 8→9)
+- Autopilot execution flow: `InvestigationPage` must not enter oneshot mode for multi-user cases. Guard the `?mode=oneshot` URL param check with `case_mode !== "multi"`.
 
-### 7.6 No Other Frontend Changes
+### 7.6 PDF Export
+
+**File:** `server/services/pdf_export.py`
+
+- For multi-user cases, include subject list in PDF header: "Multi-User Case — N Subjects: UID_001, UID_002, UID_003"
+- Read `case_mode` and `subjects` from the case document
+- No other PDF changes needed — the transcript body (chat messages) renders as-is
+
+### 7.7 No Other Frontend Changes
 
 Chat interface, message display, approval flow, step dividers, thinking display, PDF download — all work as-is. The investigator interacts with multi-user cases the same way as single-user, just with more blocks and a subject selector in the data panel.
 
 ### Phase 7 Testing
-- Open a multi-user case, verify case card shows multi-user badge
+- Open a multi-user case, verify case card shows multi-user badge and no Autopilot button
 - Verify investigation header shows subject list
-- Verify step indicator shows 8 blocks with labels
+- Verify step indicator shows 9 blocks with labels (dynamic, not hardcoded)
 - Verify case data tabs show per-subject data with subject selector
-- Verify autopilot/auto-execute/experimental features hidden
-- Full walkthrough: 8 blocks to completion, verify approval flow
-- Verify single-user investigation UI is completely unchanged
+- Verify autopilot/auto-execute/experimental features hidden for multi-user
+- Verify QC paste modal appears for block 8→9 transition
+- Full walkthrough: 9 blocks to completion, verify approval flow
+- Verify PDF export includes subject list in header
+- Verify single-user investigation UI is completely unchanged (5 steps, same behavior)
 
 ---
 
@@ -819,17 +995,18 @@ Chat interface, message display, approval flow, step dividers, thinking display,
 - Consider whether certain blocks need further splitting for high-subject-count cases
 
 ### 8.3 Output Quality Review
-- Verify UID labelling consistency across all 8 blocks
+- Verify UID labelling consistency across all 9 blocks
 - Verify per-subject proportionality (depth matches data availability)
 - Verify combined decision correctly handles divergent recommendations per subject
 - Verify step summaries capture per-subject findings adequately for downstream blocks
 - Verify Phase 0A produces per-subject inventory (not a single combined inventory)
+- Verify Block 9 QC check correctly reviews multi-user ICR text
 - Compare AI output against manually produced multi-user ICRs for QC compliance
 
 ### 8.4 PDF Export
 - Verify PDF export works for multi-user case transcripts
-- Include subject list in PDF header
-- Verify transcript length is manageable (multi-user + 8 blocks = long transcripts)
+- Verify subject list appears in PDF header
+- Verify transcript length is manageable (multi-user + 9 blocks = long transcripts)
 
 ### 8.5 Refinement
 - Adjust block boundaries based on testing
@@ -856,7 +1033,7 @@ Phase 3 (Ingestion Frontend)          Phase 5 (Conversation Manager)
                                       Phase 8 (Testing)
 ```
 
-**Critical path:** Phase 1 → Phase 2 → Phase 4 → Phase 5 → Phase 6 → Phase 8
+**Critical path:** Phase 1 → Phase 2 → Phase 4 → Phase 5 → Phase 6 → Phase 7 → Phase 8
 
 **Parallel work:** Phase 3 (ingestion frontend) can be built in parallel with Phases 4-6 once Phase 2 is complete. Phase 7 (investigation frontend) can be built in parallel with Phase 6 once Phase 5 is complete.
 
@@ -870,9 +1047,9 @@ Phase 3 (Ingestion Frontend)          Phase 5 (Conversation Manager)
 | 2 | `ingestion_service.py`, `conversation_manager.py`, `schemas.py`, `case_service.py` | — |
 | 3 | `IngestionPage.jsx`, `ingestion_api.js`, `useIngestionStatus.js` | — |
 | 4 | `config.py`, `knowledge_base.py` | — |
-| 5 | `conversation_manager.py`, `conversations.py` | — |
+| 5 | `conversation_manager.py`, `conversations.py`, `schemas.py` (`InvestigationStateResponse`) | — |
 | 6 | `knowledge_base.py` | `system-prompt-multi-user.md` |
-| 7 | `CaseCard.jsx`, `CaseHeader.jsx`, `StepIndicator.jsx`, `CaseDataTabs.jsx`, `InvestigationPage.jsx`, `ChatInput.jsx` | — |
+| 7 | `CaseCard.jsx`, `CaseHeader.jsx`, `StepIndicator.jsx`, `CaseDataTabs.jsx`, `InvestigationPage.jsx`, `ChatInput.jsx`, `pdf_export.py` | — |
 | 8 | Various (refinement) | — |
 
 ---
@@ -884,3 +1061,4 @@ Phase 3 (Ingestion Frontend)          Phase 5 (Conversation Manager)
 - Per-subject investigation state (all subjects progress through blocks together)
 - Cross-case subject linking (identifying the same UID across different cases)
 - Multi-user specific ingestion prompts (all existing prompts work per-subject as-is)
+- Migrating `coconspirator_uids` to `subjects` for existing single-user cases (different concepts, no migration needed)
