@@ -200,6 +200,7 @@ async def send_message(
                     is_initial_assessment=initial_assessment,
                     step_complete_signalled=step_complete_signalled,
                     oneshot_ready_signalled=oneshot_ready_signalled,
+                    thinking_content=done_event.get("thinking_content", ""),
                 )
                 # Now yield done — response is safely persisted
                 yield {
@@ -697,6 +698,7 @@ async def oneshot_execute(
                     tools_used=done_event.get("tools_used", []),
                     token_usage=done_event.get("token_usage", {}),
                     tool_call_messages=done_event.get("tool_call_messages", []),
+                    thinking_content=done_event.get("thinking_content", ""),
                 )
                 yield {
                     "data": json.dumps({

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -136,6 +136,21 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
           </div>
         )}
 
+        {/* One-shot complete: optional QC check */}
+        {convMode === 'oneshot' && oneshotExecuted && !disabled && (
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={onOneshotQCCheck}
+              className="text-xs text-surface-400 hover:text-amber-500 transition-colors flex items-center gap-1.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                <path fillRule="evenodd" d="M8.5 1.709a.75.75 0 0 0-1 0 8.963 8.963 0 0 1-4.84 2.217.75.75 0 0 0-.654.72 10.499 10.499 0 0 0 5.647 9.672.75.75 0 0 0 .694-.001 10.499 10.499 0 0 0 5.647-9.672.75.75 0 0 0-.654-.719A8.963 8.963 0 0 1 8.5 1.71ZM7.25 6a.75.75 0 0 0 0 1.5h.75v2.75a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 8.75 6h-1.5Z" clipRule="evenodd" />
+              </svg>
+              QC Check — paste final ICR text
+            </button>
+          </div>
+        )}
+
         {/* Step complete — approval mode: replaces the text input */}
         {stepComplete && currentStep >= 1 && currentStep <= 4 && (
           <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
@@ -242,10 +257,10 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
                         </div>
                       </button>
 
-                      {/* One-shot info */}
+                      {/* Autopilot info */}
                       <div className="w-full text-left px-3 py-2 rounded-lg opacity-50">
                         <div className="text-xs text-surface-400 mt-0.5">
-                          One-shot mode available from the case card
+                          Autopilot mode available from the case card
                         </div>
                       </div>
                     </div>
@@ -268,8 +283,8 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
           </div>
         )}
 
-        {/* Normal chat input — hidden when in approval mode or oneshot execute/complete */}
-        {(!stepComplete || !currentStep || currentStep > 4) && !(convMode === 'oneshot' && (oneshotReady || oneshotExecuted)) && <>
+        {/* Normal chat input — hidden when in approval mode or oneshot pre-execute */}
+        {(!stepComplete || !currentStep || currentStep > 4) && !(convMode === 'oneshot' && oneshotReady && !oneshotExecuted) && <>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here

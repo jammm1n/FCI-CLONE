@@ -468,6 +468,14 @@ export default function InvestigationPage() {
                   : msg
               )
             );
+          } else if (event.type === 'thinking_delta') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === streamMsgId
+                  ? { ...msg, thinking_content: (msg.thinking_content || '') + event.text }
+                  : msg
+              )
+            );
           } else if (event.type === 'tool_use') {
             toolsUsed.push({
               tool: event.tool,
@@ -513,6 +521,11 @@ export default function InvestigationPage() {
       setOneshotExecuting(false);
     }
   }, [conversationId, token, oneshotExecuting, setMessages, setTokenUsage]);
+
+  const handleOneshotQCSubmit = useCallback(async (pastedText) => {
+    setShowQCModal(false);
+    await sendMessage(pastedText);
+  }, [sendMessage]);
 
   const handleResetCase = useCallback(async () => {
     if (!conversationId || !window.confirm('Reset this investigation? The conversation will be deleted and the case will return to its initial state. This cannot be undone.')) return;
@@ -617,7 +630,7 @@ export default function InvestigationPage() {
               <TokenUsageDisplay tokenUsage={tokenUsage} />
               {convMode === 'oneshot' ? (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                  {oneshotExecuted ? 'One-shot complete' : oneshotReady ? 'Ready to execute' : 'One-shot setup'}
+                  {oneshotExecuted ? 'Autopilot complete' : oneshotReady ? 'Ready to execute' : 'Autopilot setup'}
                 </span>
               ) : (
                 <StepIndicator currentStep={currentStep} phase={stepPhase} />
@@ -668,12 +681,13 @@ export default function InvestigationPage() {
             onOneshotExecute={handleOneshotExecute}
             oneshotExecuting={oneshotExecuting}
             onContinueOneshotDiscussion={() => setOneshotReady(false)}
+            onOneshotQCCheck={() => setShowQCModal(true)}
           />
         </div>
       </div>
       {showQCModal && (
         <QCPasteModal
-          onSubmit={handleQCSubmit}
+          onSubmit={convMode === 'oneshot' ? handleOneshotQCSubmit : handleQCSubmit}
           onCancel={() => setShowQCModal(false)}
           loading={stepLoading}
         />

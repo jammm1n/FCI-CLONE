@@ -122,9 +122,9 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
                 navigate(`/investigation/${caseData.case_id}?mode=oneshot`);
               }}
               className="px-4 py-2.5 text-sm font-medium rounded-xl border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 hover:border-amber-500/60 transition-colors"
-              title="One-shot: full ICR in a single AI call"
+              title="Autopilot: AI produces the full ICR autonomously"
             >
-              One-shot
+              Autopilot
             </button>
           )}
           <button

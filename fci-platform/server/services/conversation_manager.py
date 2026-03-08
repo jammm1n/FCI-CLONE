@@ -541,6 +541,7 @@ async def store_streamed_response(
     is_initial_assessment: bool = False,
     step_complete_signalled: bool = False,
     oneshot_ready_signalled: bool = False,
+    thinking_content: str = "",
 ) -> dict:
     """
     Store a streamed conversation turn in MongoDB.
@@ -645,6 +646,8 @@ async def store_streamed_response(
         "timestamp": now,
         "visible": True,
     }
+    if thinking_content:
+        assistant_message["thinking_content"] = thinking_content
     if current_step:
         assistant_message["step"] = current_step
     all_new_messages.append(assistant_message)
@@ -727,6 +730,8 @@ async def get_history(conversation_id: str) -> dict:
             entry["images"] = msg["images"]
         if msg.get("step") is not None:
             entry["step"] = msg["step"]
+        if msg.get("thinking_content"):
+            entry["thinking_content"] = msg["thinking_content"]
 
         visible_messages.append(entry)
 
@@ -933,6 +938,7 @@ async def store_oneshot_execution(
     tools_used: list[dict],
     token_usage: dict,
     tool_call_messages: list[dict],
+    thinking_content: str = "",
 ) -> dict:
     """Store the one-shot execution result and mark the conversation as executed."""
     db = get_database()
@@ -962,18 +968,35 @@ async def store_oneshot_execution(
         }
         all_new_messages.append(msg)
 
+    # Build full tools_used: injected execution docs + AI-fetched references
+    injected = [
+        {"tool": "system_injected", "document_id": "system-prompt-oneshot-execution", "document_title": "One-Shot Execution Prompt"},
+        {"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"},
+        {"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"},
+        {"tool": "system_injected", "document_id": "icr-steps-setup", "document_title": "ICR Steps: Setup"},
+        {"tool": "system_injected", "document_id": "icr-steps-analysis", "document_title": "ICR Steps: Analysis"},
+        {"tool": "system_injected", "document_id": "icr-steps-decision", "document_title": "ICR Steps: Decision"},
+        {"tool": "system_injected", "document_id": "icr-steps-post", "document_title": "ICR Steps: Post-Decision"},
+        {"tool": "system_injected", "document_id": "decision-matrix", "document_title": "Decision Matrix"},
+        {"tool": "system_injected", "document_id": "mlro-escalation-matrix", "document_title": "MLRO Escalation Matrix"},
+        {"tool": "system_injected", "document_id": "qc-full-checklist", "document_title": "QC Submission Checklist"},
+    ]
+    all_tools_used = injected + list(tools_used)
+
     # Execution result
     assistant_msg_id = _generate_id("msg")
     assistant_message = {
         "message_id": assistant_msg_id,
         "role": "assistant",
         "content": ai_content,
-        "tools_used": tools_used,
+        "tools_used": all_tools_used,
         "token_usage": token_usage,
         "timestamp": now,
         "visible": True,
         "oneshot_execution": True,
     }
+    if thinking_content:
+        assistant_message["thinking_content"] = thinking_content
     all_new_messages.append(assistant_message)
 
     await db.conversations.update_one(

@@ -109,7 +109,7 @@ TOOL_SIGNAL_READY_TO_EXECUTE = {
     "description": (
         "Signal that you have reviewed all case data, asked any necessary "
         "clarifying questions, and are confident you have sufficient "
-        "information to produce the complete ICR in one-shot mode. Call "
+        "information to produce the complete ICR in autopilot mode. Call "
         "this ONLY when you assess >= 95% confidence that all required "
         "data is available and unambiguous. The investigator will then "
         "trigger the full ICR execution."
@@ -462,6 +462,7 @@ async def get_ai_response_streaming(
     tool_call_messages = []
     tool_call_count = 0
     full_text = ""
+    full_thinking = ""
 
     # Copy messages so we don't mutate the caller's list
     working_messages = list(messages)
@@ -486,10 +487,15 @@ async def get_ai_response_streaming(
 
         # Stream the API call
         async with client.messages.stream(**api_params) as stream:
-            # Yield text chunks as they arrive
-            async for text in stream.text_stream:
-                full_text += text
-                yield {"type": "content_delta", "text": text}
+            # Yield text and thinking chunks as they arrive
+            async for chunk in stream:
+                if chunk.type == "content_block_delta":
+                    if chunk.delta.type == "text_delta":
+                        full_text += chunk.delta.text
+                        yield {"type": "content_delta", "text": chunk.delta.text}
+                    elif chunk.delta.type == "thinking_delta":
+                        full_thinking += chunk.delta.thinking
+                        yield {"type": "thinking_delta", "text": chunk.delta.thinking}
 
             # Get the accumulated final message
             final_message = await stream.get_final_message()
@@ -508,7 +514,7 @@ async def get_ai_response_streaming(
 
         # --- Final response (no more tool calls) ---
         if final_message.stop_reason == "end_turn":
-            yield {
+            done_event = {
                 "type": "done",
                 "content": full_text,
                 "tools_used": all_tools_used,
@@ -520,6 +526,9 @@ async def get_ai_response_streaming(
                 },
                 "tool_call_messages": tool_call_messages,
             }
+            if full_thinking:
+                done_event["thinking_content"] = full_thinking
+            yield done_event
             return
 
         # --- Tool use: process tools and loop ---

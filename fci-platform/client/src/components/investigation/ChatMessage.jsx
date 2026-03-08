@@ -100,7 +100,9 @@ export default function ChatMessage({ message, conversationId }) {
   const isUser = message.role === 'user';
   const toolsUsed = message.tools_used || [];
   const isStreaming = message.isStreaming;
+  const thinkingContent = message.thinking_content || '';
   const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [showThinking, setShowThinking] = useState(false);
 
   return (
     <div className={`${isUser ? 'flex justify-end' : ''} animate-fade-in-up`}>
@@ -142,6 +144,35 @@ export default function ChatMessage({ message, conversationId }) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* AI Thinking (collapsible) */}
+        {!isUser && thinkingContent && (
+          <div className="mb-3">
+            <button
+              onClick={() => setShowThinking((prev) => !prev)}
+              className="flex items-center gap-1.5 text-xs text-surface-400 hover:text-purple-400 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className={`w-3 h-3 transition-transform ${showThinking ? 'rotate-90' : ''}`}
+              >
+                <path d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" />
+              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 opacity-60">
+                <path d="M8 1a5.5 5.5 0 0 0-4.764 8.246l-.703 2.108a.75.75 0 0 0 .949.949l2.108-.703A5.5 5.5 0 1 0 8 1ZM4 6.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5Zm.5 2.5a.5.5 0 0 0 0 1h4a.5.5 0 0 0 0-1h-4Z" />
+              </svg>
+              {showThinking ? 'Hide' : 'Show'} AI thinking
+              <span className="text-surface-500">({Math.round(thinkingContent.length / 4).toLocaleString()} tokens est.)</span>
+            </button>
+            {showThinking && (
+              <div className="mt-2 px-3 py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 max-h-96 overflow-y-auto">
+                <pre className="text-xs text-surface-400 dark:text-surface-500 whitespace-pre-wrap font-mono leading-relaxed">{thinkingContent}</pre>
+              </div>
+            )}
           </div>
         )}
 

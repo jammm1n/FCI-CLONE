@@ -199,7 +199,7 @@ class KnowledgeBase:
         MLRO escalation matrix, and reference index.
         """
         execution_header = """\
-# SYSTEM PROMPT — ONE-SHOT EXECUTION
+# SYSTEM PROMPT — AUTOPILOT EXECUTION
 
 ### IDENTITY & ROLE
 You are FCI-GPT, a Senior Compliance Investigator Copilot for Binance L2 Investigations. You are producing the complete ICR in a single execution pass. The setup conversation is included as context — honour any information or instructions the investigator provided.

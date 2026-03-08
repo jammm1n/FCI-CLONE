@@ -33,6 +33,7 @@ export default function useStreamingChat(token) {
     const decoder = new TextDecoder();
     let buffer = '';
     let toolsUsed = [];
+    let thinkingAccum = '';
 
     while (true) {
       const { done, value } = await reader.read();
@@ -62,9 +63,16 @@ export default function useStreamingChat(token) {
                 : msg
             )
           );
+        } else if (event.type === 'thinking_delta') {
+          thinkingAccum += event.text;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, thinking_content: (msg.thinking_content || '') + event.text }
+                : msg
+            )
+          );
         } else if (event.type === 'done') {
-          // Storage now happens BEFORE the done event is sent,
-          // so message_id is already available
           if (event.token_usage) setTokenUsage(event.token_usage);
           setMessages((prev) =>
             prev.map((msg) =>
