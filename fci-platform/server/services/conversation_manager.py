@@ -1228,7 +1228,7 @@ def _build_case_data_markdown(case: dict) -> str:
         "kodex": "Law Enforcement / Kodex",
         "l1_victim": "L1 Victim Communications",
         "l1_suspect": "L1 Suspect Communications",
-        "investigator_notes": "Investigator Notes",
+        "investigator_notes": "Investigator Notes & OSINT",
     }
 
     parts = [
@@ -1246,6 +1246,23 @@ def _build_case_data_markdown(case: dict) -> str:
         if content:
             parts.append(f"## {header}")
             parts.append("")
+            # Add subset count context if available
+            if field == "prior_icr":
+                total_count = preprocessed.get("prior_icr_count")
+                if total_count:
+                    parts.append(
+                        f"*Note: {total_count} prior ICRs exist for this subject. "
+                        f"The most recent are summarised below.*"
+                    )
+                    parts.append("")
+            elif field == "rfi":
+                total_count = preprocessed.get("rfi_count")
+                if total_count:
+                    parts.append(
+                        f"*Note: {total_count} RFIs exist for this subject. "
+                        f"The most recent are summarised below.*"
+                    )
+                    parts.append("")
             parts.append(content)
             parts.append("")
             parts.append("---")

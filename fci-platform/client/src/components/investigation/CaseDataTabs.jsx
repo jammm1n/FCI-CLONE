@@ -25,7 +25,7 @@ const TAB_GROUPS = [
   { id: 'kodex', label: 'LE / Kodex', tabs: [{ key: 'kodex', label: 'LE / Kodex' }] },
   { id: 'l1_victim', label: 'L1 Victim', tabs: [{ key: 'l1_victim', label: 'L1 Victim' }] },
   { id: 'l1_suspect', label: 'L1 Suspect', tabs: [{ key: 'l1_suspect', label: 'L1 Suspect' }] },
-  { id: 'notes', label: 'Notes', tabs: [{ key: 'investigator_notes', label: 'Notes' }] },
+  { id: 'notes', label: 'Notes & OSINT', tabs: [{ key: 'investigator_notes', label: 'Notes & OSINT' }] },
 ];
 
 export default function CaseDataTabs({

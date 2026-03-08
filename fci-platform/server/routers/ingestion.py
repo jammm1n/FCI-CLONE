@@ -952,7 +952,24 @@ async def get_entries(
         'ai_status': section.get('ai_status'),
         'ai_error': section.get('ai_error'),
         'updated_at': section.get('updated_at'),
+        'total_count': section.get('total_count'),
     }
+
+
+@router.patch('/cases/{case_id}/entries/{section_key}/total-count')
+async def set_total_count(
+    case_id: str,
+    section_key: str,
+    body: dict,
+    current_user: dict = Depends(get_current_user),
+):
+    """Set the total count for an iterative section (e.g. total prior ICRs for a subject)."""
+    if section_key not in _ITERATIVE_SECTIONS:
+        raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
+    await _get_case_or_404(case_id)
+    count = body.get('count')
+    await ingestion_service.set_total_count(case_id, section_key, count)
+    return {'ok': True, 'total_count': count}
 
 
 # ── Text + Image Sections (L1 Victim, L1 Suspect) ────────────────

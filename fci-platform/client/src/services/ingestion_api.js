@@ -251,6 +251,15 @@ export async function getEntries(token, caseId, sectionKey) {
   return handleResponse(res);
 }
 
+export async function setTotalCount(token, caseId, sectionKey, count) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/total-count`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ count }),
+  });
+  return handleResponse(res);
+}
+
 // ── Text + Image Sections (L1 Victim, L1 Suspect) ───────────────
 
 export async function saveTextImageSection(token, caseId, sectionKey, text, files) {

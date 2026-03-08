@@ -19,7 +19,7 @@ const SECTION_LABELS = {
   kodex: 'Law Enforcement / Kodex',
   l1_victim: 'L1 Victim Communications',
   l1_suspect: 'L1 Suspect Communications',
-  investigator_notes: 'Investigator Notes',
+  investigator_notes: 'Investigator Notes & OSINT',
 };
 
 
@@ -1352,7 +1352,7 @@ function TextPreviewModal({ title, data, activeTab, onTabChange, onClose }) {
 
 // ── Iterative Entry Section (Prior ICR) ──────────────────────────
 
-function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
+function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, showTotalCount = false }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const [text, setText] = useState('');
@@ -1361,12 +1361,18 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [previewTab, setPreviewTab] = useState('ai');
+  const [totalCount, setTotalCount] = useState(section.total_count ?? '');
 
   const entries = section.entries || [];
   const status = section.status || 'empty';
   const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
   const isNone = status === 'none';
+
+  // Sync totalCount from section data when it changes externally
+  useEffect(() => {
+    setTotalCount(section.total_count ?? '');
+  }, [section.total_count]);
 
   async function handleMarkNone() {
     try {
@@ -1440,6 +1446,17 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
     }
   }
 
+  async function handleTotalCountBlur() {
+    const parsed = totalCount === '' ? null : parseInt(totalCount, 10);
+    if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
+    try {
+      await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error(`Failed to save total count:`, err);
+    }
+  }
+
   if (isNone) {
     async function handleReopen() {
       try {
@@ -1490,6 +1507,30 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
           <StatusDot status={status === 'incomplete' ? 'empty' : status} />
         </div>
       </div>
+
+      {/* Total count input (e.g. "10 prior ICRs exist, 2 included below") */}
+      {showTotalCount && !isNone && (
+        <div className="flex items-center gap-2 mb-3">
+          <label className="text-xs text-surface-500 dark:text-surface-400 whitespace-nowrap">
+            Total prior ICRs for subject:
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={totalCount}
+            onChange={(e) => setTotalCount(e.target.value)}
+            onBlur={handleTotalCountBlur}
+            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+            placeholder={String(entries.length || 0)}
+            className="w-16 px-2 py-1 rounded-md bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+          />
+          {entries.length > 0 && totalCount && parseInt(totalCount, 10) > entries.length && (
+            <span className="text-xs text-surface-400">
+              ({entries.length} included below)
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Existing entries */}
       {entries.length > 0 && (
@@ -1590,7 +1631,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved }) {
 
 // ── RFI Entry Section (iterative entries with image support) ─────
 
-function RFIEntrySection({ caseData, onSaved }) {
+function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
   const sectionKey = 'rfis';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
@@ -1601,6 +1642,11 @@ function RFIEntrySection({ caseData, onSaved }) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [previewTab, setPreviewTab] = useState('ai');
+  const [totalCount, setTotalCount] = useState(section.total_count ?? '');
+
+  useEffect(() => {
+    setTotalCount(section.total_count ?? '');
+  }, [section.total_count]);
 
   const entries = section.entries || [];
   const status = section.status || 'empty';
@@ -1783,6 +1829,38 @@ function RFIEntrySection({ caseData, onSaved }) {
           <StatusDot status={status === 'incomplete' ? 'empty' : status} />
         </div>
       </div>
+
+      {showTotalCount && !isNone && (
+        <div className="flex items-center gap-2 mb-3">
+          <label className="text-xs text-surface-500 dark:text-surface-400 whitespace-nowrap">
+            Total RFIs for subject:
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={totalCount}
+            onChange={(e) => setTotalCount(e.target.value)}
+            onBlur={async () => {
+              const parsed = totalCount === '' ? null : parseInt(totalCount, 10);
+              if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
+              try {
+                await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed);
+                if (onSaved) onSaved();
+              } catch (err) {
+                console.error('Failed to save total count:', err);
+              }
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+            placeholder={String(entries.length || 0)}
+            className="w-16 px-2 py-1 rounded-md bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+          />
+          {entries.length > 0 && totalCount && parseInt(totalCount, 10) > entries.length && (
+            <span className="text-xs text-surface-400">
+              ({entries.length} included below)
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Existing entries */}
       {entries.length > 0 && (
@@ -3627,12 +3705,14 @@ export default function IngestionPage() {
               caseData={caseData}
               placeholder="Paste a prior ICR here (one at a time)..."
               onSaved={handleProcessingStarted}
+              showTotalCount
             />
 
             {/* RFI Summary (iterative entries with images) */}
             <RFIEntrySection
               caseData={caseData}
               onSaved={handleProcessingStarted}
+              showTotalCount
             />
 
             {/* Kodex / LE Cases */}

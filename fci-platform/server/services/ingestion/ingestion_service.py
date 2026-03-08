@@ -45,7 +45,7 @@ ASSEMBLY_ORDER = [
     ('kodex', 'Law Enforcement / Kodex Summary', 'No law enforcement cases identified.'),
     ('l1_victim', 'L1 Victim Communications Summary', 'No victim communications available.'),
     ('l1_suspect', 'L1 Suspect Communications Summary', 'No suspect communications available.'),
-    ('investigator_notes', 'Investigator Notes', 'No additional notes.'),
+    ('investigator_notes', 'Investigator Notes & OSINT', 'No additional notes or OSINT results.'),
 ]
 
 # C360 sub-sections for expanded assembly markdown and preprocessed_data mapping.
@@ -696,6 +696,12 @@ async def save_text_and_images_with_ai(
 # ── Iterative Entry Sections (Prior ICR, RFI) ─────────────────────
 
 
+async def set_total_count(case_id: str, section_key: str, count: int | None) -> None:
+    """Set the total count for an iterative section (e.g. total prior ICRs)."""
+    set_fields = {f"sections.{section_key}.total_count": count, "updated_at": _utcnow()}
+    await _collection().update_one({"_id": case_id}, {"$set": set_fields})
+
+
 async def add_entry(
     case_id: str,
     section_key: str,
@@ -1160,12 +1166,38 @@ async def assemble_case_data(case_id: str) -> dict:
         sec_status = section.get('status', 'empty')
         output = section.get('output')
 
-        parts.append('## {}'.format(heading))
+        # Total count qualifier (prior ICRs / RFIs)
+        section_heading = heading
+        entries_count = len(section.get('entries', []))
+        total_count = section.get('total_count')
+        if section_key in ('previous_icrs', 'rfis') and total_count and total_count > entries_count:
+            section_heading = '{} ({} of {} included)'.format(
+                heading, entries_count, total_count
+            )
+            if section_key == 'previous_icrs':
+                preprocessed_data['prior_icr_count'] = total_count
+            else:
+                preprocessed_data['rfi_count'] = total_count
+
+        parts.append('## {}'.format(section_heading))
         parts.append('')
 
         if sec_status == 'complete' and output:
             pp_key = SECTION_TO_PREPROCESSED.get(section_key, section_key)
             preprocessed_data[pp_key] = output
+            # Add contextual note about subset
+            if section_key == 'previous_icrs' and preprocessed_data.get('prior_icr_count'):
+                total = preprocessed_data['prior_icr_count']
+                parts.append('*Note: {} prior ICRs exist for this subject. '
+                             'The {} most recent are summarised below.*'.format(
+                                 total, entries_count))
+                parts.append('')
+            elif section_key == 'rfis' and preprocessed_data.get('rfi_count'):
+                total = preprocessed_data['rfi_count']
+                parts.append('*Note: {} RFIs exist for this subject. '
+                             'The {} most recent are summarised below.*'.format(
+                                 total, entries_count))
+                parts.append('')
             parts.append(output)
             sections_included.append(section_key)
         else:
