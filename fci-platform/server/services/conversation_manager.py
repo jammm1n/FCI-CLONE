@@ -1284,6 +1284,90 @@ async def qc_check(
     }
 
 
+async def lightweight_step_advance(
+    conversation_id: str,
+    user_id: str,
+) -> dict:
+    """
+    Advance to the next step without generating a summary.
+
+    Used by auto-execute mode when skip_summaries=True.
+    Same as approve_and_continue but skips the AI summary call.
+    """
+    db = get_database()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    state = conversation.get("investigation_state")
+    if not state:
+        raise ValueError("Conversation has no investigation state")
+
+    current_step = state["current_step"]
+    if current_step >= 4:
+        raise ValueError(f"Cannot advance from step {current_step}")
+
+    now = _now()
+    next_step = current_step + 1
+    next_phase = STEP_PHASES[next_step]
+
+    steps = [dict(s) for s in state["steps"]]
+    steps[current_step - 1].update({
+        "status": "completed",
+        "summary": None,
+        "summary_model": None,
+        "summary_token_usage": None,
+        "completed_at": now,
+        "approved_by": user_id,
+    })
+    steps.append({
+        "step_number": next_step,
+        "phase": next_phase,
+        "status": "active",
+        "summary": None,
+        "summary_model": None,
+        "summary_token_usage": None,
+        "completed_at": None,
+        "approved_by": None,
+    })
+
+    divider_msg = {
+        "message_id": _generate_id("msg"),
+        "role": "step_divider",
+        "content": (
+            f"Step {current_step} ({STEP_PHASES[current_step].replace('_', ' ').title()}) "
+            f"complete. Moving to Step {next_step}: {next_phase.replace('_', ' ').title()}."
+        ),
+        "step": current_step,
+        "timestamp": now,
+        "visible": True,
+    }
+
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {
+            "$set": {
+                "investigation_state.steps": steps,
+                "investigation_state.current_step": next_step,
+                "investigation_state.step_complete_signalled": False,
+                "updated_at": now,
+            },
+            "$push": {"messages": divider_msg},
+        }
+    )
+
+    logger.info(
+        "Lightweight advance: conversation %s from step %d to step %d (no summary)",
+        conversation_id, current_step, next_step,
+    )
+
+    return {
+        "step": next_step,
+        "phase": next_phase,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Investigation state
 # ---------------------------------------------------------------------------

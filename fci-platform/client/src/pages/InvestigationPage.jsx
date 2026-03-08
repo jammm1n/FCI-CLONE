@@ -32,6 +32,7 @@ export default function InvestigationPage() {
   const [stepLoading, setStepLoading] = useState(false);
   const [showQCModal, setShowQCModal] = useState(false);
   const [stepSignalled, setStepSignalled] = useState(false);
+  const [autoExecuting, setAutoExecuting] = useState(false);
   const dragging = useRef(false);
 
   const {
@@ -42,6 +43,7 @@ export default function InvestigationPage() {
     sending,
     aiLoading,
     tokenUsage,
+    setTokenUsage,
     stepComplete,
     setStepComplete,
     loadHistory,
@@ -121,11 +123,11 @@ export default function InvestigationPage() {
 
   // Warn on tab close / refresh while AI is responding
   useEffect(() => {
-    if (!sending && !aiLoading) return;
+    if (!sending && !aiLoading && !autoExecuting) return;
     const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [sending, aiLoading]);
+  }, [sending, aiLoading, autoExecuting]);
 
   // Track when the AI first signals step complete
   useEffect(() => {
@@ -232,6 +234,131 @@ export default function InvestigationPage() {
     }
   }, [conversationId, token, setMessages, sendMessage, setStepComplete]);
 
+  // --- Auto-execute: run remaining steps without human approval ---
+  const handleAutoExecute = useCallback(async (skipSummaries = false) => {
+    if (!conversationId || autoExecuting) return;
+    setAutoExecuting(true);
+    setStepComplete(false);
+    setStepSignalled(false);
+    setStepError('');
+
+    let currentStreamMsgId = null;
+    let currentToolsUsed = [];
+
+    try {
+      const response = await api.autoExecute(token, conversationId, skipSummaries);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const jsonStr = line.slice(5).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === 'auto_step_start') {
+            setCurrentStep(event.step);
+            setStepPhase(event.phase);
+            currentToolsUsed = [];
+            currentStreamMsgId = `stream_auto_${Date.now()}_${event.step}`;
+
+            const newMessages = [];
+            if (event.user_content) {
+              newMessages.push({
+                message_id: `auto_user_${event.step}_${Date.now()}`,
+                role: 'user',
+                content: event.user_content,
+                timestamp: new Date().toISOString(),
+              });
+            }
+            newMessages.push({
+              message_id: currentStreamMsgId,
+              role: 'assistant',
+              content: '',
+              tools_used: [],
+              timestamp: new Date().toISOString(),
+              isStreaming: true,
+            });
+            setMessages((prev) => [...prev, ...newMessages]);
+
+          } else if (event.type === 'content_delta') {
+            if (currentStreamMsgId) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === currentStreamMsgId
+                    ? { ...msg, content: msg.content + event.text }
+                    : msg
+                )
+              );
+            }
+
+          } else if (event.type === 'tool_use') {
+            currentToolsUsed.push({
+              tool: event.tool,
+              document_id: event.document_id,
+              document_title: event.document_title,
+            });
+
+          } else if (event.type === 'auto_step_done') {
+            if (currentStreamMsgId) {
+              const finalTools = [...currentToolsUsed];
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === currentStreamMsgId
+                    ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false }
+                    : msg
+                )
+              );
+            }
+            if (event.token_usage) setTokenUsage(event.token_usage);
+            currentStreamMsgId = null;
+
+          } else if (event.type === 'auto_step_divider') {
+            setMessages((prev) => [
+              ...prev,
+              {
+                message_id: `divider_auto_${Date.now()}`,
+                role: 'step_divider',
+                content: event.content,
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+
+          } else if (event.type === 'auto_complete') {
+            // All steps finished
+
+          } else if (event.type === 'error') {
+            if (currentStreamMsgId) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === currentStreamMsgId
+                    ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
+                    : msg
+                )
+              );
+            }
+            setStepError(event.message);
+          }
+        }
+      }
+    } catch (err) {
+      setStepError(err.message);
+    } finally {
+      setAutoExecuting(false);
+    }
+  }, [conversationId, token, autoExecuting, setMessages, setStepComplete, setTokenUsage]);
+
   if (caseLoading) {
     return (
       <AppLayout>
@@ -327,11 +454,11 @@ export default function InvestigationPage() {
             </div>
             <DownloadPdfButton
               conversationId={conversationId}
-              disabled={sending || aiLoading}
+              disabled={sending || aiLoading || autoExecuting}
             />
           </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
-          {sending && <StreamingIndicator />}
+          {(sending || autoExecuting) && <StreamingIndicator />}
           {stepError && (
             <div className="mx-4 mb-2 px-4 py-2 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
               <span>{stepError}</span>
@@ -340,14 +467,16 @@ export default function InvestigationPage() {
           )}
           <ChatInput
             onSend={sendMessage}
-            disabled={sending}
+            disabled={sending || autoExecuting}
             currentStep={currentStep}
-            stepComplete={stepComplete}
+            stepComplete={stepComplete && !autoExecuting}
             onAdvanceStep={handleAdvanceStep}
             onQCCheck={() => setShowQCModal(true)}
             onContinueDiscussion={() => setStepComplete(false)}
             onManualStepComplete={() => setStepComplete(true)}
             stepLoading={stepLoading}
+            onAutoExecute={handleAutoExecute}
+            autoExecuting={autoExecuting}
           />
         </div>
       </div>

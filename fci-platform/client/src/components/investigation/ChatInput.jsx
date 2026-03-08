@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -145,6 +145,29 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
                 Continue Discussion
               </button>
             </div>
+            {/* Auto-execute — easy to remove: delete this block */}
+            {onAutoExecute && currentStep <= 3 && (
+              <div className="flex items-center justify-center gap-3 mt-2">
+                <button
+                  onClick={() => onAutoExecute(false)}
+                  disabled={stepLoading || autoExecuting}
+                  className="text-xs text-surface-400 hover:text-gold-500 transition-colors flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+                    <path d="M2 4.5A2.5 2.5 0 014.5 2h2.879a2.5 2.5 0 011.767.732l2.122 2.121A2.5 2.5 0 0112 6.622V11.5A2.5 2.5 0 019.5 14h-5A2.5 2.5 0 012 11.5v-7z" />
+                  </svg>
+                  Auto-run remaining steps
+                </button>
+                <span className="text-surface-600">·</span>
+                <button
+                  onClick={() => onAutoExecute(true)}
+                  disabled={stepLoading || autoExecuting}
+                  className="text-xs text-surface-500 hover:text-gold-500 transition-colors"
+                >
+                  express (no summaries)
+                </button>
+              </div>
+            )}
           </div>
         )}
 

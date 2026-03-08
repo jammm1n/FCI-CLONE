@@ -412,6 +412,207 @@ async def get_state(
 
 
 # ---------------------------------------------------------------------------
+# Auto-execute (run remaining steps without human approval)
+# ---------------------------------------------------------------------------
+
+@router.post("/{conversation_id}/auto-execute")
+async def auto_execute(
+    conversation_id: str,
+    body: dict,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Auto-execute remaining investigation steps through a single SSE stream.
+
+    Runs each step sequentially: stream AI → store → advance → repeat.
+    Stops after step 4 (step 5 QC requires manual input).
+
+    Request body: {"skip_summaries": false}
+
+    SSE events:
+        {"type": "auto_step_start", "step": 2, "phase": "analysis", "user_content": "Begin Step 2: ..."}
+        {"type": "content_delta", "text": "..."}
+        {"type": "tool_use", "tool": "...", ...}
+        {"type": "auto_step_done", "step": 2, "message_id": "msg_xxx", "token_usage": {...}}
+        {"type": "auto_step_divider", "content": "Step 2 complete. Moving to Step 3: Decision."}
+        ... (repeat for each step)
+        {"type": "auto_complete"}
+    """
+    skip_summaries = body.get("skip_summaries", False)
+    kb = _get_knowledge_base(request)
+
+    PHASE_LABELS = {
+        "setup": "Setup", "analysis": "Analysis", "decision": "Decision",
+        "post": "Post-Decision", "qc_check": "QC Check",
+    }
+    STEP_PHASE_MAP = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}
+
+    async def event_generator():
+        try:
+            db = get_database()
+            conv = await db.conversations.find_one({"_id": conversation_id})
+
+            if not conv:
+                yield {"data": json.dumps({"type": "error", "message": "Conversation not found"})}
+                return
+
+            state = conv.get("investigation_state")
+            if not state:
+                yield {"data": json.dumps({"type": "error", "message": "No investigation state"})}
+                return
+
+            current_step = state["current_step"]
+
+            # If current step is already complete, advance first
+            if state.get("step_complete_signalled", False) and current_step < 4:
+                if skip_summaries:
+                    result = await conversation_manager.lightweight_step_advance(
+                        conversation_id=conversation_id,
+                        user_id=current_user["user_id"],
+                    )
+                else:
+                    result = await conversation_manager.approve_and_continue(
+                        conversation_id=conversation_id,
+                        user_id=current_user["user_id"],
+                        knowledge_base=kb,
+                    )
+
+                phase_label = PHASE_LABELS.get(STEP_PHASE_MAP.get(current_step), "")
+                next_label = PHASE_LABELS.get(result["phase"], result["phase"])
+                yield {"data": json.dumps({
+                    "type": "auto_step_divider",
+                    "content": f"Step {current_step} ({phase_label}) complete. Moving to Step {result['step']}: {next_label}.",
+                })}
+
+                current_step = result["step"]
+
+            # Run steps from current_step through 4
+            for step_num in range(current_step, 5):
+                phase = STEP_PHASE_MAP.get(step_num, "unknown")
+                phase_label = PHASE_LABELS.get(phase, phase)
+
+                # Check if this step already has output
+                conv_fresh = await db.conversations.find_one({"_id": conversation_id})
+                has_output = any(
+                    m.get("step") == step_num
+                    and m["role"] == "assistant"
+                    and m.get("visible", True)
+                    for m in conv_fresh.get("messages", [])
+                )
+
+                if has_output:
+                    # Step already done — advance
+                    if step_num < 4:
+                        if skip_summaries:
+                            result = await conversation_manager.lightweight_step_advance(
+                                conversation_id=conversation_id,
+                                user_id=current_user["user_id"],
+                            )
+                        else:
+                            result = await conversation_manager.approve_and_continue(
+                                conversation_id=conversation_id,
+                                user_id=current_user["user_id"],
+                                knowledge_base=kb,
+                            )
+                        next_label = PHASE_LABELS.get(result["phase"], result["phase"])
+                        yield {"data": json.dumps({
+                            "type": "auto_step_divider",
+                            "content": f"Step {step_num} ({phase_label}) complete. Moving to Step {result['step']}: {next_label}.",
+                        })}
+                    continue
+
+                # Determine message content
+                is_initial = False
+                content = f"Begin Step {step_num}: {phase_label}. Your step document is loaded. Proceed in express mode."
+
+                if step_num == 1:
+                    has_any_visible = any(
+                        m.get("step") == 1 and m.get("visible", True)
+                        for m in conv_fresh.get("messages", [])
+                    )
+                    if not has_any_visible:
+                        content = ""
+                        is_initial = True
+
+                # Emit step start
+                yield {"data": json.dumps({
+                    "type": "auto_step_start",
+                    "step": step_num,
+                    "phase": phase,
+                    "user_content": content if not is_initial else None,
+                })}
+
+                # Stream AI response
+                done_event = None
+
+                async for event in conversation_manager.send_message_streaming(
+                    conversation_id=conversation_id,
+                    content=content,
+                    knowledge_base=kb,
+                    is_initial_assessment=is_initial,
+                ):
+                    if event["type"] == "done":
+                        done_event = event
+                    elif event["type"] == "tool_use" and event.get("tool") == "signal_step_complete":
+                        pass  # Silently consume in auto mode
+                    else:
+                        yield {"data": json.dumps(event)}
+
+                # Store response
+                if done_event:
+                    store_result = await conversation_manager.store_streamed_response(
+                        conversation_id=conversation_id,
+                        user_content=content,
+                        user_images=None,
+                        ai_content=done_event["content"],
+                        tools_used=done_event.get("tools_used", []),
+                        token_usage=done_event.get("token_usage", {}),
+                        tool_call_messages=done_event.get("tool_call_messages", []),
+                        is_initial_assessment=is_initial,
+                        step_complete_signalled=False,
+                    )
+
+                    yield {"data": json.dumps({
+                        "type": "auto_step_done",
+                        "step": step_num,
+                        "message_id": store_result["message_id"],
+                        "token_usage": done_event.get("token_usage", {}),
+                    })}
+
+                # Advance to next step
+                if step_num < 4:
+                    if skip_summaries:
+                        result = await conversation_manager.lightweight_step_advance(
+                            conversation_id=conversation_id,
+                            user_id=current_user["user_id"],
+                        )
+                    else:
+                        result = await conversation_manager.approve_and_continue(
+                            conversation_id=conversation_id,
+                            user_id=current_user["user_id"],
+                            knowledge_base=kb,
+                        )
+
+                    next_label = PHASE_LABELS.get(result["phase"], result["phase"])
+                    yield {"data": json.dumps({
+                        "type": "auto_step_divider",
+                        "content": f"Step {step_num} ({phase_label}) complete. Moving to Step {result['step']}: {next_label}.",
+                    })}
+
+            yield {"data": json.dumps({"type": "auto_complete"})}
+
+        except RateLimitError as e:
+            logger.warning("Rate limit during auto-execute: %s", e)
+            yield {"data": json.dumps({"type": "error", "message": "AI service rate-limited. Try again shortly."})}
+        except Exception as e:
+            logger.exception("Auto-execute error in conversation %s", conversation_id)
+            yield {"data": json.dumps({"type": "error", "message": str(e)})}
+
+    return EventSourceResponse(event_generator())
+
+
+# ---------------------------------------------------------------------------
 # Delete conversation
 # ---------------------------------------------------------------------------
 
