@@ -14,7 +14,8 @@
       "Bash(strings:*)",
       "Bash(sc query:*)",
       "Bash(npx vite:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(pip show:*)"
     ]
   }
 }

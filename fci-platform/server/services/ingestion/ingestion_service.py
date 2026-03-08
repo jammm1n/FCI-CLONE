@@ -13,10 +13,13 @@ No in-memory session store.
 """
 
 import base64
+import io
 import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+
+from PIL import Image
 
 from server.config import settings
 from server.database import get_database
@@ -476,6 +479,44 @@ def _store_ingestion_images(
     return stored
 
 
+MAX_B64_BYTES = 4_500_000  # 4.5 MB — stay under Anthropic's 5 MB base64 limit
+
+
+def _shrink_image(img_bytes: bytes, media_type: str) -> tuple[bytes, str]:
+    """Resize/compress an image until its base64 encoding is under the API limit."""
+    # Check if already small enough
+    if len(base64.b64encode(img_bytes)) <= MAX_B64_BYTES:
+        return img_bytes, media_type
+
+    img = Image.open(io.BytesIO(img_bytes))
+    if img.mode in ('RGBA', 'P'):
+        img = img.convert('RGB')
+    output_type = 'image/jpeg'
+
+    # Try quality reduction first at original size, then progressively shrink
+    for scale in (1.0, 0.75, 0.5, 0.35, 0.25):
+        w, h = img.size
+        if scale < 1.0:
+            resized = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+        else:
+            resized = img
+        for quality in (85, 65, 45):
+            buf = io.BytesIO()
+            resized.save(buf, format='JPEG', quality=quality)
+            out_bytes = buf.getvalue()
+            if len(base64.b64encode(out_bytes)) <= MAX_B64_BYTES:
+                logger.info(
+                    'Shrunk image from %d KB to %d KB (scale=%.0f%%, quality=%d)',
+                    len(img_bytes) // 1024, len(out_bytes) // 1024,
+                    scale * 100, quality,
+                )
+                return out_bytes, output_type
+
+    # Last resort — should not reach here with 25% scale + quality 45
+    logger.warning('Image still too large after all shrink attempts (%d KB)', len(img_bytes) // 1024)
+    return out_bytes, output_type
+
+
 def _load_entry_images_as_base64(entry: dict) -> list[dict]:
     """
     Load stored images for an entry from disk and return as base64.
@@ -497,10 +538,11 @@ def _load_entry_images_as_base64(entry: dict) -> list[dict]:
             continue
         try:
             img_bytes = path.read_bytes()
+            img_bytes, media_type = _shrink_image(img_bytes, img_ref['media_type'])
             img_b64 = base64.b64encode(img_bytes).decode('ascii')
             result.append({
                 'base64': img_b64,
-                'media_type': img_ref['media_type'],
+                'media_type': media_type,
             })
         except Exception as e:
             logger.warning('Failed to load image %s: %s', stored_path, e)

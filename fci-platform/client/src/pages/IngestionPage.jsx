@@ -2819,6 +2819,14 @@ function KYCSection({ caseData, onSaved }) {
                aiStatus === 'error' ? 'AI failed' : ''}
             </span>
           )}
+          {isComplete && (
+            <PreviewButton
+              token={token}
+              caseId={caseData.case_id}
+              sectionKey={sectionKey}
+              label={SECTION_LABELS[sectionKey]}
+            />
+          )}
           <StatusDot status={status} />
         </div>
       </div>
