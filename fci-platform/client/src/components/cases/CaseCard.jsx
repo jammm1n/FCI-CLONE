@@ -38,6 +38,19 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
     }
   }
 
+  async function handleUnarchive(e) {
+    e.stopPropagation();
+    setArchiving(true);
+    try {
+      const result = await api.unarchiveCase(token, caseData.case_id);
+      onArchive?.(caseData.case_id, result.status);
+    } catch (err) {
+      console.error('Unarchive failed:', err);
+    } finally {
+      setArchiving(false);
+    }
+  }
+
   return (
     <div
       onClick={() => navigate(`/investigation/${caseData.case_id}`)}
@@ -91,7 +104,18 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
 
         {/* Action buttons */}
         <div className="ml-4 shrink-0 flex items-center gap-2">
-          {!isArchived && (
+          {isArchived ? (
+            <button
+              onClick={handleUnarchive}
+              disabled={archiving}
+              title="Restore case"
+              className="p-2 rounded-lg text-surface-400 hover:text-gold-500 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M8 1a.75.75 0 0 1 .75.75v6.5a.75.75 0 0 1-1.5 0v-6.5A.75.75 0 0 1 8 1ZM4.11 3.05a.75.75 0 0 1 0 1.06 5.5 5.5 0 1 0 7.78 0 .75.75 0 0 1 1.06-1.06 7 7 0 1 1-9.9 0 .75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+              </svg>
+            </button>
+          ) : (
             <button
               onClick={handleArchive}
               disabled={archiving}

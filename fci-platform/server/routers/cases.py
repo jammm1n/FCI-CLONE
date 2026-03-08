@@ -39,6 +39,17 @@ async def archive_case(case_id: str, current_user: dict = Depends(get_current_us
     return {"status": "archived"}
 
 
+@router.patch("/{case_id}/unarchive")
+async def unarchive_case(case_id: str, current_user: dict = Depends(get_current_user)):
+    """Restore a case from archived status."""
+    case = await case_service.get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+    new_status = "in_progress" if case.get("conversation_id") else "open"
+    await case_service.update_case_status(case_id, new_status)
+    return {"status": new_status}
+
+
 @router.get("/{case_id}")
 async def get_case(case_id: str, current_user: dict = Depends(get_current_user)):
     """

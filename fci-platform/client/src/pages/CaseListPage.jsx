@@ -28,8 +28,14 @@ export default function CaseListPage() {
     fetchCases();
   }, [token, showArchived]);
 
-  function handleArchive(caseId) {
-    setCases((prev) => prev.filter((c) => c.case_id !== caseId));
+  function handleArchive(caseId, newStatus) {
+    if (newStatus) {
+      // Unarchive — update status in place
+      setCases((prev) => prev.map((c) => c.case_id === caseId ? { ...c, status: newStatus } : c));
+    } else {
+      // Archive — remove from list
+      setCases((prev) => prev.filter((c) => c.case_id !== caseId));
+    }
   }
 
   return (

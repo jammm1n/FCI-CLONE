@@ -55,6 +55,14 @@ export async function archiveCase(token, caseId) {
   return handleResponse(res);
 }
 
+export async function unarchiveCase(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/unarchive`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 export async function getCase(token, caseId) {
   const res = await fetch(`${BASE_URL}/cases/${caseId}`, {
     headers: authHeaders(token),
