@@ -959,13 +959,45 @@ function EllipticSection({ caseData, onProcessingStarted }) {
       )}
 
       {ellStatus === 'none' && (
-        <p className="text-xs text-surface-400">Marked as not applicable.</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-surface-400">Marked as not applicable.</p>
+          <button
+            onClick={async () => {
+              try {
+                await ingestionApi.reopenSection(token, caseData.case_id, 'elliptic');
+                onProcessingStarted();
+              } catch (err) {
+                setError(err.message);
+              }
+            }}
+            className="text-[10px] text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
+          >
+            Reopen
+          </button>
+        </div>
       )}
 
       {ellStatus === 'error' && (
-        <p className="text-sm text-red-500 dark:text-red-400">
-          {elliptic.error_message || 'Screening failed.'}
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-red-500 dark:text-red-400">
+            {elliptic.error_message || 'Screening failed.'}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="px-4 py-1.5 rounded-lg border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {submitting ? 'Retrying...' : 'Retry'}
+            </button>
+            <button
+              onClick={handleMarkNone}
+              className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+            >
+              Mark N/A
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1593,6 +1625,15 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
                 No Data
               </button>
             )}
+            {aiStatus === 'error' && entries.length > 0 && (
+              <button
+                onClick={handleProcess}
+                disabled={processing}
+                className="px-4 py-1.5 rounded-lg border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Retrying...' : 'Retry Processing'}
+              </button>
+            )}
           </div>
         </>
       )}
@@ -2004,6 +2045,15 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
                 className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
               >
                 No Data
+              </button>
+            )}
+            {aiStatus === 'error' && entries.length > 0 && (
+              <button
+                onClick={handleProcess}
+                disabled={processing}
+                className="px-4 py-1.5 rounded-lg border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Retrying...' : 'Retry Processing'}
               </button>
             )}
           </div>
@@ -2848,6 +2898,14 @@ function KYCSection({ caseData, onSaved }) {
                 className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
               >
                 No Data
+              </button>
+            )}
+            {status === 'error' && (
+              <button
+                onClick={handleReset}
+                className="px-4 py-1.5 rounded-lg border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold text-sm transition-colors"
+              >
+                Reset &amp; Try Again
               </button>
             )}
           </div>
