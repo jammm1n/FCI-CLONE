@@ -1098,22 +1098,13 @@ async def reset_case(case_id: str) -> dict:
 # ── Assembly ──────────────────────────────────────────────────────
 
 
-async def assemble_case_data(case_id: str) -> dict:
+async def preview_assembled_case_data(case_id: str) -> dict:
     """
-    Assemble all section outputs into the final case data markdown,
-    create a case document in the `cases` collection for investigation,
-    and mark the ingestion case as completed.
+    Build the assembled case data markdown without creating the case
+    or marking ingestion as completed. Read-only preview.
 
-    C360 is expanded into individual sub-processor sections in both
-    the assembled markdown and the preprocessed_data dict.
-
-    Raises ValueError if any required section is not in terminal state
-    or if a case with this ID already exists in investigations.
-
-    Returns {case_id, assembled_case_data, sections_included, sections_none}.
+    Returns {case_id, assembled_case_data, sections_included, sections_none, preprocessed_data}.
     """
-    from server.services import case_service
-
     doc = await _collection().find_one({'_id': case_id})
     if not doc:
         raise ValueError(f'Case not found: {case_id}')
@@ -1250,8 +1241,39 @@ async def assemble_case_data(case_id: str) -> dict:
 
     assembled = '\n'.join(parts)
 
-    # ── Create the cases collection document ──────────────────
+    return {
+        'case_id': case_id,
+        'assembled_case_data': assembled,
+        'sections_included': sections_included,
+        'sections_none': sections_none,
+        'preprocessed_data': preprocessed_data,
+    }
 
+
+async def assemble_case_data(case_id: str) -> dict:
+    """
+    Assemble all section outputs into the final case data markdown,
+    create a case document in the `cases` collection for investigation,
+    and mark the ingestion case as completed.
+
+    Raises ValueError if any required section is not in terminal state
+    or if a case with this ID already exists in investigations.
+
+    Returns {case_id, assembled_case_data, sections_included, sections_none}.
+    """
+    from server.services import case_service
+
+    # Step 1: Build the assembled markdown (reuse preview logic)
+    preview = await preview_assembled_case_data(case_id)
+    assembled = preview['assembled_case_data']
+    preprocessed_data = preview['preprocessed_data']
+    sections_included = preview['sections_included']
+    sections_none = preview['sections_none']
+
+    # Need the doc again for metadata fields
+    doc = await _collection().find_one({'_id': case_id})
+
+    # Step 2: Create the cases collection document
     now = _utcnow()
     cases_doc = {
         '_id': case_id,
@@ -1270,8 +1292,7 @@ async def assemble_case_data(case_id: str) -> dict:
 
     await case_service.create_case(cases_doc)
 
-    # ── Mark ingestion case as completed ─────────────────────
-
+    # Step 3: Mark ingestion case as completed
     await _collection().update_one(
         {'_id': case_id},
         {

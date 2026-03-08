@@ -3539,6 +3539,8 @@ export default function IngestionPage() {
   const [error, setError] = useState('');
   const [showAssemblyConfirm, setShowAssemblyConfirm] = useState(false);
   const [assembling, setAssembling] = useState(false);
+  const [assemblyPreview, setAssemblyPreview] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -3625,6 +3627,18 @@ export default function IngestionPage() {
       setShowAssemblyConfirm(false);
     } finally {
       setAssembling(false);
+    }
+  }
+
+  async function handlePreviewAssembly() {
+    setLoadingPreview(true);
+    try {
+      const result = await ingestionApi.previewAssembly(token, caseData.case_id);
+      setAssemblyPreview(result.assembled_case_data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingPreview(false);
     }
   }
 
@@ -3808,13 +3822,22 @@ export default function IngestionPage() {
 
             {/* Assembly */}
             <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
-              <button
-                onClick={() => setShowAssemblyConfirm(true)}
-                disabled={!canAssemble || assembling}
-                className="w-full px-5 py-3 rounded-xl bg-gold-500 hover:bg-gold-600 text-surface-900 font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Assemble Case Data
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handlePreviewAssembly}
+                  disabled={!canAssemble || loadingPreview}
+                  className="flex-1 px-5 py-3 rounded-xl border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 font-semibold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {loadingPreview ? 'Loading...' : 'Preview Case Document'}
+                </button>
+                <button
+                  onClick={() => setShowAssemblyConfirm(true)}
+                  disabled={!canAssemble || assembling}
+                  className="flex-1 px-5 py-3 rounded-xl bg-gold-500 hover:bg-gold-600 text-surface-900 font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Assemble Case Data
+                </button>
+              </div>
               {!canAssemble && caseData.sections && (
                 <p className="text-xs text-surface-400 mt-2 text-center">
                   All sections must be complete or marked N/A before assembly.
@@ -3831,6 +3854,15 @@ export default function IngestionPage() {
           onConfirm={handleAssemble}
           onCancel={() => setShowAssemblyConfirm(false)}
           assembling={assembling}
+        />
+      )}
+
+      {/* Assembly preview modal */}
+      {assemblyPreview !== null && (
+        <PreviewModal
+          title="Case Document Preview"
+          content={assemblyPreview}
+          onClose={() => setAssemblyPreview(null)}
         />
       )}
     </AppLayout>

@@ -1472,6 +1472,32 @@ async def delete_case(case_id: str, current_user: dict = Depends(get_current_use
 # ── Assembly ──────────────────────────────────────────────────────
 
 
+@router.get('/cases/{case_id}/assemble/preview')
+async def preview_assembly(case_id: str, current_user: dict = Depends(get_current_user)):
+    """Preview the assembled case data markdown without creating the case."""
+    await _get_case_or_404(case_id)
+
+    try:
+        result = await ingestion_service.preview_assembled_case_data(case_id)
+        return {
+            'assembled_case_data': result['assembled_case_data'],
+            'sections_included': result['sections_included'],
+            'sections_none': result['sections_none'],
+        }
+    except ValueError as e:
+        msg = str(e)
+        if msg.startswith('incomplete:'):
+            incomplete = msg.split(':', 1)[1].split(',')
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    'message': 'Cannot preview: sections not complete',
+                    'incomplete_sections': incomplete,
+                },
+            )
+        raise HTTPException(status_code=400, detail=msg)
+
+
 @router.post('/cases/{case_id}/assemble')
 async def assemble_case(case_id: str, current_user: dict = Depends(get_current_user)):
     """Assemble section outputs, create investigation case, mark ingestion completed."""

@@ -355,6 +355,13 @@ export async function resetKodex(token, caseId) {
 
 // ── Assembly ─────────────────────────────────────────────────────
 
+export async function previewAssembly(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/assemble/preview`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
 export async function assembleCase(token, caseId) {
   const res = await fetch(`${BASE_URL}/cases/${caseId}/assemble`, {
     method: 'POST',
