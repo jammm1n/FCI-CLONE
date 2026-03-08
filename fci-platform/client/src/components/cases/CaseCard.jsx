@@ -115,6 +115,18 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
               <path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
             </svg>
           </button>
+          {!hasConversation && !isArchived && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/investigation/${caseData.case_id}?mode=oneshot`);
+              }}
+              className="px-4 py-2.5 text-sm font-medium rounded-xl border border-amber-500/40 text-amber-500 hover:bg-amber-500/10 hover:border-amber-500/60 transition-colors"
+              title="One-shot: full ICR in a single AI call"
+            >
+              One-shot
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

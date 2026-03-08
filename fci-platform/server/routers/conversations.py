@@ -151,6 +151,7 @@ async def send_message(
         """
         done_event = None
         step_complete_signalled = False
+        oneshot_ready_signalled = False
 
         try:
             async for event in conversation_manager.send_message_streaming(
@@ -165,6 +166,9 @@ async def send_message(
                     done_event = event
                 elif event["type"] == "tool_use" and event.get("tool") == "signal_step_complete":
                     step_complete_signalled = True
+                    yield {"data": json.dumps(event)}
+                elif event["type"] == "tool_use" and event.get("tool") == "signal_ready_to_execute":
+                    oneshot_ready_signalled = True
                     yield {"data": json.dumps(event)}
                 else:
                     # Forward content_delta and tool_use events
@@ -195,6 +199,7 @@ async def send_message(
                     tool_call_messages=done_event.get("tool_call_messages", []),
                     is_initial_assessment=initial_assessment,
                     step_complete_signalled=step_complete_signalled,
+                    oneshot_ready_signalled=oneshot_ready_signalled,
                 )
                 # Now yield done — response is safely persisted
                 yield {
@@ -631,6 +636,88 @@ async def delete_conversation(
         raise HTTPException(status_code=404, detail=str(e))
 
     return {"status": "deleted"}
+
+
+# ---------------------------------------------------------------------------
+# One-shot execution
+# ---------------------------------------------------------------------------
+
+@router.post("/{conversation_id}/oneshot-execute")
+async def oneshot_execute(
+    conversation_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Execute the full ICR in one-shot mode via a single streaming AI call.
+
+    Uses Opus + extended thinking (configurable). All step documents are
+    loaded into a single system prompt. The setup transcript is included
+    as context.
+
+    SSE events:
+        {"type": "content_delta", "text": "..."}
+        {"type": "tool_use", "tool": "...", ...}
+        {"type": "done", "message_id": "msg_xxx", "token_usage": {...}}
+    """
+    kb = _get_knowledge_base(request)
+
+    async def event_generator():
+        done_event = None
+
+        try:
+            async for event in conversation_manager.oneshot_execute(
+                conversation_id=conversation_id,
+                knowledge_base=kb,
+            ):
+                if event["type"] == "done":
+                    done_event = event
+                else:
+                    yield {"data": json.dumps(event)}
+
+        except ValueError as e:
+            yield {"data": json.dumps({"type": "error", "message": str(e)})}
+            return
+        except RateLimitError as e:
+            logger.warning("Rate limit during oneshot execution: %s", e)
+            yield {"data": json.dumps({"type": "error", "message": "AI service rate-limited. Try again shortly."})}
+            return
+        except Exception as e:
+            logger.exception("Oneshot execution error in conversation %s", conversation_id)
+            yield {"data": json.dumps({"type": "error", "message": "Internal server error"})}
+            return
+
+        # Store to MongoDB FIRST, then yield done event
+        if done_event:
+            try:
+                store_result = await conversation_manager.store_oneshot_execution(
+                    conversation_id=conversation_id,
+                    user_id=current_user["user_id"],
+                    ai_content=done_event["content"],
+                    tools_used=done_event.get("tools_used", []),
+                    token_usage=done_event.get("token_usage", {}),
+                    tool_call_messages=done_event.get("tool_call_messages", []),
+                )
+                yield {
+                    "data": json.dumps({
+                        "type": "done",
+                        "message_id": store_result["message_id"],
+                        "token_usage": done_event.get("token_usage", {}),
+                    })
+                }
+            except Exception as e:
+                logger.exception(
+                    "Failed to store oneshot execution in conversation %s",
+                    conversation_id,
+                )
+                yield {
+                    "data": json.dumps({
+                        "type": "error",
+                        "message": "Response streamed but failed to save.",
+                    })
+                }
+
+    return EventSourceResponse(event_generator())
 
 
 @router.post("/{conversation_id}/reset")

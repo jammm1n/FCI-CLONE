@@ -16,6 +16,7 @@ export default function useStreamingChat(token) {
   const [aiLoading, setAiLoading] = useState(false);
   const [tokenUsage, setTokenUsage] = useState(null);
   const [stepComplete, setStepComplete] = useState(false);
+  const [oneshotReady, setOneshotReady] = useState(false);
 
   // Ref to avoid stale closure in streaming callbacks
   const conversationIdRef = useRef(null);
@@ -75,6 +76,8 @@ export default function useStreamingChat(token) {
         } else if (event.type === 'tool_use') {
           if (event.tool === 'signal_step_complete') {
             setStepComplete(true);
+          } else if (event.tool === 'signal_ready_to_execute') {
+            setOneshotReady(true);
           }
           toolsUsed.push({
             tool: event.tool,
@@ -200,6 +203,8 @@ export default function useStreamingChat(token) {
     setTokenUsage,
     stepComplete,
     setStepComplete,
+    oneshotReady,
+    setOneshotReady,
     loadHistory,
     sendMessage,
     triggerInitialAssessment,

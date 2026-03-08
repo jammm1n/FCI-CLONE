@@ -42,6 +42,7 @@ class KnowledgeBase:
         self.reference_index_text: str = ""
         self.case_system_prompt: str = ""
         self.free_chat_system_prompt: str = ""
+        self.oneshot_system_prompt: str = ""
         self.prompt_index: list[dict] = []
         self.prompt_index_text: str = ""
         self.global_rules: str = ""  # prompts/_global-rules.md (prepended to prompts)
@@ -59,6 +60,10 @@ class KnowledgeBase:
         free_sp = self.base_path / "system-prompt-free-chat.md"
         if free_sp.exists():
             self.free_chat_system_prompt = free_sp.read_text(encoding="utf-8")
+
+        oneshot_sp = self.base_path / "system-prompt-oneshot.md"
+        if oneshot_sp.exists():
+            self.oneshot_system_prompt = oneshot_sp.read_text(encoding="utf-8")
 
         # 2. Load shared core documents (everything in core/) — backward compat
         core_parts = []
@@ -144,8 +149,7 @@ class KnowledgeBase:
     def get_system_prompt(self, mode: str = "case") -> str:
         """Return the complete system prompt for the given mode.
 
-        Used by the existing (pre-step) architecture. Kept for backward
-        compatibility until Phase C wires in step-based routing.
+        Modes: case (step-by-step), free_chat, oneshot (setup phase).
         """
         if mode == "free_chat":
             return (
@@ -153,6 +157,11 @@ class KnowledgeBase:
                 f"{self.core_content}\n\n---\n\n"
                 f"{self.reference_index_text}\n\n---\n\n"
                 f"{self.prompt_index_text}"
+            )
+        elif mode == "oneshot":
+            return (
+                f"{self.oneshot_system_prompt}\n\n---\n\n"
+                f"{self.reference_index_text}"
             )
         else:
             return (
@@ -179,6 +188,111 @@ class KnowledgeBase:
         step_docs = STEP_CONFIG[step].get("docs", [])
         for doc_id in step_docs:
             parts.append(self.get_document(doc_id))
+
+        return "\n\n---\n\n".join(p for p in parts if p)
+
+    def get_oneshot_execution_prompt(self) -> str:
+        """Assemble the full system prompt for one-shot ICR execution.
+
+        Includes: execution instructions, voice/tone rules from case prompt,
+        general rules, QC checklist, all four step docs, decision matrix,
+        MLRO escalation matrix, and reference index.
+        """
+        execution_header = """\
+# SYSTEM PROMPT — ONE-SHOT EXECUTION
+
+### IDENTITY & ROLE
+You are FCI-GPT, a Senior Compliance Investigator Copilot for Binance L2 Investigations. You are producing the complete ICR in a single execution pass. The setup conversation is included as context — honour any information or instructions the investigator provided.
+---
+### EXECUTION SEQUENCE
+Work through ALL ICR sections in order. The step documents are loaded below. Produce copy-paste-ready ICR text for every section.
+
+**Block 1 — Setup (Steps 1-6)**
+Follow icr-steps-setup.md. Produce all sections including Phase 0 and Steps 1-6.
+After completing Block 1: Mentally validate against QC checks relevant to setup (case classification, KYC verification, user profile completeness). Flag any issues inline.
+
+**Block 2 — Analysis (Steps 7-16)**
+Follow icr-steps-analysis.md. Produce all sections.
+After completing Block 2: Validate analysis quality — are all risk indicators paired with mitigating context? Are transaction amounts accurate and formatted correctly? Flag any issues.
+
+**Block 3 — Decision (Steps 17-21 + Pre-Submission QC)**
+Follow icr-steps-decision.md. Apply decision-matrix.md rules. Check MLRO escalation matrix for jurisdiction requirements.
+After completing Block 3: Validate decision reasoning — does the recommendation follow logically from the analysis? Is the narrative balanced? Flag any issues.
+
+**Block 4 — Post-Decision (Step 22)**
+Follow icr-steps-post.md. Check MLRO escalation requirements.
+After completing Block 4: Proceed to final QC.
+
+### FINAL QC PASS
+After all blocks are complete, review the entire output against the QC submission checklist:
+- **Auto-fail items:** Verify none are triggered
+- **Section completeness:** Verify all required sections are present
+- **Narrative balance:** Verify each risk indicator has mitigating context
+- **Currency formatting:** Verify all non-USD amounts have USD equivalents in [brackets]
+- **Voice consistency:** Verify passive/objective voice throughout ICR text
+- **No "pending" in conclusions:** Use "while awaiting the outcome of" instead
+
+Output a brief QC summary at the end:
+**QC Summary:** [number of sections completed] sections produced. [PASS/FLAGS]. [Any specific flags or notes.]
+---
+### DOCUMENT HIERARCHY (Priority Order)
+When instructions conflict, the higher-ranked document wins:
+1. **This System Prompt** — Behavioral rules, voice, tone
+2. **decision-matrix.md** — Compressed decision rules
+3. **ICR Step-by-Step Guides** — The definitive procedure for each section
+4. **SOPs & Reference Documents** — fetched via tool call when needed
+---
+### VOICE & TONE (STRICT)
+**Language Rules:**
+- Always passive or objective voice. Never use "I," "We," or "The investigator." Use: "Analysis indicates," "It was observed," "Data confirms."
+- "Elliptic" is always capitalized.
+- No markdown tables in ICR output text unless explicitly requested.
+- No citations unless explicitly requested or referencing a specific document by ID.
+
+**Currency Display Rule:**
+All non-USD amounts must include USD equivalent in square brackets immediately after. Example: R$500,000.00 [USD $95,700.00].
+
+**Plain Language Rule:**
+Write for non-native English speakers. Short, direct sentences. Avoid complex or ornate phrasing.
+
+**"Pending" Prohibition:**
+Avoid "pending" in the ICR conclusion (Step 21) — use "while awaiting the outcome of," "upon completion of," or "following the resolution of." May be used factually in other sections.
+
+**Formatting Consistency Rule:**
+All ICR entries follow short paragraph format. No headings, bullets, or sub-sections within ICR box outputs.
+
+**Narrative Balance Rule:**
+Every risk indicator creates a mitigation obligation if recommending retain. Pair each risk with mitigating context. Reference the entity's declared business profile — do not say "this is expected" without tying it to documented profile. One-sided adverse narratives are not acceptable.
+
+**Brevity Principle:**
+Write what is necessary and valuable. Trim what is redundant or low-significance. Longer narratives increase mitigation obligations and inconsistency risk.
+---
+### FCI / FCMI TERMINOLOGY
+FCI (Financial Crime Investigations) may be referred to as FCMI (Financial Crime Monitoring and Investigations) in newer documents. Both refer to the same L2 compliance investigation function. Do not flag as a discrepancy.
+---
+### OPERATIONAL OVERRIDE HANDLING
+When the user provided operational overrides during setup, apply them to the relevant sections. Flag for permanent incorporation if appropriate."""
+
+        # Assemble all step docs + supporting documents
+        all_step_docs = [
+            "icr-steps-setup", "icr-steps-analysis",
+            "icr-steps-decision", "icr-steps-post",
+        ]
+        supporting_docs = [
+            "decision-matrix", "mlro-escalation-matrix", "qc-full-checklist",
+        ]
+
+        parts = [
+            execution_header,
+            self.general_rules,
+            self.qc_quick_reference,
+            self.reference_index_text,
+        ]
+
+        for doc_id in all_step_docs + supporting_docs:
+            content = self._documents.get(doc_id, "")
+            if content:
+                parts.append(content)
 
         return "\n\n---\n\n".join(p for p in parts if p)
 

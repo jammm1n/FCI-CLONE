@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -108,6 +108,34 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
       style={{ paddingLeft: '5%', paddingRight: '5%' }}
     >
       <div className={maxWidth ? `${maxWidth} mx-auto` : ''}>
+        {/* One-shot: Execute Full ICR button when ready */}
+        {convMode === 'oneshot' && oneshotReady && !oneshotExecuted && !oneshotExecuting && (
+          <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              The AI has reviewed the case data and is ready to produce the full ICR.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onOneshotExecute}
+                disabled={disabled}
+                className="px-6 py-3 text-sm font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-surface-950 active:scale-[0.98] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 flex items-center gap-2 shadow-lg shadow-amber-500/20"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+                </svg>
+                Execute Full ICR
+              </button>
+              <button
+                onClick={onContinueOneshotDiscussion}
+                disabled={disabled}
+                className="px-5 py-3 text-sm font-medium rounded-lg border border-surface-300 dark:border-surface-600 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 active:scale-[0.98] disabled:opacity-50"
+              >
+                Continue Discussion
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Step complete — approval mode: replaces the text input */}
         {stepComplete && currentStep >= 1 && currentStep <= 4 && (
           <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
@@ -214,13 +242,10 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
                         </div>
                       </button>
 
-                      {/* One-shot placeholder */}
-                      <div className="w-full text-left px-3 py-2 rounded-lg opacity-40 cursor-not-allowed">
-                        <div className="text-sm font-medium text-surface-500 dark:text-surface-500">
-                          One-shot (coming soon)
-                        </div>
+                      {/* One-shot info */}
+                      <div className="w-full text-left px-3 py-2 rounded-lg opacity-50">
                         <div className="text-xs text-surface-400 mt-0.5">
-                          Full ICR in a single AI call with extended thinking
+                          One-shot mode available from the case card
                         </div>
                       </div>
                     </div>
@@ -243,8 +268,8 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
           </div>
         )}
 
-        {/* Normal chat input — hidden when in approval mode */}
-        {(!stepComplete || !currentStep || currentStep > 4) && <>
+        {/* Normal chat input — hidden when in approval mode or oneshot execute/complete */}
+        {(!stepComplete || !currentStep || currentStep > 4) && !(convMode === 'oneshot' && (oneshotReady || oneshotExecuted)) && <>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here

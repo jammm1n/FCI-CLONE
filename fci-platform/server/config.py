@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Image storage
     IMAGES_DIR: str = "./data/images"
 
+    # One-shot mode
+    ONESHOT_MODEL: str = "claude-opus-4-6"
+    ONESHOT_THINKING_ENABLED: bool = True
+    ONESHOT_THINKING_BUDGET: int = 10000
+    ONESHOT_MAX_TOKENS: int = 16000
+
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 8000

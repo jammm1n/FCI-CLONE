@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
 import useStreamingChat from '../hooks/useStreamingChat';
@@ -18,6 +18,7 @@ import QCPasteModal from '../components/shared/QCPasteModal';
 
 export default function InvestigationPage() {
   const { caseId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { token } = useAuth();
 
@@ -33,7 +34,11 @@ export default function InvestigationPage() {
   const [stepLoading, setStepLoading] = useState(false);
   const [showQCModal, setShowQCModal] = useState(false);
   const [stepSignalled, setStepSignalled] = useState(false);
+  const [oneshotSignalled, setOneshotSignalled] = useState(false);
   const [autoExecuting, setAutoExecuting] = useState(false);
+  const [convMode, setConvMode] = useState('case'); // 'case' or 'oneshot'
+  const [oneshotExecuted, setOneshotExecuted] = useState(false);
+  const [oneshotExecuting, setOneshotExecuting] = useState(false);
   const autoAbortRef = useRef(null);
   const dragging = useRef(false);
 
@@ -48,6 +53,8 @@ export default function InvestigationPage() {
     setTokenUsage,
     stepComplete,
     setStepComplete,
+    oneshotReady,
+    setOneshotReady,
     loadHistory,
     sendMessage,
     triggerInitialAssessment,
@@ -77,30 +84,48 @@ export default function InvestigationPage() {
         // Case data is ready — render left panel immediately
         setCaseLoading(false);
 
+        const requestedMode = searchParams.get('mode') || 'case';
+
         if (caseDetail.conversation_id) {
           // Existing conversation — load history
           setConversationId(caseDetail.conversation_id);
           const history = await loadHistory(caseDetail.conversation_id);
-          if (history?.investigation_state) {
-            setCurrentStep(history.investigation_state.current_step);
-            setStepPhase(history.investigation_state.phase);
-            if (history.investigation_state.step_complete_signalled) {
-              setStepComplete(true);
-              setStepSignalled(true);
+          // Detect mode from conversation
+          if (history?.mode === 'oneshot') {
+            setConvMode('oneshot');
+            if (history.oneshot_state?.ready) {
+              setOneshotReady(true);
+              setOneshotSignalled(true);
+            }
+            if (history.oneshot_state?.executed) setOneshotExecuted(true);
+          } else {
+            setConvMode('case');
+            if (history?.investigation_state) {
+              setCurrentStep(history.investigation_state.current_step);
+              setStepPhase(history.investigation_state.phase);
+              if (history.investigation_state.step_complete_signalled) {
+                setStepComplete(true);
+                setStepSignalled(true);
+              }
             }
           }
         } else {
-          // New conversation — two-step: create (instant) then stream assessment
-          const result = await api.createConversation(token, caseId, 'case');
+          // New conversation — create with the requested mode
+          const createMode = requestedMode === 'oneshot' ? 'oneshot' : 'case';
+          const result = await api.createConversation(token, caseId, createMode);
           if (cancelled) return;
           setConversationId(result.conversation_id);
+          setConvMode(createMode);
           setCaseData((prev) => ({
             ...prev,
             conversation_id: result.conversation_id,
             status: 'in_progress',
           }));
-          setCurrentStep(1);
-          setStepPhase('setup');
+
+          if (createMode === 'case') {
+            setCurrentStep(1);
+            setStepPhase('setup');
+          }
 
           // Check if this conversation already has messages (e.g. race condition)
           const history = await api.getConversationHistory(token, result.conversation_id);
@@ -125,27 +150,36 @@ export default function InvestigationPage() {
 
   // Warn on tab close / refresh while AI is responding
   useEffect(() => {
-    if (!sending && !aiLoading && !autoExecuting) return;
+    if (!sending && !aiLoading && !autoExecuting && !oneshotExecuting) return;
     const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
-  }, [sending, aiLoading, autoExecuting]);
+  }, [sending, aiLoading, autoExecuting, oneshotExecuting]);
 
-  // Track when the AI first signals step complete
+  // Track when the AI first signals step complete / oneshot ready
   useEffect(() => {
     if (stepComplete) setStepSignalled(true);
   }, [stepComplete]);
+  useEffect(() => {
+    if (oneshotReady) setOneshotSignalled(true);
+  }, [oneshotReady]);
 
   // After AI finishes responding, re-show approval buttons if step was signalled
+  // Also re-show oneshot execute button if it was signalled
   const wasSending = useRef(false);
   useEffect(() => {
     if (sending) {
       wasSending.current = true;
-    } else if (wasSending.current && stepSignalled && !stepComplete) {
+    } else if (wasSending.current) {
       wasSending.current = false;
-      setStepComplete(true);
+      if (stepSignalled && !stepComplete) {
+        setStepComplete(true);
+      }
+      if (oneshotSignalled && !oneshotReady && !oneshotExecuted) {
+        setOneshotReady(true);
+      }
     }
-  }, [sending, stepSignalled, stepComplete, setStepComplete]);
+  }, [sending, stepSignalled, stepComplete, setStepComplete, oneshotSignalled, oneshotReady, oneshotExecuted, setOneshotReady]);
 
   const handleMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -374,6 +408,112 @@ export default function InvestigationPage() {
     }
   }, [conversationId, token, autoExecuting, setMessages, setStepComplete, setTokenUsage]);
 
+  // --- One-shot execution ---
+  const handleOneshotExecute = useCallback(async () => {
+    if (!conversationId || oneshotExecuting) return;
+    const controller = new AbortController();
+    autoAbortRef.current = controller;
+    setOneshotExecuting(true);
+    setStepError('');
+
+    const streamMsgId = `stream_oneshot_${Date.now()}`;
+    let toolsUsed = [];
+
+    // Add trigger message and streaming placeholder
+    setMessages((prev) => [
+      ...prev,
+      {
+        message_id: `oneshot_trigger_${Date.now()}`,
+        role: 'user',
+        content: 'Execute Full ICR',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        message_id: streamMsgId,
+        role: 'assistant',
+        content: '',
+        tools_used: [],
+        timestamp: new Date().toISOString(),
+        isStreaming: true,
+      },
+    ]);
+
+    try {
+      const response = await api.oneshotExecute(token, conversationId, controller.signal);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const jsonStr = line.slice(5).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === 'content_delta') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === streamMsgId
+                  ? { ...msg, content: msg.content + event.text }
+                  : msg
+              )
+            );
+          } else if (event.type === 'tool_use') {
+            toolsUsed.push({
+              tool: event.tool,
+              document_id: event.document_id,
+              document_title: event.document_title,
+            });
+          } else if (event.type === 'done') {
+            const finalTools = [...toolsUsed];
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === streamMsgId
+                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false }
+                  : msg
+              )
+            );
+            if (event.token_usage) setTokenUsage(event.token_usage);
+            setOneshotExecuted(true);
+          } else if (event.type === 'error') {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === streamMsgId
+                  ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
+                  : msg
+              )
+            );
+            setStepError(event.message);
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setStepError(err.message);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === streamMsgId
+              ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
+              : msg
+          )
+        );
+      }
+    } finally {
+      autoAbortRef.current = null;
+      setOneshotExecuting(false);
+    }
+  }, [conversationId, token, oneshotExecuting, setMessages, setTokenUsage]);
+
   const handleResetCase = useCallback(async () => {
     if (!conversationId || !window.confirm('Reset this investigation? The conversation will be deleted and the case will return to its initial state. This cannot be undone.')) return;
     try {
@@ -475,7 +615,13 @@ export default function InvestigationPage() {
           <div className="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 shrink-0">
             <div className="flex items-center gap-4">
               <TokenUsageDisplay tokenUsage={tokenUsage} />
-              <StepIndicator currentStep={currentStep} phase={stepPhase} />
+              {convMode === 'oneshot' ? (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                  {oneshotExecuted ? 'One-shot complete' : oneshotReady ? 'Ready to execute' : 'One-shot setup'}
+                </span>
+              ) : (
+                <StepIndicator currentStep={currentStep} phase={stepPhase} />
+              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -495,8 +641,8 @@ export default function InvestigationPage() {
             </div>
           </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
-          {(sending || autoExecuting) && (
-            <StreamingIndicator onStop={autoExecuting ? () => autoAbortRef.current?.abort() : undefined} />
+          {(sending || autoExecuting || oneshotExecuting) && (
+            <StreamingIndicator onStop={(autoExecuting || oneshotExecuting) ? () => autoAbortRef.current?.abort() : undefined} />
           )}
           {stepError && (
             <div className="mx-4 mb-2 px-4 py-2 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">
@@ -506,7 +652,7 @@ export default function InvestigationPage() {
           )}
           <ChatInput
             onSend={sendMessage}
-            disabled={sending || autoExecuting}
+            disabled={sending || autoExecuting || oneshotExecuting}
             currentStep={currentStep}
             stepComplete={stepComplete && !autoExecuting}
             onAdvanceStep={handleAdvanceStep}
@@ -516,6 +662,12 @@ export default function InvestigationPage() {
             stepLoading={stepLoading}
             onAutoExecute={handleAutoExecute}
             autoExecuting={autoExecuting}
+            convMode={convMode}
+            oneshotReady={oneshotReady && !oneshotExecuted}
+            oneshotExecuted={oneshotExecuted}
+            onOneshotExecute={handleOneshotExecute}
+            oneshotExecuting={oneshotExecuting}
+            onContinueOneshotDiscussion={() => setOneshotReady(false)}
           />
         </div>
       </div>

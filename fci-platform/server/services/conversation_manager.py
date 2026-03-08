@@ -57,6 +57,8 @@ from server.services.ai_client import (
     get_ai_response,
     get_ai_response_streaming,
     build_user_message_content,
+    TOOLS_ONESHOT_SETUP,
+    TOOLS_ONESHOT_EXECUTE,
 )
 from server.services.knowledge_base import KnowledgeBase
 
@@ -237,6 +239,69 @@ async def create_conversation(
 
         logger.info("Created case conversation %s for case %s (step 1)", conversation_id, case_id)
 
+    elif mode == "oneshot":
+        # One-shot mode: like case mode but no investigation_state (no steps)
+        if not case_id:
+            raise ValueError("case_id is required for oneshot mode")
+
+        case = await db.cases.find_one({"_id": case_id})
+        if case is None:
+            raise ValueError(f"Case not found: {case_id}")
+
+        if case.get("conversation_id"):
+            existing_id = case["conversation_id"]
+            logger.info("Case %s already has conversation %s — returning existing", case_id, existing_id)
+            return {
+                "conversation_id": existing_id,
+                "case_id": case_id,
+                "mode": "oneshot",
+            }
+
+        # Build case data and store as system_injected
+        case_data_markdown = _build_case_data_markdown(case)
+        initial_user_content = (
+            f"[CASE DATA]\n\n{case_data_markdown}\n\n"
+            "Review this case data thoroughly. Identify any gaps, ambiguities, "
+            "or missing information. Ask clarifying questions if needed, then "
+            "signal when you are ready for full ICR execution."
+        )
+
+        case_data_message = {
+            "message_id": _generate_id("msg"),
+            "role": "system_injected",
+            "content": initial_user_content,
+            "timestamp": now,
+            "visible": False,
+        }
+
+        conversation_doc = {
+            "_id": conversation_id,
+            "case_id": case_id,
+            "user_id": user_id,
+            "mode": "oneshot",
+            "title": "",
+            "status": "active",
+            "oneshot_ready": False,
+            "oneshot_executed": False,
+            "messages": [case_data_message],
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.conversations.insert_one(conversation_doc)
+
+        await db.cases.update_one(
+            {"_id": case_id},
+            {
+                "$set": {
+                    "conversation_id": conversation_id,
+                    "status": "in_progress",
+                    "updated_at": now,
+                }
+            }
+        )
+
+        logger.info("Created oneshot conversation %s for case %s", conversation_id, case_id)
+
     else:  # free_chat
         conversation_doc = {
             "_id": conversation_id,
@@ -414,6 +479,8 @@ async def send_message_streaming(
 
     # Build system prompt and API messages based on mode
     has_step_state = bool(conversation.get("investigation_state"))
+    conv_mode = conversation.get("mode", "case")
+    tools_override = None  # None = use default TOOLS
 
     if has_step_state:
         step = conversation["investigation_state"]["current_step"]
@@ -423,8 +490,13 @@ async def send_message_streaming(
         if step <= 4 and conversation.get("case_id"):
             case = await db.cases.find_one({"_id": conversation["case_id"]})
         api_messages = _rebuild_step_api_messages(conversation, case)
+    elif conv_mode == "oneshot":
+        system_prompt = knowledge_base.get_system_prompt(mode="oneshot")
+        model = None
+        tools_override = TOOLS_ONESHOT_SETUP
+        api_messages = _rebuild_api_messages(conversation["messages"])
     else:
-        system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
+        system_prompt = knowledge_base.get_system_prompt(mode=conv_mode)
         model = None
         api_messages = _rebuild_api_messages(conversation["messages"])
 
@@ -442,15 +514,19 @@ async def send_message_streaming(
             "role": "user",
             "content": INITIAL_ASSESSMENT_INSTRUCTION,
         })
-    # else: non-step initial assessment — system_injected already has instruction
+    # else: non-step/oneshot initial assessment — system_injected already has instruction
 
     # Stream the AI response
-    async for event in get_ai_response_streaming(
-        system_prompt=system_prompt,
-        messages=api_messages,
-        knowledge_base=knowledge_base,
-        model=model,
-    ):
+    streaming_kwargs = {
+        "system_prompt": system_prompt,
+        "messages": api_messages,
+        "knowledge_base": knowledge_base,
+        "model": model,
+    }
+    if tools_override is not None:
+        streaming_kwargs["tools"] = tools_override
+
+    async for event in get_ai_response_streaming(**streaming_kwargs):
         yield event
 
 
@@ -464,6 +540,7 @@ async def store_streamed_response(
     tool_call_messages: list[dict],
     is_initial_assessment: bool = False,
     step_complete_signalled: bool = False,
+    oneshot_ready_signalled: bool = False,
 ) -> dict:
     """
     Store a streamed conversation turn in MongoDB.
@@ -575,6 +652,8 @@ async def store_streamed_response(
     set_fields = {"updated_at": now}
     if current_step and step_complete_signalled:
         set_fields["investigation_state.step_complete_signalled"] = True
+    if oneshot_ready_signalled:
+        set_fields["oneshot_ready"] = True
 
     await db.conversations.update_one(
         {"_id": conversation_id},
@@ -667,6 +746,13 @@ async def get_history(conversation_id: str) -> dict:
             "phase": STEP_PHASES.get(state["current_step"], "unknown"),
             "steps": state["steps"],
             "step_complete_signalled": state.get("step_complete_signalled", False),
+        }
+
+    # Include oneshot state if present
+    if conversation.get("mode") == "oneshot":
+        result["oneshot_state"] = {
+            "ready": conversation.get("oneshot_ready", False),
+            "executed": conversation.get("oneshot_executed", False),
         }
 
     return result
@@ -766,6 +852,152 @@ async def reset_case_conversation(
     )
 
     return {"status": "reset", "case_id": case_id}
+
+
+# ---------------------------------------------------------------------------
+# One-shot execution
+# ---------------------------------------------------------------------------
+
+async def oneshot_execute(
+    conversation_id: str,
+    knowledge_base: KnowledgeBase,
+):
+    """
+    Execute the full ICR in one-shot mode.
+
+    Builds the execution system prompt with ALL step docs, includes
+    the setup transcript as context, and streams a single massive
+    AI response.
+
+    Uses configurable model (Opus), thinking, and max_tokens from settings.
+
+    Yields SSE-compatible event dicts:
+        {"type": "content_delta", "text": "..."}
+        {"type": "tool_use", ...}
+        {"type": "done", "content": "...", "tools_used": [...], "token_usage": {...},
+         "tool_call_messages": [...]}
+    """
+    db = get_database()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    if conversation.get("mode") != "oneshot":
+        raise ValueError("One-shot execution requires a oneshot conversation")
+
+    if conversation.get("oneshot_executed"):
+        raise ValueError("One-shot execution has already been performed")
+
+    # Build the execution system prompt (all step docs + rules)
+    system_prompt = knowledge_base.get_oneshot_execution_prompt()
+
+    # Build API messages: setup transcript + execution instruction
+    api_messages = _rebuild_api_messages(conversation["messages"])
+    api_messages.append({
+        "role": "user",
+        "content": (
+            "Execute the full ICR now. Work through all four blocks in order "
+            "(Setup, Analysis, Decision, Post-Decision). Produce copy-paste-ready "
+            "ICR text for every section. Validate against QC checks after each block. "
+            "End with a QC summary."
+        ),
+    })
+
+    # Configure model and thinking
+    model = settings.ONESHOT_MODEL
+    max_tokens = settings.ONESHOT_MAX_TOKENS
+    thinking = None
+    if settings.ONESHOT_THINKING_ENABLED:
+        thinking = {
+            "type": "enabled",
+            "budget_tokens": settings.ONESHOT_THINKING_BUDGET,
+        }
+
+    async for event in get_ai_response_streaming(
+        system_prompt=system_prompt,
+        messages=api_messages,
+        knowledge_base=knowledge_base,
+        model=model,
+        tools=TOOLS_ONESHOT_EXECUTE,
+        max_tokens=max_tokens,
+        thinking=thinking,
+    ):
+        yield event
+
+
+async def store_oneshot_execution(
+    conversation_id: str,
+    user_id: str,
+    ai_content: str,
+    tools_used: list[dict],
+    token_usage: dict,
+    tool_call_messages: list[dict],
+) -> dict:
+    """Store the one-shot execution result and mark the conversation as executed."""
+    db = get_database()
+    now = _now()
+
+    all_new_messages = []
+
+    # Execution trigger message (visible)
+    trigger_msg = {
+        "message_id": _generate_id("msg"),
+        "role": "user",
+        "content": "Execute Full ICR",
+        "timestamp": now,
+        "visible": True,
+    }
+    all_new_messages.append(trigger_msg)
+
+    # Tool exchanges (hidden)
+    for tc_msg in tool_call_messages:
+        msg = {
+            "message_id": _generate_id("msg"),
+            "role": "tool_exchange",
+            "content": tc_msg["content"],
+            "original_role": tc_msg["role"],
+            "timestamp": now,
+            "visible": False,
+        }
+        all_new_messages.append(msg)
+
+    # Execution result
+    assistant_msg_id = _generate_id("msg")
+    assistant_message = {
+        "message_id": assistant_msg_id,
+        "role": "assistant",
+        "content": ai_content,
+        "tools_used": tools_used,
+        "token_usage": token_usage,
+        "timestamp": now,
+        "visible": True,
+        "oneshot_execution": True,
+    }
+    all_new_messages.append(assistant_message)
+
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {
+            "$push": {"messages": {"$each": all_new_messages}},
+            "$set": {
+                "oneshot_executed": True,
+                "updated_at": now,
+            },
+        }
+    )
+
+    logger.info(
+        "One-shot execution stored for %s. Output: %d chars, tools: %s",
+        conversation_id,
+        len(ai_content),
+        [t.get("document_id") for t in tools_used],
+    )
+
+    return {
+        "message_id": assistant_msg_id,
+        "timestamp": now.isoformat(),
+    }
 
 
 # ---------------------------------------------------------------------------

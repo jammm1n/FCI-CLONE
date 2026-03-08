@@ -176,6 +176,19 @@ export async function resetCase(token, conversationId) {
   return handleResponse(res);
 }
 
+export async function oneshotExecute(token, conversationId, signal) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/oneshot-execute`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    signal,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `One-shot execution failed: ${res.status}`);
+  }
+  return res;
+}
+
 // ---------------------------------------------------------------------------
 // PDF Export
 // ---------------------------------------------------------------------------

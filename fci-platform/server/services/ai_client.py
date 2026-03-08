@@ -27,82 +27,112 @@ logger = logging.getLogger(__name__)
 # Tool definitions — sent with every API call
 # ---------------------------------------------------------------------------
 
-TOOLS = [
-    {
-        "name": "signal_step_complete",
-        "description": (
-            "Signal that you have completed all sections and blocks in the "
-            "current investigation step. Call this tool ONLY when you have "
-            "finished producing all ICR-ready text for every section covered "
-            "by your current step document. After calling this tool, stop — "
-            "do not proceed to the next block or step. The investigator will "
-            "review your work and advance when ready."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": (
-                        "Brief summary of what was completed in this step "
-                        "(e.g., 'Block 1 complete: Phase 0 + Steps 1-6')"
-                    )
-                }
-            },
-            "required": ["summary"]
-        }
-    },
-    {
-        "name": "get_reference_document",
-        "description": (
-            "Retrieve a reference document from the knowledge base. "
-            "Use this tool when you need detailed procedural guidance, "
-            "SOP requirements, or historical decision precedents that are "
-            "not covered by your core knowledge. Consult the reference "
-            "document index in your system prompt to identify the correct "
-            "document_id. Only request documents that are directly relevant "
-            "to the current investigation question or case form section."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "document_id": {
-                    "type": "string",
-                    "description": (
-                        "The unique identifier of the reference document "
-                        "to retrieve, as listed in the reference document index."
-                    )
-                }
-            },
-            "required": ["document_id"]
-        }
-    },
-    {
-        "name": "get_prompt",
-        "description": (
-            "Retrieve a data processing prompt from the prompt library. "
-            "Use this tool when you need to process raw data pasted by "
-            "the investigator (e.g., C360 transaction data, device/IP "
-            "output, Elliptic screenshots, communications). The prompt "
-            "will include formatting rules automatically. Consult the "
-            "processing prompt index in your system prompt to identify "
-            "the correct prompt_id."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "prompt_id": {
-                    "type": "string",
-                    "description": (
-                        "The unique identifier of the processing prompt "
-                        "to retrieve, as listed in the processing prompt index."
-                    )
-                }
-            },
-            "required": ["prompt_id"]
-        }
-    },
-]
+TOOL_SIGNAL_STEP_COMPLETE = {
+    "name": "signal_step_complete",
+    "description": (
+        "Signal that you have completed all sections and blocks in the "
+        "current investigation step. Call this tool ONLY when you have "
+        "finished producing all ICR-ready text for every section covered "
+        "by your current step document. After calling this tool, stop — "
+        "do not proceed to the next block or step. The investigator will "
+        "review your work and advance when ready."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "summary": {
+                "type": "string",
+                "description": (
+                    "Brief summary of what was completed in this step "
+                    "(e.g., 'Block 1 complete: Phase 0 + Steps 1-6')"
+                )
+            }
+        },
+        "required": ["summary"]
+    }
+}
+
+TOOL_GET_REFERENCE_DOCUMENT = {
+    "name": "get_reference_document",
+    "description": (
+        "Retrieve a reference document from the knowledge base. "
+        "Use this tool when you need detailed procedural guidance, "
+        "SOP requirements, or historical decision precedents that are "
+        "not covered by your core knowledge. Consult the reference "
+        "document index in your system prompt to identify the correct "
+        "document_id. Only request documents that are directly relevant "
+        "to the current investigation question or case form section."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "document_id": {
+                "type": "string",
+                "description": (
+                    "The unique identifier of the reference document "
+                    "to retrieve, as listed in the reference document index."
+                )
+            }
+        },
+        "required": ["document_id"]
+    }
+}
+
+TOOL_GET_PROMPT = {
+    "name": "get_prompt",
+    "description": (
+        "Retrieve a data processing prompt from the prompt library. "
+        "Use this tool when you need to process raw data pasted by "
+        "the investigator (e.g., C360 transaction data, device/IP "
+        "output, Elliptic screenshots, communications). The prompt "
+        "will include formatting rules automatically. Consult the "
+        "processing prompt index in your system prompt to identify "
+        "the correct prompt_id."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "prompt_id": {
+                "type": "string",
+                "description": (
+                    "The unique identifier of the processing prompt "
+                    "to retrieve, as listed in the processing prompt index."
+                )
+            }
+        },
+        "required": ["prompt_id"]
+    }
+}
+
+TOOL_SIGNAL_READY_TO_EXECUTE = {
+    "name": "signal_ready_to_execute",
+    "description": (
+        "Signal that you have reviewed all case data, asked any necessary "
+        "clarifying questions, and are confident you have sufficient "
+        "information to produce the complete ICR in one-shot mode. Call "
+        "this ONLY when you assess >= 95% confidence that all required "
+        "data is available and unambiguous. The investigator will then "
+        "trigger the full ICR execution."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "assessment": {
+                "type": "string",
+                "description": (
+                    "Brief assessment of data completeness and any "
+                    "remaining minor gaps that will not block the ICR"
+                )
+            }
+        },
+        "required": ["assessment"]
+    }
+}
+
+# Tool sets for different modes
+TOOLS = [TOOL_SIGNAL_STEP_COMPLETE, TOOL_GET_REFERENCE_DOCUMENT, TOOL_GET_PROMPT]
+TOOLS_ONESHOT_SETUP = [TOOL_SIGNAL_READY_TO_EXECUTE, TOOL_GET_REFERENCE_DOCUMENT]
+TOOLS_ONESHOT_EXECUTE = [TOOL_GET_REFERENCE_DOCUMENT]
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +192,18 @@ def _process_tool_calls(
                     ),
                 })
                 logger.info("Tool call: signal_step_complete — %s", summary)
+            elif block.name == "signal_ready_to_execute":
+                assessment = block.input.get("assessment", "")
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": (
+                        "Readiness acknowledged. The investigator has been notified and "
+                        "can now trigger the full ICR execution. Wait for the investigator "
+                        "to proceed. Do not begin producing ICR text."
+                    ),
+                })
+                logger.info("Tool call: signal_ready_to_execute — %s", assessment)
             elif block.name == "get_reference_document":
                 doc_id = block.input.get("document_id", "")
                 doc_content = knowledge_base.get_reference_document(doc_id)
@@ -394,6 +436,9 @@ async def get_ai_response_streaming(
     messages: list[dict],
     knowledge_base: KnowledgeBase,
     model: str | None = None,
+    tools: list[dict] | None = None,
+    max_tokens: int | None = None,
+    thinking: dict | None = None,
 ) -> AsyncGenerator[dict, None]:
     """
     Stream a response from the Anthropic API, handling tool calls.
@@ -404,18 +449,15 @@ async def get_ai_response_streaming(
         {"type": "done", "content": "...", "tools_used": [...], "token_usage": {...},
          "tool_call_messages": [...]}
 
-    Strategy for tool calls during streaming:
-        1. Stream the API call, yielding text chunks as they arrive
-        2. After the stream completes, check the final message's stop_reason
-        3. If tool_use: process tools silently, then stream the next API call
-        4. Repeat until end_turn
-        5. Yield a final "done" event with metadata
-
-    This means the user sees text flowing, a brief pause during tool
-    processing, then more text. Good UX for the investigation workflow.
+    Optional overrides:
+        tools: Custom tool set (defaults to TOOLS).
+        max_tokens: Override max tokens (defaults to settings.ANTHROPIC_MAX_TOKENS).
+        thinking: Extended thinking config, e.g. {"type": "enabled", "budget_tokens": 10000}.
     """
     client = get_client()
     model = model or settings.ANTHROPIC_MODEL
+    active_tools = tools if tools is not None else TOOLS
+    active_max_tokens = max_tokens or settings.ANTHROPIC_MAX_TOKENS
     all_tools_used = []
     tool_call_messages = []
     tool_call_count = 0
@@ -425,20 +467,25 @@ async def get_ai_response_streaming(
     working_messages = list(messages)
 
     while True:
-        # Stream the API call
-        async with client.messages.stream(
-            model=model,
-            max_tokens=settings.ANTHROPIC_MAX_TOKENS,
-            system=[
+        # Build API call params
+        api_params = {
+            "model": model,
+            "max_tokens": active_max_tokens,
+            "system": [
                 {
                     "type": "text",
                     "text": system_prompt,
                     "cache_control": {"type": "ephemeral"}
                 }
             ],
-            messages=working_messages,
-            tools=TOOLS,
-        ) as stream:
+            "messages": working_messages,
+            "tools": active_tools,
+        }
+        if thinking:
+            api_params["thinking"] = thinking
+
+        # Stream the API call
+        async with client.messages.stream(**api_params) as stream:
             # Yield text chunks as they arrive
             async for text in stream.text_stream:
                 full_text += text
@@ -514,7 +561,7 @@ async def get_ai_response_streaming(
                     "document_title": tool_info["document_title"],
                 }
 
-            # Check for step_complete signal (emitted separately, not stored as tools_used)
+            # Check for signal tools (emitted separately, not stored as tools_used)
             for block in final_message.content:
                 if block.type == "tool_use" and block.name == "signal_step_complete":
                     yield {
@@ -522,6 +569,13 @@ async def get_ai_response_streaming(
                         "tool": "signal_step_complete",
                         "document_id": None,
                         "document_title": block.input.get("summary", ""),
+                    }
+                elif block.type == "tool_use" and block.name == "signal_ready_to_execute":
+                    yield {
+                        "type": "tool_use",
+                        "tool": "signal_ready_to_execute",
+                        "document_id": None,
+                        "document_title": block.input.get("assessment", ""),
                     }
 
             # Append to working messages for the next API call
@@ -579,7 +633,7 @@ def _serialize_content(content_blocks: list) -> list[dict]:
     Serialize Anthropic SDK content blocks to plain dicts for
     inclusion in the messages array on subsequent API calls.
 
-    The SDK returns typed objects (TextBlock, ToolUseBlock, etc.)
+    The SDK returns typed objects (TextBlock, ToolUseBlock, ThinkingBlock, etc.)
     but the API expects plain dicts when you send them back.
     """
     serialized = []
@@ -595,6 +649,12 @@ def _serialize_content(content_blocks: list) -> list[dict]:
                 "id": block.id,
                 "name": block.name,
                 "input": block.input,
+            })
+        elif block.type == "thinking":
+            serialized.append({
+                "type": "thinking",
+                "thinking": block.thinking,
+                "signature": block.signature,
             })
         else:
             # Pass through any other block types as-is
