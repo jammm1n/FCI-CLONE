@@ -80,6 +80,10 @@ export default function InvestigationPage() {
           if (history?.investigation_state) {
             setCurrentStep(history.investigation_state.current_step);
             setStepPhase(history.investigation_state.phase);
+            if (history.investigation_state.step_complete_signalled) {
+              setStepComplete(true);
+              setStepSignalled(true);
+            }
           }
         } else {
           // New conversation — two-step: create (instant) then stream assessment
@@ -114,6 +118,14 @@ export default function InvestigationPage() {
 
     return () => { cancelled = true; };
   }, [token, caseId]);
+
+  // Warn on tab close / refresh while AI is responding
+  useEffect(() => {
+    if (!sending && !aiLoading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [sending, aiLoading]);
 
   // Track when the AI first signals step complete
   useEffect(() => {

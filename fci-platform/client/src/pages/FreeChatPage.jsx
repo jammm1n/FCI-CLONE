@@ -46,6 +46,14 @@ export default function FreeChatPage() {
     refreshSidebar();
   }, [refreshSidebar]);
 
+  // Warn on tab close / refresh while AI is responding
+  useEffect(() => {
+    if (!sending && !aiLoading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [sending, aiLoading]);
+
   // When URL param changes, load that conversation
   useEffect(() => {
     if (paramConvId && paramConvId !== conversationId) {
@@ -138,20 +146,19 @@ export default function FreeChatPage() {
               );
             } else if (event.type === 'done') {
               if (event.token_usage) setTokenUsage(event.token_usage);
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: toolsUsed, isStreaming: false }
+                    : msg
+                )
+              );
             } else if (event.type === 'tool_use') {
               toolsUsed.push({
                 tool: event.tool,
                 document_id: event.document_id,
                 document_title: event.document_title,
               });
-            } else if (event.type === 'stored') {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.message_id === streamMsgId
-                    ? { ...msg, message_id: event.message_id, tools_used: toolsUsed, isStreaming: false }
-                    : msg
-                )
-              );
             } else if (event.type === 'error') {
               setMessages((prev) =>
                 prev.map((msg) =>

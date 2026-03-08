@@ -463,6 +463,7 @@ async def store_streamed_response(
     token_usage: dict,
     tool_call_messages: list[dict],
     is_initial_assessment: bool = False,
+    step_complete_signalled: bool = False,
 ) -> dict:
     """
     Store a streamed conversation turn in MongoDB.
@@ -571,11 +572,15 @@ async def store_streamed_response(
         assistant_message["step"] = current_step
     all_new_messages.append(assistant_message)
 
+    set_fields = {"updated_at": now}
+    if current_step and step_complete_signalled:
+        set_fields["investigation_state.step_complete_signalled"] = True
+
     await db.conversations.update_one(
         {"_id": conversation_id},
         {
             "$push": {"messages": {"$each": all_new_messages}},
-            "$set": {"updated_at": now},
+            "$set": set_fields,
         }
     )
 
@@ -661,6 +666,7 @@ async def get_history(conversation_id: str) -> dict:
             "current_step": state["current_step"],
             "phase": STEP_PHASES.get(state["current_step"], "unknown"),
             "steps": state["steps"],
+            "step_complete_signalled": state.get("step_complete_signalled", False),
         }
 
     return result
@@ -1167,6 +1173,7 @@ async def approve_and_continue(
             "$set": {
                 "investigation_state.steps": steps,
                 "investigation_state.current_step": next_step,
+                "investigation_state.step_complete_signalled": False,
                 "updated_at": now,
             },
             "$push": {"messages": divider_msg},
@@ -1259,6 +1266,7 @@ async def qc_check(
             "$set": {
                 "investigation_state.steps": steps,
                 "investigation_state.current_step": 5,
+                "investigation_state.step_complete_signalled": False,
                 "updated_at": now,
             },
             "$push": {"messages": divider_msg},

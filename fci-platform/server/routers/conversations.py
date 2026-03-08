@@ -143,9 +143,14 @@ async def send_message(
     async def event_generator():
         """
         Iterate the streaming generator, yield SSE events,
-        then store the completed turn in MongoDB.
+        then store the completed turn in MongoDB BEFORE yielding
+        the done event.
+
+        This ensures that if the client disconnects after receiving
+        the done event, the response is already persisted.
         """
         done_event = None
+        step_complete_signalled = False
 
         try:
             async for event in conversation_manager.send_message_streaming(
@@ -156,16 +161,11 @@ async def send_message(
                 is_initial_assessment=initial_assessment,
             ):
                 if event["type"] == "done":
-                    # Capture the done event for storage, then yield it
+                    # Capture — do NOT yield yet; store first
                     done_event = event
-                    # Yield a slim done event to the frontend
-                    yield {
-                        "data": json.dumps({
-                            "type": "done",
-                            "message_id": None,  # Will be set after storage
-                            "token_usage": event.get("token_usage", {}),
-                        })
-                    }
+                elif event["type"] == "tool_use" and event.get("tool") == "signal_step_complete":
+                    step_complete_signalled = True
+                    yield {"data": json.dumps(event)}
                 else:
                     # Forward content_delta and tool_use events
                     yield {"data": json.dumps(event)}
@@ -182,7 +182,7 @@ async def send_message(
             yield {"data": json.dumps({"type": "error", "message": "Internal server error"})}
             return
 
-        # After streaming is complete, store the turn in MongoDB
+        # Store to MongoDB FIRST, then yield done event with message_id
         if done_event:
             try:
                 store_result = await conversation_manager.store_streamed_response(
@@ -194,12 +194,14 @@ async def send_message(
                     token_usage=done_event.get("token_usage", {}),
                     tool_call_messages=done_event.get("tool_call_messages", []),
                     is_initial_assessment=initial_assessment,
+                    step_complete_signalled=step_complete_signalled,
                 )
-                # Yield a final storage confirmation event
+                # Now yield done — response is safely persisted
                 yield {
                     "data": json.dumps({
-                        "type": "stored",
+                        "type": "done",
                         "message_id": store_result["message_id"],
+                        "token_usage": done_event.get("token_usage", {}),
                     })
                 }
             except Exception as e:

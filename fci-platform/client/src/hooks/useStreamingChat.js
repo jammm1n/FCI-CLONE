@@ -62,7 +62,16 @@ export default function useStreamingChat(token) {
             )
           );
         } else if (event.type === 'done') {
+          // Storage now happens BEFORE the done event is sent,
+          // so message_id is already available
           if (event.token_usage) setTokenUsage(event.token_usage);
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: toolsUsed, isStreaming: false }
+                : msg
+            )
+          );
         } else if (event.type === 'tool_use') {
           if (event.tool === 'signal_step_complete') {
             setStepComplete(true);
@@ -72,14 +81,6 @@ export default function useStreamingChat(token) {
             document_id: event.document_id,
             document_title: event.document_title,
           });
-        } else if (event.type === 'stored') {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.message_id === streamMsgId
-                ? { ...msg, message_id: event.message_id, tools_used: toolsUsed, isStreaming: false }
-                : msg
-            )
-          );
         } else if (event.type === 'error') {
           setMessages((prev) =>
             prev.map((msg) =>
