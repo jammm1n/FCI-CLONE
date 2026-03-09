@@ -133,3 +133,22 @@
   npm run dev
 
   Let me know if you hit any errors at any step.
+
+
+
+
+
+    cd ~/Documents/GitHub/fci-investigator/fci-platform
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r requirements.txt
+
+  And when starting the backend:
+
+  cd ~/Documents/GitHub/fci-investigator/fci-platform
+  source venv/bin/activate
+  cd server
+  uvicorn main:app --reload --port 8000
+
+  The venv lives at the fci-platform root, but you run uvicorn from server/ so the relative paths in config (like
+  KNOWLEDGE_BASE_PATH=../knowledge_base) resolve correctly.
