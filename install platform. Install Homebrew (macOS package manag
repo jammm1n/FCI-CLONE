@@ -172,19 +172,10 @@
 
 
 
-I'm on a MacBook Pro running macOS. I just ran brew install python@3.14 and it said the binary is in
-  /opt/homebrew/opt/python@3.14/libexec/bin. But when I try to run /opt/homebrew/opt/python@3.14/libexec/bin/python3 -m
-  venv venv I get "no such file or directory".
 
-  I need to:
-  1. Find where Homebrew actually put the Python 3.14 binary
-  2. Create a virtual environment with it
-  3. Install packages from a requirements.txt
+  python scripts/manage_user.py password ben.investigator <your-password>
+  python scripts/manage_user.py add jane.investigator Jane somepass123
+  python scripts/manage_user.py list
+  python scripts/manage_user.py delete demo.investigator
 
-  Can you help me find the correct path? Here's what I see:
-
-  brew info python@3.14
-
-  (paste the output of that command)
-
-  find /opt/homebrew -name "python3*" -type f
+  Four commands: list, add, password, delete. Auto-generates user IDs. Delete confirms first and leaves cases intact
