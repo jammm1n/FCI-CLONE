@@ -112,7 +112,14 @@ def generate_conversation_pdf(
     if case_doc:
         meta_rows.append(("Case ID", case_doc.get("case_id", "N/A")))
         meta_rows.append(("Type", case_doc.get("case_type", "N/A")))
-        meta_rows.append(("Subject", case_doc.get("subject_user_id", "N/A")))
+        if case_doc.get("case_mode") == "multi" and case_doc.get("subjects"):
+            uids = ", ".join(
+                s.get("user_id", "Unknown") for s in case_doc["subjects"]
+            )
+            n = len(case_doc["subjects"])
+            meta_rows.append(("Subjects", f"Multi-User — {n} Subjects: {uids}"))
+        else:
+            meta_rows.append(("Subject", case_doc.get("subject_user_id", "N/A")))
         meta_rows.append(("Status", case_doc.get("status", "N/A")))
     elif mode == "free_chat":
         title = conversation.get("title", "")

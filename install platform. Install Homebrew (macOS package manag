@@ -1,0 +1,135 @@
+  1. Install Homebrew (macOS package manager)
+
+  This makes everything else easier:
+
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  It will ask for your password (the laptop login password). When it finishes, it will print "Next steps" telling you to
+   run two commands to add Homebrew to your PATH. Run those commands — they look something like:
+
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+
+  Verify it works:
+  brew --version
+
+  2. Install MongoDB via Homebrew
+
+  Forget the unzipped download — this is cleaner:
+
+  brew tap mongodb/brew
+  brew install mongodb-community
+
+  Start MongoDB:
+  brew services start mongodb-community
+
+  Verify it's running:
+  mongosh --eval "db.runCommand({ ping: 1 })"
+
+  You should see { ok: 1 }. MongoDB will now auto-start on boot.
+
+  3. Install Python
+
+  brew install python@3.12
+
+  Verify:
+  python3 --version
+
+  4. Install Node.js
+
+  brew install node
+
+  Verify:
+  node --version
+  npm --version
+
+  5. Set up the backend
+
+  Navigate to your project (adjust the path to wherever GitHub Desktop cloned it):
+
+  cd ~/Documents/GitHub/fci-investigator/fci-platform
+
+  If you're not sure where it is:
+  find ~/Documents -name "fci-platform" -type d 2>/dev/null
+
+  Create a Python virtual environment and install dependencies:
+
+  cd server
+  python3 -m venv venv
+  source venv/bin/activate
+  pip install -r requirements.txt
+
+  6. Create the .env file
+
+  cat > .env << 'EOF'
+  ANTHROPIC_API_KEY=sk-placeholder-will-replace-later
+  ANTHROPIC_MODEL=claude-sonnet-4-6
+  KNOWLEDGE_BASE_PATH=../knowledge_base
+  MONGODB_URL=mongodb://localhost:27017
+  MONGODB_DB_NAME=fci_platform
+  EOF
+
+  The placeholder API key means the AI chat won't work, but the rest of the platform (login, ingestion, case list, data
+  panel) will load fine.
+
+  7. Seed the database
+
+  python3 -m scripts.seed_demo_data
+
+  If that gives an import error, try:
+  cd ..
+  python3 -m server.scripts.seed_demo_data
+
+  Or from the fci-platform root:
+  PYTHONPATH=. python3 scripts/seed_demo_data.py
+
+  8. Start the backend
+
+  From the fci-platform directory with the venv active:
+
+  cd server
+  source venv/bin/activate
+  uvicorn main:app --reload --port 8000
+
+  Leave this terminal running. You should see Uvicorn running on http://0.0.0.0:8000.
+
+  9. Set up and start the frontend
+
+  Open a new Terminal tab (Cmd+T):
+
+  cd ~/Documents/GitHub/fci-investigator/fci-platform/client
+  npm install
+  npm run dev
+
+  You should see Local: http://localhost:5173/.
+
+  10. Open the app
+
+  Go to http://localhost:5173 in your browser. Log in with:
+  - Username: ben.investigator
+  - Password: password123
+
+  What works without an API key
+
+  - Login, case list, ingestion dashboard (create cases, upload data, process sections, assemble)
+  - Investigation page opens — case data panel, tabs, subject selector all work
+  - Chat will fail when you send a message (API key invalid) — that's expected
+
+  Once you get the API key, just edit server/.env, replace sk-placeholder-will-replace-later with the real key, and
+  restart the backend (Ctrl+C then re-run the uvicorn command).
+
+  Quick reference for daily use
+
+  # Terminal 1 — start MongoDB (if not using brew services)
+  brew services start mongodb-community
+
+  # Terminal 2 — backend
+  cd ~/Documents/GitHub/fci-investigator/fci-platform/server
+  source venv/bin/activate
+  uvicorn main:app --reload --port 8000
+
+  # Terminal 3 — frontend
+  cd ~/Documents/GitHub/fci-investigator/fci-platform/client
+  npm run dev
+
+  Let me know if you hit any errors at any step.

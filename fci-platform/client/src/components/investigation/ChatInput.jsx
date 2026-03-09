@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5 }) {
   const [text, setText] = useState('');
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -152,13 +152,13 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
         )}
 
         {/* Step complete — approval mode: replaces the text input */}
-        {stepComplete && currentStep >= 1 && currentStep <= 4 && (
+        {stepComplete && currentStep >= 1 && currentStep <= totalSteps - 1 && (
           <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
             <p className="text-sm text-surface-500 dark:text-surface-400">
               This step is complete. Review the output above, then approve or continue the discussion.
             </p>
             <div className="flex items-center gap-3">
-              {currentStep <= 3 ? (
+              {currentStep <= totalSteps - 2 ? (
                 <button
                   onClick={onAdvanceStep}
                   disabled={stepLoading}
@@ -203,7 +203,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
               </button>
             </div>
             {/* Experimental features popover */}
-            {onAutoExecute && currentStep <= 3 && (
+            {onAutoExecute && currentStep <= totalSteps - 2 && (
               <div className="relative mt-2 flex justify-center" ref={experimentalRef}>
                 <button
                   onClick={() => setShowExperimental((prev) => !prev)}
@@ -272,7 +272,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
         )}
 
         {/* Manual override — only when step is NOT yet signalled complete */}
-        {!stepComplete && currentStep >= 1 && currentStep <= 4 && !disabled && (
+        {!stepComplete && currentStep >= 1 && currentStep <= totalSteps - 1 && !disabled && (
           <div className="flex justify-center mb-1">
             <button
               onClick={onManualStepComplete}
@@ -284,7 +284,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
         )}
 
         {/* Normal chat input — hidden when in approval mode or oneshot pre-execute */}
-        {(!stepComplete || !currentStep || currentStep > 4) && !(convMode === 'oneshot' && oneshotReady && !oneshotExecuted) && <>
+        {(!stepComplete || !currentStep || currentStep > totalSteps - 1) && !(convMode === 'oneshot' && oneshotReady && !oneshotExecuted) && <>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here

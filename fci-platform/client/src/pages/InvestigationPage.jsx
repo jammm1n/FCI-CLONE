@@ -25,6 +25,7 @@ export default function InvestigationPage() {
   const [caseData, setCaseData] = useState(null);
   const [activeGroup, setActiveGroup] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState(null);
+  const [activeSubjectIndex, setActiveSubjectIndex] = useState(0);
   const [caseLoading, setCaseLoading] = useState(true);
   const [error, setError] = useState('');
   const [stepError, setStepError] = useState('');
@@ -72,7 +73,10 @@ export default function InvestigationPage() {
         if (cancelled) return;
         setCaseData(caseDetail);
 
-        const ppd = caseDetail.preprocessed_data || {};
+        const isMultiUser = caseDetail.case_mode === 'multi';
+        const ppd = isMultiUser
+          ? (caseDetail.subjects?.[0]?.preprocessed_data || {})
+          : (caseDetail.preprocessed_data || {});
         // Find the first group that has data and set it as active
         for (const group of TAB_GROUPS) {
           const firstTab = group.tabs.find((t) => ppd[t.key]);
@@ -114,8 +118,8 @@ export default function InvestigationPage() {
             }
           }
         } else {
-          // New conversation — create with the requested mode
-          const createMode = requestedMode === 'oneshot' ? 'oneshot' : 'case';
+          // New conversation — create with the requested mode (oneshot blocked for multi-user)
+          const createMode = (requestedMode === 'oneshot' && !isMultiUser) ? 'oneshot' : 'case';
           const result = await api.createConversation(token, caseId, createMode);
           if (cancelled) return;
           setConversationId(result.conversation_id);
@@ -227,16 +231,17 @@ export default function InvestigationPage() {
       setCurrentStep(result.step);
       setStepPhase(result.phase);
       const prevStep = result.step - 1;
+      const isMulti = totalSteps > 5;
+      const unit = isMulti ? 'Block' : 'Step';
       const PHASE_LABELS = { setup: 'Setup', analysis: 'Analysis', decision: 'Decision', post: 'Post-Decision', qc_check: 'QC Check' };
-      const STEP_PHASES = { 1: 'setup', 2: 'analysis', 3: 'decision', 4: 'post', 5: 'qc_check' };
-      const prevPhaseLabel = PHASE_LABELS[STEP_PHASES[prevStep]] || prevStep;
-      const nextPhaseLabel = PHASE_LABELS[result.phase] || result.phase;
+      const prevLabel = stepLabels[String(prevStep)] || PHASE_LABELS[result.phase] || prevStep;
+      const nextLabel = stepLabels[String(result.step)] || PHASE_LABELS[result.phase] || result.phase;
       setMessages((prev) => [
         ...prev,
         {
           message_id: `divider_${Date.now()}`,
           role: 'step_divider',
-          content: `Step ${prevStep} (${prevPhaseLabel}) complete. Moving to Step ${result.step}: ${nextPhaseLabel}.`,
+          content: `${unit} ${prevStep} (${prevLabel}) complete. Moving to ${unit} ${result.step}: ${nextLabel}.`,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -244,13 +249,13 @@ export default function InvestigationPage() {
       setStepSignalled(false);
       setStepLoading(false);
       // Auto-trigger the AI to begin the new step
-      const PHASE_LABELS_FULL = { setup: 'Setup', analysis: 'Analysis', decision: 'Decision', post: 'Post-Decision', qc_check: 'QC Check' };
-      await sendMessage(`Begin Step ${result.step}: ${PHASE_LABELS_FULL[result.phase] || result.phase}. Your step document is loaded. Proceed in express mode.`);
+      const proceedSuffix = isMulti ? 'Proceed.' : 'Proceed in express mode.';
+      await sendMessage(`Begin ${unit} ${result.step}: ${nextLabel}. Your step document is loaded. ${proceedSuffix}`);
     } catch (err) {
       setStepError(err.message);
       setStepLoading(false);
     }
-  }, [conversationId, token, stepLoading, setMessages, setStepComplete, sendMessage]);
+  }, [conversationId, token, stepLoading, setMessages, setStepComplete, sendMessage, totalSteps, stepLabels]);
 
   const handleQCSubmit = useCallback(async (pastedText) => {
     if (!conversationId) return;
@@ -260,12 +265,16 @@ export default function InvestigationPage() {
       const result = await api.qcCheck(token, conversationId);
       setCurrentStep(result.step);
       setStepPhase(result.phase);
+      const prevStep = result.step - 1;
+      const isMulti = totalSteps > 5;
+      const unit = isMulti ? 'Block' : 'Step';
+      const prevLabel = stepLabels[String(prevStep)] || 'Decision';
       setMessages((prev) => [
         ...prev,
         {
           message_id: `divider_${Date.now()}`,
           role: 'step_divider',
-          content: 'Step 4 (Post-Decision) complete. Moving to Step 5: QC Check.',
+          content: `${unit} ${prevStep} (${prevLabel}) complete. Moving to ${unit} ${result.step}: QC Check.`,
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -278,7 +287,7 @@ export default function InvestigationPage() {
     } finally {
       setStepLoading(false);
     }
-  }, [conversationId, token, setMessages, sendMessage, setStepComplete]);
+  }, [conversationId, token, setMessages, sendMessage, setStepComplete, totalSteps, stepLabels]);
 
   // --- Auto-execute: run remaining steps without human approval ---
   const handleAutoExecute = useCallback(async (skipSummaries = false) => {
@@ -581,7 +590,31 @@ export default function InvestigationPage() {
     );
   }
 
-  const preprocessedData = caseData?.preprocessed_data || {};
+  const isMulti = caseData?.case_mode === 'multi';
+  const subjects = caseData?.subjects || [];
+  const preprocessedData = isMulti
+    ? (subjects[activeSubjectIndex]?.preprocessed_data || {})
+    : (caseData?.preprocessed_data || {});
+
+  function handleSubjectChange(index) {
+    setActiveSubjectIndex(index);
+    // Reset tab selection for the new subject's data
+    const ppd = subjects[index]?.preprocessed_data || {};
+    let found = false;
+    for (const group of TAB_GROUPS) {
+      const firstTab = group.tabs.find((t) => ppd[t.key]);
+      if (firstTab) {
+        setActiveGroup(group.id);
+        setActiveSubTab(firstTab.key);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      setActiveGroup(null);
+      setActiveSubTab(null);
+    }
+  }
 
   function handleGroupChange(groupId) {
     setActiveGroup(groupId);
@@ -604,6 +637,23 @@ export default function InvestigationPage() {
           className="border-r border-surface-200 dark:border-surface-700 flex flex-col min-h-0 shrink-0 animate-slide-in-left"
         >
           <CaseHeader caseData={caseData} />
+          {isMulti && subjects.length > 1 && (
+            <div className="flex gap-0 border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 px-4 overflow-x-auto shrink-0">
+              {subjects.map((subject, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSubjectChange(idx)}
+                  className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-[3px] rounded-t-lg transition-colors ${
+                    activeSubjectIndex === idx
+                      ? 'border-blue-500 text-blue-500 dark:text-blue-400'
+                      : 'border-transparent text-surface-500 dark:text-surface-400 hover:text-blue-400 hover:bg-surface-100 dark:hover:bg-surface-700/50'
+                  }`}
+                >
+                  Subject {idx + 1} — {subject.user_id || 'Unknown'}
+                </button>
+              ))}
+            </div>
+          )}
           <CaseDataTabs
             preprocessedData={preprocessedData}
             activeGroup={activeGroup}
@@ -688,7 +738,7 @@ export default function InvestigationPage() {
             onContinueDiscussion={() => setStepComplete(false)}
             onManualStepComplete={() => setStepComplete(true)}
             stepLoading={stepLoading}
-            onAutoExecute={handleAutoExecute}
+            onAutoExecute={isMulti ? null : handleAutoExecute}
             autoExecuting={autoExecuting}
             convMode={convMode}
             oneshotReady={oneshotReady && !oneshotExecuted}
@@ -697,6 +747,7 @@ export default function InvestigationPage() {
             oneshotExecuting={oneshotExecuting}
             onContinueOneshotDiscussion={() => setOneshotReady(false)}
             onOneshotQCCheck={() => setShowQCModal(true)}
+            totalSteps={totalSteps}
           />
         </div>
       </div>
