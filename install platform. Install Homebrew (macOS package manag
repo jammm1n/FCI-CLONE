@@ -172,19 +172,19 @@
 
 
 
-  ben@th47w2x1j7 fci-platform % /opt/homebrew/bin/python3.12 -m venv venv
-zsh: no such file or directory: /opt/homebrew/bin/python3.12
-ben@th47w2x1j7 fci-platform % brew list | grep python
-ben@th47w2x1j7 fci-platform % brew install python@3.14.3
-✔︎ JSON API cask.jws.json                             Downloaded   15.4MB/ 15.4MB
-✔︎ JSON API formula.jws.json                          Downloaded   31.9MB/ 31.9MB
-Warning: No available formula with the name "python@3.14.3". Did you mean python@3.14, python@3.13, python@3.12, python@3.11 or python@3.10?
-==> Searching for similarly named formulae and casks...
-==> Formulae
-python@3.14     python@3.13     python@3.12     python@3.11     python@3.10
+I'm on a MacBook Pro running macOS. I just ran brew install python@3.14 and it said the binary is in
+  /opt/homebrew/opt/python@3.14/libexec/bin. But when I try to run /opt/homebrew/opt/python@3.14/libexec/bin/python3 -m
+  venv venv I get "no such file or directory".
 
-To install python@3.14, run:
-  brew install python@3.14
-ben@th47w2x1j7 fci-platform % ls /opt/homebrew/bin/python3
-ls: /opt/homebrew/bin/python3: No such file or directory
-ben@th47w2x1j7 fci-platform % 
+  I need to:
+  1. Find where Homebrew actually put the Python 3.14 binary
+  2. Create a virtual environment with it
+  3. Install packages from a requirements.txt
+
+  Can you help me find the correct path? Here's what I see:
+
+  brew info python@3.14
+
+  (paste the output of that command)
+
+  find /opt/homebrew -name "python3*" -type f
