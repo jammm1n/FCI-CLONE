@@ -58,6 +58,16 @@ corrected Hexa output and paste it directly into
 HaoDesk, then separately select and paste the
 Supplemental Analysis below it.
 
+**Individual Entry Rule:** When correcting Hexa
+bullet point entries (e.g., counterparty entries at
+Step 12), output the COMPLETE corrected bullet point
+— the full text as it should appear in HaoDesk.
+Never output a description of changes or edit
+instructions like "UID X entry updated to include
+[change]." Only reproduce entries that require
+correction. For unchanged entries, state "All other
+Hexa entries retained as-is."
+
 ---
 
 ## Corporate Account Rules

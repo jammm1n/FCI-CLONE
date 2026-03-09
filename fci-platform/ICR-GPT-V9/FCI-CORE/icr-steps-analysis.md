@@ -909,47 +909,6 @@ The investigator will paste structured data
 containing four tasks: Hexa Corrections, Risk
 Flag Table, Clean Counterparty Summary, and P2P
 Totals. Using this data:
-**HEXA BULLET POINT OUTPUT RULE (Step 12 Specific):**
-When Hexa bullet point entries require correction
-(missing offboarding reasons, missing block reasons,
-incorrect block counts, missing No KYC status, or
-any other error identified through the Prompt #12
-audit or web app extraction), the AI must output the
-COMPLETE corrected bullet point — the full text of
-the entry as it should appear in HaoDesk after
-correction. Do not output a description of what
-changed. Do not output edit instructions. Do not
-output "UID X entry updated to include [change]."
-
-For each bullet point that requires correction:
-reproduce the entire Hexa bullet point text with
-corrections applied, ready for the investigator to
-select, copy, and paste directly over the original
-Hexa entry in HaoDesk.
-
-For bullet points that require NO correction: do not
-reproduce them. State "All other Hexa entries
-retained as-is."
-
-For bullet points that must be ADDED (e.g., a
-high-risk counterparty not in Hexa but identified
-in the web app extraction): output the new bullet
-point in the same format as the existing Hexa
-bullet points, clearly labeled "NEW ENTRY — add
-below existing Hexa bullet points."
-
-The output structure for Step 12 is:
-1. Header validation result (one sentence)
-2. Complete corrected bullet points (full text,
-   copy-paste ready) — only those requiring changes
-3. New bullet point entries if any
-4. "All other Hexa entries retained as-is."
-5. Supplemental Analysis paragraph (below, separate)
-
-This rule reinforces the Correction Sequence Rule
-in icr-general-rules.md and the Output Format Rule
-in the system prompt. It is stated here to prevent
-ambiguity at this step.
 1. Apply Hexa corrections from Task 1 in-place
    (adjust header counts, remove self-references,
    fix formatting)
