@@ -186,7 +186,8 @@ narrative.
 
 ## Parallel Chat Data Products
 - **Preprocessed Data Products:** When the
-  ingestion pipeline processes raw data (device,
+  investigator processes raw data in a parallel
+  chat (device,
   Elliptic, LE/Kodex, case intake, counterparty
   extractions), the output is structured data —
   not ICR narrative. The main chat writes all ICR

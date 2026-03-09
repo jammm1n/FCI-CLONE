@@ -603,8 +603,7 @@ enforcement cases.
    Kodex Case Details.
 3. If Kodex shows cases not in the Hexa text, add them.
 4. Provide appropriate level of detail per request type.
-**If LE data was extracted by the ingestion
-pipeline:**
+**If LE data was extracted in a parallel chat:**
 The investigator will paste structured LE data
 containing an LE Case Table and Summary. Using
 this data:

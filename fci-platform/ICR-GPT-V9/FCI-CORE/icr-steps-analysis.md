@@ -351,8 +351,7 @@ amount, date range).
 2. Open with the standardized Elliptic template.
 3. Identify all high-risk entities with full wallet
    addresses.
-**If Elliptic data was extracted by the ingestion
-pipeline:**
+**If Elliptic data was extracted in a parallel chat:**
 The investigator will paste structured Elliptic
 data containing a Wallet Screening Table and
 Summary Statistics. Using this data:
@@ -496,8 +495,8 @@ is an advisory analytical step — not a mandatory gate
 or a replacement for batch screening.
 
 **WEB APP UOL INTEGRATION:** When the investigator
-processes Elliptic data in a parallel chat using
-the ingestion pipeline and the web app provides UOL
+processes Elliptic data in a parallel chat and
+the extraction output provides UOL
 cross-reference data, the extraction output will
 include a Section 3 (UOL Cross-Reference) and UOL
 Status fields per wallet in Section 1. This
@@ -764,8 +763,7 @@ RISK MITIGATION CROSS-REFERENCE: If any high-risk wallet finding in this section
    a wallet scoring 5 or above, perform the
    jurisdiction check per gambling-legality-matrix.md
    as documented in Step 9.
-**If Elliptic data was extracted by the ingestion
-pipeline:**
+**If Elliptic data was extracted in a parallel chat:**
 The same extraction may cover both Step 9
 (exposed addresses) and Step 10 (top addresses
 by value) if the investigator screened all
@@ -905,8 +903,8 @@ counterparties.
    (common in counterparty transaction counts such as
    "received seven of 22 from and made one"). Correct
    silently.
-**If counterparty data was extracted by the
-ingestion pipeline:**
+**If counterparty data was extracted in a parallel
+chat:**
 The investigator will paste structured data
 containing four tasks: Hexa Corrections, Risk
 Flag Table, Clean Counterparty Summary, and P2P
@@ -1255,8 +1253,7 @@ sharing summary.
    languages. These headline figures anchor the
    device paragraph and must not be approximated
    from raw data.
-**If device data was extracted by the ingestion
-pipeline:**
+**If device data was extracted in a parallel chat:**
 The investigator will paste structured data
 containing six sections: Headline Figures,
 Location Frequency, Language Summary, VPN Usage,
