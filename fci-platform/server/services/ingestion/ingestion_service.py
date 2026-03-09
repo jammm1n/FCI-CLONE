@@ -33,6 +33,36 @@ from server.models.ingestion_schemas import (
 logger = logging.getLogger(__name__)
 
 
+# ── Multi-User Path Helpers ───────────────────────────────────────
+
+
+def _section_path(section_key: str, subject_index: int | None = None) -> str:
+    """
+    Build the MongoDB dot-notation prefix for a section field.
+
+    Single-user (subject_index=None): 'sections.{key}'
+    Multi-user  (subject_index=N):    'subjects.{N}.sections.{key}'
+    """
+    if subject_index is not None:
+        return f'subjects.{subject_index}.sections.{section_key}'
+    return f'sections.{section_key}'
+
+
+def _get_section(doc: dict, section_key: str, subject_index: int | None = None) -> dict:
+    """
+    Read a section dict from a case document.
+
+    Single-user (subject_index=None): doc['sections'][key]
+    Multi-user  (subject_index=N):    doc['subjects'][N]['sections'][key]
+    """
+    if subject_index is not None:
+        subjects = doc.get('subjects', [])
+        if subject_index < len(subjects):
+            return subjects[subject_index].get('sections', {}).get(section_key, {})
+        return {}
+    return doc.get('sections', {}).get(section_key, {})
+
+
 # ── Assembly Order and None Statements ────────────────────────────
 
 # Fixed order for the assembled case data markdown.
@@ -138,15 +168,26 @@ async def create_ingestion_case(
     subject_uid: str = '',
     coconspirator_uids: list[str] | None = None,
     created_by: str = '',
+    case_mode: str = 'single',
+    total_subjects: int = 1,
 ) -> dict:
     """
     Create a new ingestion case document.
 
+    For multi-user cases (case_mode="multi"), creates a subjects array
+    with total_subjects entries. The first subject gets _empty_sections()
+    and status "in_progress"; subsequent subjects start as "pending" with
+    sections=None (populated when they become active).
+
     Raises ValueError if:
       - The investigator already has an active case (ingesting/ready)
       - The case_id already exists
+      - case_mode is "multi" and total_subjects < 2
     """
     col = _collection()
+
+    if case_mode == 'multi' and total_subjects < 2:
+        raise ValueError('Multi-user cases require at least 2 subjects')
 
     # Check for existing active case for this investigator
     active = await col.find_one(
@@ -165,17 +206,42 @@ async def create_ingestion_case(
     doc = {
         '_id': case_id,
         'status': 'ingesting',
+        'case_mode': case_mode,
         'created_by': created_by,
         'subject_uid': subject_uid,
         'coconspirator_uids': coconspirator_uids or [],
-        'sections': _empty_sections(),
         'assembled_case_data': None,
         'created_at': now,
         'updated_at': now,
         'completed_at': None,
     }
+
+    if case_mode == 'multi':
+        doc['total_subjects'] = total_subjects
+        doc['current_subject_index'] = 0
+        subjects = []
+        for i in range(total_subjects):
+            if i == 0:
+                subjects.append({
+                    'user_id': subject_uid or None,
+                    'label': f'Subject {i + 1}',
+                    'status': 'in_progress',
+                    'sections': _empty_sections(),
+                })
+            else:
+                subjects.append({
+                    'user_id': None,
+                    'label': f'Subject {i + 1}',
+                    'status': 'pending',
+                    'sections': None,
+                })
+        doc['subjects'] = subjects
+        doc['sections'] = {}  # empty for multi-user
+    else:
+        doc['sections'] = _empty_sections()
+
     await col.insert_one(doc)
-    logger.info('Created ingestion case %s for user %s', case_id, created_by)
+    logger.info('Created ingestion case %s (mode=%s) for user %s', case_id, case_mode, created_by)
     return doc
 
 
@@ -197,14 +263,31 @@ async def get_case_status(case_id: str) -> dict | None:
 
     Only returns section statuses and timestamps, not full outputs.
     Designed to be called every 2-3 seconds by the frontend.
+
+    For multi-user cases, returns the current subject's sections in the
+    'sections' field (preserving the existing polling hook's logic), plus
+    multi-user metadata: case_mode, current_subject_index, subjects summary.
     """
     doc = await _collection().find_one({'_id': case_id})
     if not doc:
         return None
 
+    is_multi = doc.get('case_mode') == 'multi'
+    current_si = doc.get('current_subject_index', 0) if is_multi else None
+
+    # Determine which sections dict to read
+    if is_multi:
+        subjects = doc.get('subjects', [])
+        if current_si < len(subjects) and subjects[current_si].get('sections'):
+            raw_sections = subjects[current_si]['sections']
+        else:
+            raw_sections = {}
+    else:
+        raw_sections = doc.get('sections', {})
+
     section_statuses = {}
     for key in ALL_SECTION_KEYS:
-        section = doc.get('sections', {}).get(key, {})
+        section = raw_sections.get(key, {})
         entry = {
             'status': section.get('status', 'empty'),
             'updated_at': section.get('updated_at'),
@@ -218,11 +301,33 @@ async def get_case_status(case_id: str) -> dict | None:
             entry['ai_status'] = section['ai_status']
         section_statuses[key] = entry
 
-    return {
+    result = {
         'case_id': doc['_id'],
         'case_status': doc.get('status', 'ingesting'),
+        'case_mode': doc.get('case_mode', 'single'),
         'sections': section_statuses,
     }
+
+    if is_multi:
+        result['current_subject_index'] = current_si
+        # Build per-subject summary for progress header
+        subjects_summary = []
+        for subj in doc.get('subjects', []):
+            subj_sections = subj.get('sections') or {}
+            complete_count = sum(
+                1 for k in REQUIRED_TERMINAL_KEYS
+                if subj_sections.get(k, {}).get('status') in TERMINAL_STATUSES
+            )
+            subjects_summary.append({
+                'user_id': subj.get('user_id'),
+                'label': subj.get('label', ''),
+                'status': subj.get('status', 'pending'),
+                'sections_complete': complete_count,
+                'sections_total': len(REQUIRED_TERMINAL_KEYS),
+            })
+        result['subjects'] = subjects_summary
+
+    return result
 
 
 # ── Section Updates ───────────────────────────────────────────────
@@ -235,29 +340,34 @@ async def update_section(
     output: str | None = None,
     error: str | None = None,
     extra_fields: dict | None = None,
+    subject_index: int | None = None,
 ):
     """
     Atomic section update via MongoDB $set.
 
     After each update, checks if all required sections have reached
     terminal state and auto-transitions the case to 'ready' if so.
+
+    subject_index: For multi-user cases, the index into the subjects array.
+                   None for single-user (writes to top-level sections).
     """
     now = _utcnow()
+    prefix = _section_path(section_key, subject_index)
     update_fields = {
-        f'sections.{section_key}.status': status,
-        f'sections.{section_key}.updated_at': now,
+        f'{prefix}.status': status,
+        f'{prefix}.updated_at': now,
         'updated_at': now,
     }
 
     if output is not None:
-        update_fields[f'sections.{section_key}.output'] = output
+        update_fields[f'{prefix}.output'] = output
     if error is not None:
-        update_fields[f'sections.{section_key}.error_message'] = error
+        update_fields[f'{prefix}.error_message'] = error
 
     # Extra fields (e.g. wallet_addresses, detected_file_types, warnings)
     if extra_fields:
         for k, v in extra_fields.items():
-            update_fields[f'sections.{section_key}.{k}'] = v
+            update_fields[f'{prefix}.{k}'] = v
 
     await _collection().update_one(
         {'_id': case_id},
@@ -266,10 +376,12 @@ async def update_section(
     logger.info('Updated section %s.%s -> %s', case_id, section_key, status)
 
     # Check if case should transition to 'ready'
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
 
 
-async def mark_section_none(case_id: str, section_key: str):
+async def mark_section_none(
+    case_id: str, section_key: str, subject_index: int | None = None,
+):
     """
     Mark a section as not applicable.
 
@@ -281,10 +393,12 @@ async def mark_section_none(case_id: str, section_key: str):
             f'Section "{section_key}" cannot be marked as not applicable'
         )
 
-    await update_section(case_id, section_key, 'none')
+    await update_section(case_id, section_key, 'none', subject_index=subject_index)
 
 
-async def save_notes(case_id: str, notes_text: str) -> dict:
+async def save_notes(
+    case_id: str, notes_text: str, subject_index: int | None = None,
+) -> dict:
     """
     Save investigator notes. No AI processing.
 
@@ -300,12 +414,13 @@ async def save_notes(case_id: str, notes_text: str) -> dict:
         status = 'empty'
         output = None
 
+    prefix = _section_path('investigator_notes', subject_index)
     await _collection().update_one(
         {'_id': case_id},
         {'$set': {
-            'sections.investigator_notes.status': status,
-            'sections.investigator_notes.output': output,
-            'sections.investigator_notes.updated_at': now,
+            f'{prefix}.status': status,
+            f'{prefix}.output': output,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
@@ -313,7 +428,10 @@ async def save_notes(case_id: str, notes_text: str) -> dict:
     return {'status': status, 'updated_at': now}
 
 
-async def save_text_section(case_id: str, section_key: str, text: str) -> dict:
+async def save_text_section(
+    case_id: str, section_key: str, text: str,
+    subject_index: int | None = None,
+) -> dict:
     """
     Save a plain-text section (no AI processing).
 
@@ -321,6 +439,7 @@ async def save_text_section(case_id: str, section_key: str, text: str) -> dict:
     Returns {status, updated_at}.
     """
     now = _utcnow()
+    prefix = _section_path(section_key, subject_index)
 
     if text.strip():
         status = 'complete'
@@ -332,19 +451,20 @@ async def save_text_section(case_id: str, section_key: str, text: str) -> dict:
     await _collection().update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': status,
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': status,
+            f'{prefix}.output': output,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {'status': status, 'updated_at': now}
 
 
 async def save_text_section_with_ai(
     case_id: str, section_key: str, text: str,
+    subject_index: int | None = None,
 ) -> dict:
     """
     Save a text section, then run AI processing in the foreground.
@@ -356,21 +476,22 @@ async def save_text_section_with_ai(
     from server.services.ingestion.ai_processor import process_with_ai
 
     now = _utcnow()
+    prefix = _section_path(section_key, subject_index)
 
     if not text.strip():
         # Clear the section
         await _collection().update_one(
             {'_id': case_id},
             {'$set': {
-                f'sections.{section_key}.status': 'empty',
-                f'sections.{section_key}.output': None,
-                f'sections.{section_key}.raw_text': None,
-                f'sections.{section_key}.ai_status': None,
-                f'sections.{section_key}.updated_at': now,
+                f'{prefix}.status': 'empty',
+                f'{prefix}.output': None,
+                f'{prefix}.raw_text': None,
+                f'{prefix}.ai_status': None,
+                f'{prefix}.updated_at': now,
                 'updated_at': now,
             }},
         )
-        await _check_ready_state(case_id)
+        await _check_ready_state(case_id, subject_index=subject_index)
         return {'status': 'empty', 'updated_at': now, 'ai_status': None, 'ai_error': None}
 
     raw_text = text.strip()
@@ -379,10 +500,10 @@ async def save_text_section_with_ai(
     await _collection().update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'processing',
-            f'sections.{section_key}.raw_text': raw_text,
-            f'sections.{section_key}.ai_status': 'processing',
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'processing',
+            f'{prefix}.raw_text': raw_text,
+            f'{prefix}.ai_status': 'processing',
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
@@ -403,17 +524,17 @@ async def save_text_section_with_ai(
     await _collection().update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'complete',
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.raw_text': raw_text,
-            f'sections.{section_key}.ai_status': ai_status,
-            f'sections.{section_key}.ai_error': ai_error,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'complete',
+            f'{prefix}.output': output,
+            f'{prefix}.raw_text': raw_text,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {
         'status': 'complete',
         'updated_at': now,
@@ -554,6 +675,7 @@ def _load_entry_images_as_base64(entry: dict) -> list[dict]:
 
 async def save_images_with_ai(
     case_id: str, section_key: str, image_refs: list[dict], batch_id: str,
+    subject_index: int | None = None,
 ) -> dict:
     """
     Save images to a section and run AI processing with vision.
@@ -566,16 +688,17 @@ async def save_images_with_ai(
 
     now = _utcnow()
     col = _collection()
+    prefix = _section_path(section_key, subject_index)
 
     # Store image refs, mark as processing
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'processing',
-            f'sections.{section_key}.images': image_refs,
-            f'sections.{section_key}.batch_id': batch_id,
-            f'sections.{section_key}.ai_status': 'processing',
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'processing',
+            f'{prefix}.images': image_refs,
+            f'{prefix}.batch_id': batch_id,
+            f'{prefix}.ai_status': 'processing',
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
@@ -604,16 +727,16 @@ async def save_images_with_ai(
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': status,
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.ai_status': ai_status,
-            f'sections.{section_key}.ai_error': ai_error,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': status,
+            f'{prefix}.output': output,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {
         'status': status,
         'updated_at': now,
@@ -631,6 +754,7 @@ async def save_text_and_images_with_ai(
     text: str,
     image_refs: list[dict],
     batch_id: str,
+    subject_index: int | None = None,
 ) -> dict:
     """
     Save text and images to a section, then run AI processing with vision.
@@ -645,6 +769,7 @@ async def save_text_and_images_with_ai(
 
     now = _utcnow()
     col = _collection()
+    prefix = _section_path(section_key, subject_index)
     raw_text = text.strip() if text else ''
 
     if not raw_text and not image_refs:
@@ -652,18 +777,18 @@ async def save_text_and_images_with_ai(
         await col.update_one(
             {'_id': case_id},
             {'$set': {
-                f'sections.{section_key}.status': 'empty',
-                f'sections.{section_key}.output': None,
-                f'sections.{section_key}.raw_text': None,
-                f'sections.{section_key}.images': [],
-                f'sections.{section_key}.batch_id': None,
-                f'sections.{section_key}.ai_status': None,
-                f'sections.{section_key}.ai_error': None,
-                f'sections.{section_key}.updated_at': now,
+                f'{prefix}.status': 'empty',
+                f'{prefix}.output': None,
+                f'{prefix}.raw_text': None,
+                f'{prefix}.images': [],
+                f'{prefix}.batch_id': None,
+                f'{prefix}.ai_status': None,
+                f'{prefix}.ai_error': None,
+                f'{prefix}.updated_at': now,
                 'updated_at': now,
             }},
         )
-        await _check_ready_state(case_id)
+        await _check_ready_state(case_id, subject_index=subject_index)
         return {
             'status': 'empty', 'updated_at': now,
             'ai_status': None, 'ai_error': None,
@@ -673,12 +798,12 @@ async def save_text_and_images_with_ai(
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'processing',
-            f'sections.{section_key}.raw_text': raw_text,
-            f'sections.{section_key}.images': image_refs,
-            f'sections.{section_key}.batch_id': batch_id,
-            f'sections.{section_key}.ai_status': 'processing',
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'processing',
+            f'{prefix}.raw_text': raw_text,
+            f'{prefix}.images': image_refs,
+            f'{prefix}.batch_id': batch_id,
+            f'{prefix}.ai_status': 'processing',
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
@@ -716,17 +841,17 @@ async def save_text_and_images_with_ai(
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'complete',
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.raw_text': raw_text,
-            f'sections.{section_key}.ai_status': ai_status,
-            f'sections.{section_key}.ai_error': ai_error,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'complete',
+            f'{prefix}.output': output,
+            f'{prefix}.raw_text': raw_text,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {
         'status': 'complete',
         'updated_at': now,
@@ -738,10 +863,14 @@ async def save_text_and_images_with_ai(
 # ── Iterative Entry Sections (Prior ICR, RFI) ─────────────────────
 
 
-async def set_total_count(case_id: str, section_key: str, count: int | None) -> None:
+async def set_total_count(
+    case_id: str, section_key: str, count: int | None,
+    subject_index: int | None = None,
+) -> None:
     """Set the total count for an iterative section (e.g. total prior ICRs)."""
-    set_fields = {f"sections.{section_key}.total_count": count, "updated_at": _utcnow()}
-    await _collection().update_one({"_id": case_id}, {"$set": set_fields})
+    prefix = _section_path(section_key, subject_index)
+    set_fields = {f'{prefix}.total_count': count, 'updated_at': _utcnow()}
+    await _collection().update_one({'_id': case_id}, {'$set': set_fields})
 
 
 async def add_entry(
@@ -750,6 +879,7 @@ async def add_entry(
     text: str,
     images: list[dict] | None = None,
     entry_id: str | None = None,
+    subject_index: int | None = None,
 ) -> dict:
     """
     Add a text entry (with optional image references) to an iterative section.
@@ -760,11 +890,13 @@ async def add_entry(
         text: The entry text.
         images: Optional list of image reference dicts (from _store_ingestion_images).
         entry_id: Optional pre-generated entry ID (used when images are stored first).
+        subject_index: For multi-user cases, index into subjects array.
 
     Returns the new entry dict with its generated id.
     """
     now = _utcnow()
     col = _collection()
+    prefix = _section_path(section_key, subject_index)
 
     if not entry_id:
         entry_id = f'entry_{uuid.uuid4().hex[:8]}'
@@ -780,10 +912,10 @@ async def add_entry(
     await col.update_one(
         {'_id': case_id},
         {
-            '$push': {f'sections.{section_key}.entries': entry},
+            '$push': {f'{prefix}.entries': entry},
             '$set': {
-                f'sections.{section_key}.status': 'incomplete',
-                f'sections.{section_key}.updated_at': now,
+                f'{prefix}.status': 'incomplete',
+                f'{prefix}.updated_at': now,
                 'updated_at': now,
             },
         },
@@ -793,40 +925,47 @@ async def add_entry(
     return entry
 
 
-async def remove_entry(case_id: str, section_key: str, entry_id: str):
+async def remove_entry(
+    case_id: str, section_key: str, entry_id: str,
+    subject_index: int | None = None,
+):
     """Remove an entry from an iterative section by its id."""
     now = _utcnow()
     col = _collection()
+    prefix = _section_path(section_key, subject_index)
 
     await col.update_one(
         {'_id': case_id},
         {
-            '$pull': {f'sections.{section_key}.entries': {'id': entry_id}},
+            '$pull': {f'{prefix}.entries': {'id': entry_id}},
             '$set': {
-                f'sections.{section_key}.updated_at': now,
+                f'{prefix}.updated_at': now,
                 'updated_at': now,
             },
         },
     )
 
     # If no entries left, reset section to empty
-    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}.entries': 1})
-    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
+    doc = await col.find_one({'_id': case_id}, {f'{prefix}.entries': 1})
+    entries = _get_section(doc, section_key, subject_index).get('entries', [])
     if not entries:
         await col.update_one(
             {'_id': case_id},
             {'$set': {
-                f'sections.{section_key}.status': 'empty',
-                f'sections.{section_key}.output': None,
-                f'sections.{section_key}.raw_text': None,
-                f'sections.{section_key}.ai_status': None,
+                f'{prefix}.status': 'empty',
+                f'{prefix}.output': None,
+                f'{prefix}.raw_text': None,
+                f'{prefix}.ai_status': None,
             }},
         )
 
     logger.info('Removed entry %s from %s.%s', entry_id, case_id, section_key)
 
 
-async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
+async def process_entries_with_ai(
+    case_id: str, section_key: str,
+    subject_index: int | None = None,
+) -> dict:
     """
     Combine all entries in an iterative section and run AI processing.
 
@@ -838,8 +977,9 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
     from server.services.ingestion.ai_processor import process_with_ai
 
     col = _collection()
-    doc = await col.find_one({'_id': case_id}, {f'sections.{section_key}': 1})
-    entries = doc.get('sections', {}).get(section_key, {}).get('entries', [])
+    prefix = _section_path(section_key, subject_index)
+    doc = await col.find_one({'_id': case_id}, {f'{prefix}': 1})
+    entries = _get_section(doc, section_key, subject_index).get('entries', [])
 
     if not entries:
         return {'status': 'empty', 'ai_status': None, 'ai_error': 'No entries to process'}
@@ -848,15 +988,17 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'processing',
-            f'sections.{section_key}.ai_status': 'processing',
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'processing',
+            f'{prefix}.ai_status': 'processing',
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
     if section_key == 'rfis':
-        return await _process_rfi_entries(case_id, section_key, entries)
+        return await _process_rfi_entries(
+            case_id, section_key, entries, subject_index=subject_index,
+        )
 
     # Default path: combine entries into numbered text, single AI call
     parts = []
@@ -866,7 +1008,7 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
 
     await col.update_one(
         {'_id': case_id},
-        {'$set': {f'sections.{section_key}.raw_text': combined_text}},
+        {'$set': {f'{prefix}.raw_text': combined_text}},
     )
 
     ai_result = await process_with_ai(section_key, combined_text)
@@ -884,17 +1026,17 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'complete',
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.raw_text': combined_text,
-            f'sections.{section_key}.ai_status': ai_status,
-            f'sections.{section_key}.ai_error': ai_error,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'complete',
+            f'{prefix}.output': output,
+            f'{prefix}.raw_text': combined_text,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {
         'status': 'complete',
         'updated_at': now,
@@ -906,6 +1048,7 @@ async def process_entries_with_ai(case_id: str, section_key: str) -> dict:
 
 async def _process_rfi_entries(
     case_id: str, section_key: str, entries: list[dict],
+    subject_index: int | None = None,
 ) -> dict:
     """
     Two-stage RFI processing:
@@ -915,6 +1058,7 @@ async def _process_rfi_entries(
     from server.services.ingestion.ai_processor import process_with_ai
 
     col = _collection()
+    prefix = _section_path(section_key, subject_index)
 
     # Stage 1: Process each entry individually
     entry_narratives = []
@@ -939,11 +1083,11 @@ async def _process_rfi_entries(
 
         entry_narratives.append(narrative)
 
-        # Store per-entry AI output back on the entry
+        # Store per-entry AI output back on the entry (positional $ operator)
         await col.update_one(
-            {'_id': case_id, f'sections.{section_key}.entries.id': entry['id']},
+            {'_id': case_id, f'{prefix}.entries.id': entry['id']},
             {'$set': {
-                f'sections.{section_key}.entries.$.ai_output': narrative,
+                f'{prefix}.entries.$.ai_output': narrative,
             }},
         )
 
@@ -955,7 +1099,7 @@ async def _process_rfi_entries(
 
     await col.update_one(
         {'_id': case_id},
-        {'$set': {f'sections.{section_key}.raw_text': combined_text}},
+        {'$set': {f'{prefix}.raw_text': combined_text}},
     )
 
     ai_result = await process_with_ai('rfis', combined_text)
@@ -973,17 +1117,17 @@ async def _process_rfi_entries(
     await col.update_one(
         {'_id': case_id},
         {'$set': {
-            f'sections.{section_key}.status': 'complete',
-            f'sections.{section_key}.output': output,
-            f'sections.{section_key}.raw_text': combined_text,
-            f'sections.{section_key}.ai_status': ai_status,
-            f'sections.{section_key}.ai_error': ai_error,
-            f'sections.{section_key}.updated_at': now,
+            f'{prefix}.status': 'complete',
+            f'{prefix}.output': output,
+            f'{prefix}.raw_text': combined_text,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
             'updated_at': now,
         }},
     )
 
-    await _check_ready_state(case_id)
+    await _check_ready_state(case_id, subject_index=subject_index)
     return {
         'status': 'complete',
         'updated_at': now,
@@ -996,32 +1140,189 @@ async def _process_rfi_entries(
 # ── Ready-State Detection ─────────────────────────────────────────
 
 
-async def _check_ready_state(case_id: str):
-    """
-    Check if all required sections are in terminal state.
-
-    If so, and the case is currently 'ingesting', transition to 'ready'.
-    investigator_notes is excluded — it never blocks readiness.
-    """
-    doc = await _collection().find_one(
-        {'_id': case_id},
-        {'status': 1, 'sections': 1},
-    )
-    if not doc or doc.get('status') != 'ingesting':
-        return
-
-    sections = doc.get('sections', {})
-    all_terminal = all(
+def _sections_all_terminal(sections: dict) -> bool:
+    """Check if all required sections in a sections dict are terminal."""
+    return all(
         sections.get(key, {}).get('status') in TERMINAL_STATUSES
         for key in REQUIRED_TERMINAL_KEYS
     )
 
-    if all_terminal:
+
+async def _check_ready_state(
+    case_id: str, subject_index: int | None = None,
+):
+    """
+    Check if all required sections are in terminal state.
+
+    Single-user: If all top-level sections are terminal, transition case to 'ready'.
+    Multi-user: Checks the specified subject's sections only. The case-level
+    'ready' transition happens only when ALL subjects are 'complete' (via submit_subject).
+    investigator_notes is excluded — it never blocks readiness.
+    """
+    doc = await _collection().find_one(
+        {'_id': case_id},
+        {'status': 1, 'sections': 1, 'case_mode': 1, 'subjects': 1},
+    )
+    if not doc or doc.get('status') != 'ingesting':
+        return
+
+    if doc.get('case_mode') == 'multi':
+        # Multi-user: don't auto-transition the case to ready.
+        # Subject readiness is checked via _check_subject_ready() and
+        # case readiness transitions happen in submit_subject().
+        return
+
+    # Single-user: check top-level sections
+    sections = doc.get('sections', {})
+    if _sections_all_terminal(sections):
         await _collection().update_one(
             {'_id': case_id},
             {'$set': {'status': 'ready', 'updated_at': _utcnow()}},
         )
         logger.info('Case %s auto-transitioned to ready', case_id)
+
+
+async def _check_subject_ready(case_id: str, subject_index: int) -> bool:
+    """
+    Check if a specific subject's sections are all terminal.
+
+    Returns True if the subject is ready for submission, False otherwise.
+    Does NOT modify any state — callers decide what to do with the result.
+    """
+    doc = await _collection().find_one(
+        {'_id': case_id},
+        {f'subjects.{subject_index}.sections': 1},
+    )
+    if not doc:
+        return False
+
+    subjects = doc.get('subjects', [])
+    if subject_index >= len(subjects):
+        return False
+
+    sections = subjects[subject_index].get('sections', {})
+    if not sections:
+        return False
+
+    return _sections_all_terminal(sections)
+
+
+# ── Multi-User Subject Management ─────────────────────────────────
+
+
+async def submit_subject(case_id: str, subject_index: int) -> dict:
+    """
+    Mark a subject as complete and advance to the next subject.
+
+    Validates that all required sections for this subject are terminal.
+    If a next subject exists, populates its sections with _empty_sections()
+    and sets its status to 'in_progress'. Updates current_subject_index.
+
+    If all subjects are now complete, transitions the case to 'ready'.
+
+    Returns {submitted_index, next_index, case_status}.
+    Raises ValueError if subject is not ready or index is invalid.
+    """
+    col = _collection()
+    doc = await col.find_one({'_id': case_id})
+    if not doc:
+        raise ValueError(f'Case not found: {case_id}')
+
+    if doc.get('case_mode') != 'multi':
+        raise ValueError('submit_subject is only valid for multi-user cases')
+
+    subjects = doc.get('subjects', [])
+    if subject_index >= len(subjects):
+        raise ValueError(f'Invalid subject index: {subject_index}')
+
+    subject = subjects[subject_index]
+    if subject.get('status') == 'complete':
+        raise ValueError(f'Subject {subject_index} is already complete')
+
+    # Verify all required sections are terminal
+    sections = subject.get('sections', {})
+    if not sections or not _sections_all_terminal(sections):
+        raise ValueError(
+            f'Subject {subject_index} has incomplete sections. '
+            'All required sections must be complete or marked N/A.'
+        )
+
+    now = _utcnow()
+    update = {
+        f'subjects.{subject_index}.status': 'complete',
+        'updated_at': now,
+    }
+
+    next_index = subject_index + 1
+    has_next = next_index < len(subjects)
+
+    if has_next:
+        # Populate next subject's sections and activate it
+        update[f'subjects.{next_index}.sections'] = _empty_sections()
+        update[f'subjects.{next_index}.status'] = 'in_progress'
+        update['current_subject_index'] = next_index
+
+    # Check if ALL subjects will be complete after this submission
+    all_complete = all(
+        s.get('status') == 'complete'
+        for i, s in enumerate(subjects)
+        if i != subject_index  # skip the one we're about to complete
+    )
+    # The current subject is being completed now, so check passes for it
+    case_ready = all_complete and True  # current subject is now complete
+
+    if case_ready:
+        update['status'] = 'ready'
+
+    await col.update_one({'_id': case_id}, {'$set': update})
+    logger.info(
+        'Submitted subject %d for case %s (next=%s, case_ready=%s)',
+        subject_index, case_id,
+        next_index if has_next else 'none',
+        case_ready,
+    )
+
+    return {
+        'submitted_index': subject_index,
+        'next_index': next_index if has_next else None,
+        'case_status': 'ready' if case_ready else 'ingesting',
+    }
+
+
+async def set_subject_uid(
+    case_id: str, subject_index: int, user_id: str,
+) -> dict:
+    """
+    Set the UID for a subject in a multi-user case.
+
+    Raises ValueError if the case is not multi-user or index is invalid.
+    Returns {subject_index, user_id}.
+    """
+    col = _collection()
+    doc = await col.find_one({'_id': case_id}, {'case_mode': 1, 'subjects': 1})
+    if not doc:
+        raise ValueError(f'Case not found: {case_id}')
+
+    if doc.get('case_mode') != 'multi':
+        raise ValueError('set_subject_uid is only valid for multi-user cases')
+
+    subjects = doc.get('subjects', [])
+    if subject_index >= len(subjects):
+        raise ValueError(f'Invalid subject index: {subject_index}')
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'subjects.{subject_index}.user_id': user_id,
+            'updated_at': _utcnow(),
+        }},
+    )
+    logger.info(
+        'Set UID for subject %d in case %s: %s',
+        subject_index, case_id, user_id,
+    )
+
+    return {'subject_index': subject_index, 'user_id': user_id}
 
 
 # ── Delete ────────────────────────────────────────────────────────
@@ -1058,6 +1359,10 @@ async def reset_case(case_id: str) -> dict:
     Reset an ingestion case to its initial state.
 
     Clears all sections, subject_uid, and assembled data.
+    For multi-user cases, re-initializes the subjects array:
+    first subject gets _empty_sections() + 'in_progress', others get
+    sections=None + 'pending', current_subject_index resets to 0.
+
     Only allowed when status is 'ingesting' or 'ready'.
 
     Returns the reset case document.
@@ -1074,18 +1379,43 @@ async def reset_case(case_id: str) -> dict:
         )
 
     now = _utcnow()
+    update_set = {
+        'status': 'ingesting',
+        'subject_uid': '',
+        'coconspirator_uids': [],
+        'assembled_case_data': None,
+        'updated_at': now,
+        'completed_at': None,
+    }
+
+    if doc.get('case_mode') == 'multi':
+        total = doc.get('total_subjects', len(doc.get('subjects', [])))
+        subjects = []
+        for i in range(total):
+            if i == 0:
+                subjects.append({
+                    'user_id': None,
+                    'label': f'Subject {i + 1}',
+                    'status': 'in_progress',
+                    'sections': _empty_sections(),
+                })
+            else:
+                subjects.append({
+                    'user_id': None,
+                    'label': f'Subject {i + 1}',
+                    'status': 'pending',
+                    'sections': None,
+                })
+        update_set['subjects'] = subjects
+        update_set['current_subject_index'] = 0
+        update_set['sections'] = {}
+    else:
+        update_set['sections'] = _empty_sections()
+
     await _collection().update_one(
         {'_id': case_id},
         {
-            '$set': {
-                'status': 'ingesting',
-                'subject_uid': '',
-                'coconspirator_uids': [],
-                'sections': _empty_sections(),
-                'assembled_case_data': None,
-                'updated_at': now,
-                'completed_at': None,
-            },
+            '$set': update_set,
             '$unset': {'uol_raw_data': 1},
         },
     )

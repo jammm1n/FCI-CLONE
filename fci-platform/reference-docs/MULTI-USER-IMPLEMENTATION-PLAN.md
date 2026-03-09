@@ -1,5 +1,7 @@
 # Multi-User Case Implementation Plan
 
+**Companion document:** `MULTI-USER-IMPLEMENTATION-GUIDE.md` — covers implementation ordering, risk areas, session breakdown, regression testing requirements, and backward compatibility checklist. Read both before starting.
+
 ## Overview
 
 Multi-user cases involve multiple linked suspects investigated together in a single case. Each subject requires a full data ingestion cycle (C360, KYC, Elliptic, etc.), and the AI investigates all subjects together through a stepped process with a dedicated system prompt.
@@ -483,12 +485,15 @@ MULTI_USER_STEP_PHASES = {
 **File:** `server/config.py` (alongside the step config)
 
 ```python
+# Sentinel constants — avoids overloaded None with multiple meanings
+ALL_SECTIONS = "all"      # Inject all case data sections (unfiltered)
+NO_INJECTION = "none"     # No case data injected for this block
+
 MULTI_USER_BLOCK_DATA = {
-    1: None,                  # ALL data — unfiltered. Phase 0 (initial assessment) runs
-                              # within block 1 and needs a full data inventory for every
-                              # subject. The AI then uses the step doc to scope its
-                              # narrative to Steps 1-3 only. This matches single-user
-                              # behavior where all data is injected at every step.
+    1: ALL_SECTIONS,          # Phase 0 (initial assessment) needs a full data inventory
+                              # for every subject. The AI uses the step doc to scope its
+                              # narrative to Steps 1-3 only. Matches single-user behavior
+                              # where all data is injected at every step.
     2: ["l1_referral", "haoDesk", "prior_icr", "kodex", "l1_victim", "l1_suspect"],
     3: ["tx_summary", "ctm_alerts", "ftm_alerts"],
     4: ["elliptic", "address_xref", "privacy_coin"],
@@ -496,20 +501,15 @@ MULTI_USER_BLOCK_DATA = {
     6: ["investigator_notes", "rfi"],
     7: ["tx_summary"],       # light reference data for unusual activity summary;
                               # summaries from blocks 1-6 are the primary context
-    8: None,                  # decision block — summaries only, no raw data
-    9: None,                  # QC block — no case data injected (investigator pastes ICR text)
+    8: NO_INJECTION,          # decision block — summaries only, no raw data
+    9: NO_INJECTION,          # QC block — investigator pastes ICR text as a message
 }
 ```
 
-**Semantics of `None`:**
-- Block 1: `None` = inject ALL sections (unfiltered) for Phase 0 inventory
-- Block 8: `None` = inject NO data (decision uses only step summaries)
-- Block 9: `None` = inject NO data (QC reviews pasted ICR text)
-
-**IMPORTANT:** These three `None` values have **different meanings**. The injection logic in `_rebuild_step_api_messages` (Phase 5.2) must distinguish between them:
-- Block 1 (`phase == "setup"` and first block): inject full unfiltered case data
-- Block 8 (`phase == "decision"`): no case data injection
-- Block 9 (`phase == "qc_check"`): no case data injection (investigator pastes text as a regular message)
+The injection logic in `_rebuild_step_api_messages` (Phase 5.2) uses these sentinels directly — no ambiguity:
+- `ALL_SECTIONS` → call `_build_case_data_markdown(case, sections=None)` (unfiltered)
+- `list[str]` → call `_build_case_data_markdown(case, sections=block_data_keys)` (filtered)
+- `NO_INJECTION` → skip case data injection entirely
 
 ### 4.3 Step Document Filtering
 
@@ -564,6 +564,17 @@ For non-step docs (e.g., `decision-matrix`, `mlro-escalation-matrix`), these are
 ## Phase 5: Conversation Manager — Multi-User Flow
 
 **Goal:** Wire the multi-user step config and data injection into the conversation lifecycle.
+
+### 5.0 Prerequisite Stub — Knowledge Base
+
+**IMPORTANT:** Phase 5.3 references `self.multi_user_system_prompt` which is created in Phase 6. To avoid `AttributeError` during Phase 5 development and testing, create the following stubs at the start of Phase 5:
+
+1. Create `knowledge_base/system-prompt-multi-user.md` with placeholder content: `# SYSTEM PROMPT — MULTI-USER INVESTIGATION (placeholder — see Phase 6)`
+2. In `knowledge_base.py` `__init__`: add `self.multi_user_system_prompt: str = ""`
+3. In `load_on_startup()`: load the stub file into `self.multi_user_system_prompt`
+4. Add the `get_filtered_step_doc()` method (from Phase 4.3) — needed for `get_step_system_prompt` changes
+
+Phase 6 then replaces the stub content with the real system prompt. The loader code from Phase 6.2 is already done at this point.
 
 ### 5.1 Conversation Creation
 
@@ -637,20 +648,20 @@ For multi-user with 9 blocks, this must change. The three `None` values in `MULT
 is_multi = conversation.get("case_mode") == "multi"
 
 if is_multi and case:
-    phase = MULTI_USER_STEP_PHASES.get(current_step)
     block_data_keys = MULTI_USER_BLOCK_DATA.get(current_step)
 
-    if current_step == 1:
+    if block_data_keys == ALL_SECTIONS:
         # Block 1: inject ALL data (unfiltered) — Phase 0 needs full inventory
         case_data_md = _build_case_data_markdown(case, sections=None)
         api_messages.append({"role": "user", "content": f"[CASE DATA]\n\n{case_data_md}"})
         api_messages.append({"role": "assistant", "content": "Case data received..."})
-    elif block_data_keys is not None:
-        # Blocks 2-7: inject filtered data
+    elif block_data_keys == NO_INJECTION:
+        pass  # Blocks 8-9: no case data, summaries only / investigator pastes ICR
+    else:
+        # Blocks 2-7: inject filtered data (block_data_keys is a list of section keys)
         case_data_md = _build_case_data_markdown(case, sections=block_data_keys)
         api_messages.append({"role": "user", "content": f"[CASE DATA]\n\n{case_data_md}"})
         api_messages.append({"role": "assistant", "content": "Case data received..."})
-    # else: Blocks 8-9 (decision, qc_check) — no case data, summaries only
 
 elif not is_multi and current_step <= 4 and case:
     # Single-user — existing behavior, unchanged
@@ -660,10 +671,10 @@ elif not is_multi and current_step <= 4 and case:
 ```
 
 This ensures:
-- **Block 1:** Full unfiltered data for all subjects (Phase 0 inventory + Steps 1-3)
-- **Blocks 2-7:** Only the sections relevant to that block's ICR steps
-- **Block 8 (Decision):** No raw data — relies on step summaries from blocks 1-7
-- **Block 9 (QC):** No case data — investigator pastes ICR text as a regular message
+- **Block 1 (`ALL_SECTIONS`):** Full unfiltered data for all subjects (Phase 0 inventory + Steps 1-3)
+- **Blocks 2-7 (`list`):** Only the sections relevant to that block's ICR steps
+- **Block 8 (`NO_INJECTION`):** No raw data — relies on step summaries from blocks 1-7
+- **Block 9 (`NO_INJECTION`):** No case data — investigator pastes ICR text as a regular message
 
 ### 5.3 System Prompt & Step Document Injection
 

@@ -19,6 +19,8 @@ Endpoint overview:
   PUT    /cases/{case_id}/notes             Save investigator notes
   PUT    /cases/{case_id}/text-section/{key}  Save text section with AI processing
   GET    /cases/{case_id}/text-section/{key}  Get text section output + AI status
+  POST   /cases/{case_id}/submit-subject     Submit current subject (multi-user)
+  PATCH  /cases/{case_id}/subjects/{i}/uid  Set subject UID (multi-user)
   POST   /cases/{case_id}/reset             Reset case to initial state
   POST   /cases/{case_id}/assemble          Assemble final case markdown
 """
@@ -29,7 +31,7 @@ import mimetypes
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse, PlainTextResponse
 
 from server.routers.auth import get_current_user
@@ -39,6 +41,7 @@ from server.services.ingestion import elliptic_processor
 from server.services.ingestion.ai_processor import (
     process_with_ai, PROCESSOR_PROMPT_MAP,
 )
+from server.services.ingestion.ingestion_service import _section_path, _get_section
 from server.services.icr.address_manager import build_address_list
 from server.services.icr.uid_search import search_associated_uids
 from server.models.ingestion_schemas import (
@@ -47,6 +50,7 @@ from server.models.ingestion_schemas import (
     EllipticSubmitRequest,
     NotesRequest,
     TextSectionRequest,
+    SetSubjectUidRequest,
     NONEABLE_SECTION_KEYS,
 )
 
@@ -88,6 +92,8 @@ async def create_case(
             subject_uid=body.subject_uid,
             coconspirator_uids=body.coconspirator_uids,
             created_by=current_user['user_id'],
+            case_mode=body.case_mode,
+            total_subjects=body.total_subjects,
         )
         return _serialize_case(doc)
     except ValueError as e:
@@ -139,6 +145,7 @@ async def upload_c360(
     case_id: str,
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -150,7 +157,8 @@ async def upload_c360(
     case = await _get_case_or_404(case_id)
 
     # Guard: don't reprocess if already complete or processing
-    c360_status = case.get('sections', {}).get('c360', {}).get('status', 'empty')
+    c360 = _get_section(case, 'c360', subject_index)
+    c360_status = c360.get('status', 'empty')
     if c360_status == 'processing':
         raise HTTPException(status_code=409, detail='C360 section is currently processing.')
     if c360_status == 'complete':
@@ -184,9 +192,12 @@ async def upload_c360(
     file_uid = quick_info.get('file_uid', '')
     if file_uid:
         from server.database import get_database
+        update_uid = {'subject_uid': file_uid}
+        if subject_index is not None:
+            update_uid[f'subjects.{subject_index}.user_id'] = file_uid
         await get_database()['ingestion_cases'].update_one(
             {'_id': case_id},
-            {'$set': {'subject_uid': file_uid}},
+            {'$set': update_uid},
         )
 
     # Record upload + quick extraction results, set status to processing
@@ -198,11 +209,15 @@ async def upload_c360(
             'user_info': quick_info.get('user_info'),
             'detected_file_types': quick_info.get('detected_file_types', []),
         },
+        subject_index=subject_index,
     )
 
     # Kick off full processor pipeline in background
+    # CRITICAL: subject_index captured here, passed as parameter to task
     params = {'subject_uid': file_uid or case.get('subject_uid', '')}
-    background_tasks.add_task(_process_c360_background, case_id, files_bytes, params)
+    background_tasks.add_task(
+        _process_c360_background, case_id, files_bytes, params, subject_index,
+    )
 
     return {
         'accepted': True,
@@ -214,8 +229,14 @@ async def upload_c360(
     }
 
 
-async def _process_c360_background(case_id: str, files_bytes: list, params: dict):
+async def _process_c360_background(
+    case_id: str, files_bytes: list, params: dict,
+    subject_index: int | None = None,
+):
     """Background task: run C360 pipeline, AI processing, update MongoDB."""
+    # subject_index is captured in the closure at task creation time
+    c360_prefix = _section_path('c360', subject_index)
+
     try:
         result = await c360_processor.process_c360_files(files_bytes, params)
 
@@ -225,9 +246,12 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
             case = await ingestion_service.get_case(case_id)
             if case and not case.get('subject_uid'):
                 from server.database import get_database
+                update_uid = {'subject_uid': result['subject_uid']}
+                if subject_index is not None:
+                    update_uid[f'subjects.{subject_index}.user_id'] = result['subject_uid']
                 await get_database()['ingestion_cases'].update_one(
                     {'_id': case_id},
-                    {'$set': {'subject_uid': result['subject_uid']}},
+                    {'$set': update_uid},
                 )
 
         # Build user_info: prefer UOL customer_info (has name, email, etc.)
@@ -236,7 +260,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
         if not user_info:
             case_now = await ingestion_service.get_case(case_id)
             user_info = (
-                case_now.get('sections', {}).get('c360', {}).get('user_info')
+                _get_section(case_now, 'c360', subject_index).get('user_info')
                 if case_now else None
             )
 
@@ -258,6 +282,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 'detected_uid': result.get('file_uid', ''),
                 'user_info': user_info,
             },
+            subject_index=subject_index,
         )
 
         # Store UOL raw data for cross-referencing (address manager, UID search)
@@ -284,7 +309,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 from server.database import get_database
                 await get_database()['ingestion_cases'].update_one(
                     {'_id': case_id},
-                    {'$set': {'sections.c360.address_xref': xref['narrative']}},
+                    {'$set': {f'{c360_prefix}.address_xref': xref['narrative']}},
                 )
             except Exception:
                 logger.exception('Auto address xref failed for %s', case_id)
@@ -304,8 +329,8 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
         await db.update_one(
             {'_id': case_id},
             {'$set': {
-                'sections.c360.ai_status': 'processing',
-                'sections.c360.ai_progress': {},
+                f'{c360_prefix}.ai_status': 'processing',
+                f'{c360_prefix}.ai_progress': {},
             }},
         )
 
@@ -339,7 +364,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 await db.update_one(
                     {'_id': case_id},
                     {'$set': {
-                        f'sections.c360.ai_progress.{processor_id}': 'skipped',
+                        f'{c360_prefix}.ai_progress.{processor_id}': 'skipped',
                     }},
                 )
                 continue
@@ -348,7 +373,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
             await db.update_one(
                 {'_id': case_id},
                 {'$set': {
-                    f'sections.c360.ai_progress.{processor_id}': 'processing',
+                    f'{c360_prefix}.ai_progress.{processor_id}': 'processing',
                 }},
             )
 
@@ -365,14 +390,14 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 await db.update_one(
                     {'_id': case_id},
                     {'$set': {
-                        f'sections.c360.ai_progress.{processor_id}': 'error',
+                        f'{c360_prefix}.ai_progress.{processor_id}': 'error',
                     }},
                 )
             else:
                 await db.update_one(
                     {'_id': case_id},
                     {'$set': {
-                        f'sections.c360.ai_progress.{processor_id}': 'complete',
+                        f'{c360_prefix}.ai_progress.{processor_id}': 'complete',
                     }},
                 )
 
@@ -419,6 +444,7 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
                 'ai_outputs': ai_outputs,
                 'ai_status': ai_status,
             },
+            subject_index=subject_index,
         )
 
         logger.info('C360 processing + AI complete for case %s', case_id)
@@ -428,14 +454,19 @@ async def _process_c360_background(case_id: str, files_bytes: list, params: dict
         await ingestion_service.update_section(
             case_id, 'c360', 'error',
             error=str(e),
+            subject_index=subject_index,
         )
 
 
 @router.get('/cases/{case_id}/c360')
-async def get_c360_output(case_id: str, current_user: dict = Depends(get_current_user)):
+async def get_c360_output(
+    case_id: str,
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
     """Return the C360 section data after processing, including cross-references."""
     case = await _get_case_or_404(case_id)
-    c360 = case.get('sections', {}).get('c360', {})
+    c360 = _get_section(case, 'c360', subject_index)
 
     # Concatenate processor output + address xref + uid search narratives
     output = c360.get('output') or ''
@@ -460,7 +491,11 @@ async def get_c360_output(case_id: str, current_user: dict = Depends(get_current
 
 
 @router.get('/cases/{case_id}/c360/csv')
-async def download_c360_csv(case_id: str, current_user: dict = Depends(get_current_user)):
+async def download_c360_csv(
+    case_id: str,
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
     """
     Download the Elliptic batch screening CSV.
 
@@ -468,8 +503,8 @@ async def download_c360_csv(case_id: str, current_user: dict = Depends(get_curre
     addresses added after C360 processing.
     """
     case = await _get_case_or_404(case_id)
-    c360 = case.get('sections', {}).get('c360', {})
-    elliptic_sec = case.get('sections', {}).get('elliptic', {})
+    c360 = _get_section(case, 'c360', subject_index)
+    elliptic_sec = _get_section(case, 'elliptic', subject_index)
 
     # Collect all addresses: C360-extracted + manual
     c360_addrs = c360.get('wallet_addresses', [])
@@ -517,20 +552,22 @@ async def download_c360_csv(case_id: str, current_user: dict = Depends(get_curre
 async def add_manual_addresses(
     case_id: str,
     body: ManualAddressesRequest,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Add or replace manual wallet addresses for Elliptic screening."""
     await _get_case_or_404(case_id)
 
+    ell_prefix = _section_path('elliptic', subject_index)
     from server.database import get_database
     await get_database()['ingestion_cases'].update_one(
         {'_id': case_id},
-        {'$set': {'sections.elliptic.manual_addresses': body.manual_addresses}},
+        {'$set': {f'{ell_prefix}.manual_addresses': body.manual_addresses}},
     )
 
     # Get total count (C360-extracted + manual)
     case = await ingestion_service.get_case(case_id)
-    c360_addrs = case.get('sections', {}).get('c360', {}).get('wallet_addresses', [])
+    c360_addrs = _get_section(case, 'c360', subject_index).get('wallet_addresses', [])
     total = len(c360_addrs) + len(body.manual_addresses)
 
     return {
@@ -543,6 +580,7 @@ async def add_manual_addresses(
 async def submit_elliptic(
     case_id: str,
     background_tasks: BackgroundTasks,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -554,7 +592,7 @@ async def submit_elliptic(
     case = await _get_case_or_404(case_id)
 
     # Guard: C360 must be complete first
-    c360_status = case.get('sections', {}).get('c360', {}).get('status', 'empty')
+    c360_status = _get_section(case, 'c360', subject_index).get('status', 'empty')
     if c360_status != 'complete':
         raise HTTPException(
             status_code=400,
@@ -562,13 +600,13 @@ async def submit_elliptic(
         )
 
     # Guard: don't resubmit if already processing
-    ell_status = case.get('sections', {}).get('elliptic', {}).get('status', 'empty')
+    ell_status = _get_section(case, 'elliptic', subject_index).get('status', 'empty')
     if ell_status == 'processing':
         raise HTTPException(status_code=409, detail='Elliptic screening is already processing.')
 
     # Combine C360-extracted + manual addresses
-    c360_addrs = case.get('sections', {}).get('c360', {}).get('wallet_addresses', [])
-    manual_addrs = case.get('sections', {}).get('elliptic', {}).get('manual_addresses', [])
+    c360_addrs = _get_section(case, 'c360', subject_index).get('wallet_addresses', [])
+    manual_addrs = _get_section(case, 'elliptic', subject_index).get('manual_addresses', [])
 
     all_addresses = [a['address'] for a in c360_addrs if isinstance(a, dict)]
     all_addresses.extend(manual_addrs)
@@ -585,10 +623,12 @@ async def submit_elliptic(
     await ingestion_service.update_section(
         case_id, 'elliptic', 'processing',
         extra_fields={'wallet_addresses': unique_addresses},
+        subject_index=subject_index,
     )
 
     background_tasks.add_task(
         _process_elliptic_background, case_id, unique_addresses, customer_id,
+        subject_index,
     )
 
     return {
@@ -600,6 +640,7 @@ async def submit_elliptic(
 
 async def _process_elliptic_background(
     case_id: str, addresses: list[str], customer_id: str,
+    subject_index: int | None = None,
 ):
     """Background task: run Elliptic screening, update MongoDB."""
     try:
@@ -609,6 +650,7 @@ async def _process_elliptic_background(
             await ingestion_service.update_section(
                 case_id, 'elliptic', 'error',
                 error=result.get('message', 'Elliptic API not configured'),
+                subject_index=subject_index,
             )
             return
 
@@ -619,6 +661,7 @@ async def _process_elliptic_background(
                 'summary': result.get('summary', {}),
                 'demo_mode': result.get('demo_mode', False),
             },
+            subject_index=subject_index,
         )
         logger.info('Elliptic screening complete for case %s', case_id)
 
@@ -627,14 +670,19 @@ async def _process_elliptic_background(
         await ingestion_service.update_section(
             case_id, 'elliptic', 'error',
             error=str(e),
+            subject_index=subject_index,
         )
 
 
 @router.get('/cases/{case_id}/elliptic')
-async def get_elliptic_output(case_id: str, current_user: dict = Depends(get_current_user)):
+async def get_elliptic_output(
+    case_id: str,
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
     """Return the Elliptic section data after screening."""
     case = await _get_case_or_404(case_id)
-    ell = case.get('sections', {}).get('elliptic', {})
+    ell = _get_section(case, 'elliptic', subject_index)
     return {
         'status': ell.get('status', 'empty'),
         'output': ell.get('output'),
@@ -650,6 +698,7 @@ async def get_elliptic_output(case_id: str, current_user: dict = Depends(get_cur
 @router.post('/cases/{case_id}/address-xref')
 async def run_address_xref(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -669,11 +718,11 @@ async def run_address_xref(
         }
 
     # Reconstruct address map from stored wallet addresses
-    c360_addrs = case.get('sections', {}).get('c360', {}).get('wallet_addresses', [])
+    c360_addrs = _get_section(case, 'c360', subject_index).get('wallet_addresses', [])
     address_map = {e['address']: e for e in c360_addrs if isinstance(e, dict)}
 
     # Get manual addresses
-    manual_addrs = case.get('sections', {}).get('elliptic', {}).get('manual_addresses', [])
+    manual_addrs = _get_section(case, 'elliptic', subject_index).get('manual_addresses', [])
 
     session_like = {
         'elliptic_addresses': address_map,
@@ -683,10 +732,11 @@ async def run_address_xref(
     result = await asyncio.to_thread(build_address_list, session_like, manual_addrs)
 
     # Store narrative on the c360 section
+    c360_prefix = _section_path('c360', subject_index)
     from server.database import get_database
     await get_database()['ingestion_cases'].update_one(
         {'_id': case_id},
-        {'$set': {'sections.c360.address_xref': result['narrative']}},
+        {'$set': {f'{c360_prefix}.address_xref': result['narrative']}},
     )
 
     return {
@@ -698,6 +748,7 @@ async def run_address_xref(
 @router.post('/cases/{case_id}/uid-search')
 async def run_uid_search(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -716,7 +767,15 @@ async def run_uid_search(
             'stats': {'uids_searched': 0, 'uids_found': 0, 'total_matches': 0},
         }
 
-    uids = case.get('coconspirator_uids', [])
+    # For multi-user: collect UIDs from other subjects instead of coconspirator_uids
+    if case.get('case_mode') == 'multi':
+        uids = []
+        for i, subj in enumerate(case.get('subjects', [])):
+            if i != subject_index and subj.get('user_id'):
+                uids.append(subj['user_id'])
+    else:
+        uids = case.get('coconspirator_uids', [])
+
     if not uids:
         return {
             'narrative': 'No UIDs to search for.',
@@ -731,10 +790,11 @@ async def run_uid_search(
     result = await asyncio.to_thread(search_associated_uids, session_like, uids)
 
     # Store narrative on the c360 section
+    c360_prefix = _section_path('c360', subject_index)
     from server.database import get_database
     await get_database()['ingestion_cases'].update_one(
         {'_id': case_id},
-        {'$set': {'sections.c360.uid_search': result['narrative']}},
+        {'$set': {f'{c360_prefix}.uid_search': result['narrative']}},
     )
 
     return {
@@ -775,6 +835,7 @@ async def update_coconspirator_uids(
 async def mark_section_none(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Mark a section as not applicable."""
@@ -788,7 +849,9 @@ async def mark_section_none(
         )
 
     try:
-        await ingestion_service.mark_section_none(case_id, section_key)
+        await ingestion_service.mark_section_none(
+            case_id, section_key, subject_index=subject_index,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -799,11 +862,14 @@ async def mark_section_none(
 async def reopen_section(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Reopen a section that was marked as N/A, setting it back to empty."""
     await _get_case_or_404(case_id)
-    await ingestion_service.update_section(case_id, section_key, 'empty')
+    await ingestion_service.update_section(
+        case_id, section_key, 'empty', subject_index=subject_index,
+    )
     return {'section': section_key, 'status': 'empty'}
 
 
@@ -814,11 +880,14 @@ async def reopen_section(
 async def save_notes(
     case_id: str,
     body: NotesRequest,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Save investigator notes. Empty string resets to 'empty'."""
     await _get_case_or_404(case_id)
-    result = await ingestion_service.save_notes(case_id, body.notes)
+    result = await ingestion_service.save_notes(
+        case_id, body.notes, subject_index=subject_index,
+    )
     return result
 
 
@@ -833,6 +902,7 @@ async def save_text_section(
     case_id: str,
     section_key: str,
     body: TextSectionRequest,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -849,7 +919,7 @@ async def save_text_section(
         )
     await _get_case_or_404(case_id)
     result = await ingestion_service.save_text_section_with_ai(
-        case_id, section_key, body.text,
+        case_id, section_key, body.text, subject_index=subject_index,
     )
     return result
 
@@ -858,6 +928,7 @@ async def save_text_section(
 async def get_text_section(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return a text section's output, raw text, and AI status."""
@@ -867,7 +938,7 @@ async def get_text_section(
             detail=f'Invalid section key: {section_key}.',
         )
     case = await _get_case_or_404(case_id)
-    section = case.get('sections', {}).get(section_key, {})
+    section = _get_section(case, section_key, subject_index)
     return {
         'status': section.get('status', 'empty'),
         'output': section.get('output'),
@@ -888,6 +959,7 @@ async def add_entry(
     case_id: str,
     section_key: str,
     body: TextSectionRequest,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Add a text entry to an iterative section."""
@@ -900,7 +972,9 @@ async def add_entry(
     await _get_case_or_404(case_id)
     if not body.text.strip():
         raise HTTPException(status_code=400, detail='Text cannot be empty.')
-    entry = await ingestion_service.add_entry(case_id, section_key, body.text)
+    entry = await ingestion_service.add_entry(
+        case_id, section_key, body.text, subject_index=subject_index,
+    )
     return entry
 
 
@@ -909,13 +983,16 @@ async def remove_entry(
     case_id: str,
     section_key: str,
     entry_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Remove an entry from an iterative section."""
     if section_key not in _ITERATIVE_SECTIONS:
         raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
     await _get_case_or_404(case_id)
-    await ingestion_service.remove_entry(case_id, section_key, entry_id)
+    await ingestion_service.remove_entry(
+        case_id, section_key, entry_id, subject_index=subject_index,
+    )
     return {'deleted': True, 'entry_id': entry_id}
 
 
@@ -923,13 +1000,16 @@ async def remove_entry(
 async def process_entries(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Combine all entries and run AI processing to generate the summary."""
     if section_key not in _ITERATIVE_SECTIONS:
         raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
     await _get_case_or_404(case_id)
-    result = await ingestion_service.process_entries_with_ai(case_id, section_key)
+    result = await ingestion_service.process_entries_with_ai(
+        case_id, section_key, subject_index=subject_index,
+    )
     return result
 
 
@@ -937,13 +1017,14 @@ async def process_entries(
 async def get_entries(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return all entries and AI output for an iterative section."""
     if section_key not in _ITERATIVE_SECTIONS:
         raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
     case = await _get_case_or_404(case_id)
-    section = case.get('sections', {}).get(section_key, {})
+    section = _get_section(case, section_key, subject_index)
     return {
         'status': section.get('status', 'empty'),
         'entries': section.get('entries', []),
@@ -961,6 +1042,7 @@ async def set_total_count(
     case_id: str,
     section_key: str,
     body: dict,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Set the total count for an iterative section (e.g. total prior ICRs for a subject)."""
@@ -968,7 +1050,9 @@ async def set_total_count(
         raise HTTPException(status_code=400, detail=f'Invalid section key: {section_key}.')
     await _get_case_or_404(case_id)
     count = body.get('count')
-    await ingestion_service.set_total_count(case_id, section_key, count)
+    await ingestion_service.set_total_count(
+        case_id, section_key, count, subject_index=subject_index,
+    )
     return {'ok': True, 'total_count': count}
 
 
@@ -983,6 +1067,7 @@ async def save_text_image_section(
     section_key: str,
     text: str = Form(''),
     files: Optional[List[UploadFile]] = File(None),
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1001,7 +1086,7 @@ async def save_text_image_section(
     case = await _get_case_or_404(case_id)
 
     # Guard: don't reprocess if already complete or processing
-    sec_status = case.get('sections', {}).get(section_key, {}).get('status', 'empty')
+    sec_status = _get_section(case, section_key, subject_index).get('status', 'empty')
     if sec_status == 'processing':
         raise HTTPException(status_code=409, detail=f'{section_key} is currently processing.')
     if sec_status == 'complete':
@@ -1036,6 +1121,7 @@ async def save_text_image_section(
 
     result = await ingestion_service.save_text_and_images_with_ai(
         case_id, section_key, text, image_refs, batch_id,
+        subject_index=subject_index,
     )
     return result
 
@@ -1044,6 +1130,7 @@ async def save_text_image_section(
 async def get_text_image_section(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return a text+image section's output, raw text, images, and AI status."""
@@ -1053,7 +1140,7 @@ async def get_text_image_section(
             detail=f'Invalid section key: {section_key}.',
         )
     case = await _get_case_or_404(case_id)
-    section = case.get('sections', {}).get(section_key, {})
+    section = _get_section(case, section_key, subject_index)
     return {
         'status': section.get('status', 'empty'),
         'output': section.get('output'),
@@ -1070,6 +1157,7 @@ async def get_text_image_section(
 async def reset_text_image_section(
     case_id: str,
     section_key: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Reset a text+image section to empty."""
@@ -1089,6 +1177,7 @@ async def reset_text_image_section(
             'ai_status': None,
             'ai_error': None,
         },
+        subject_index=subject_index,
     )
     return {'section': section_key, 'status': 'empty'}
 
@@ -1100,6 +1189,7 @@ async def reset_text_image_section(
 async def upload_kyc(
     case_id: str,
     files: List[UploadFile] = File(...),
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1111,7 +1201,7 @@ async def upload_kyc(
     case = await _get_case_or_404(case_id)
 
     # Guard: don't reprocess if already complete or processing
-    kyc_status = case.get('sections', {}).get('kyc', {}).get('status', 'empty')
+    kyc_status = _get_section(case, 'kyc', subject_index).get('status', 'empty')
     if kyc_status == 'processing':
         raise HTTPException(status_code=409, detail='KYC section is currently processing.')
     if kyc_status == 'complete':
@@ -1142,7 +1232,7 @@ async def upload_kyc(
     image_refs = _store_ingestion_images(case_id, 'kyc', batch_id, file_data)
 
     result = await ingestion_service.save_images_with_ai(
-        case_id, 'kyc', image_refs, batch_id,
+        case_id, 'kyc', image_refs, batch_id, subject_index=subject_index,
     )
     return result
 
@@ -1150,11 +1240,12 @@ async def upload_kyc(
 @router.get('/cases/{case_id}/kyc')
 async def get_kyc_output(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return KYC section data including output and image references."""
     case = await _get_case_or_404(case_id)
-    section = case.get('sections', {}).get('kyc', {})
+    section = _get_section(case, 'kyc', subject_index)
     return {
         'status': section.get('status', 'empty'),
         'output': section.get('output'),
@@ -1169,6 +1260,7 @@ async def get_kyc_output(
 @router.post('/cases/{case_id}/kyc/reset')
 async def reset_kyc(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Reset KYC section to empty, clearing images and AI output."""
@@ -1182,6 +1274,7 @@ async def reset_kyc(
             'ai_status': None,
             'ai_error': None,
         },
+        subject_index=subject_index,
     )
     return {'section': 'kyc', 'status': 'empty'}
 
@@ -1196,6 +1289,7 @@ _ALLOWED_PDF_TYPES = {'application/pdf'}
 async def upload_kodex(
     case_id: str,
     files: List[UploadFile] = File(...),
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1219,7 +1313,7 @@ async def upload_kodex(
         )
 
     # Guard: don't reprocess if already complete or processing
-    kodex_status = case.get('sections', {}).get('kodex', {}).get('status', 'empty')
+    kodex_status = _get_section(case, 'kodex', subject_index).get('status', 'empty')
     if kodex_status == 'processing':
         raise HTTPException(status_code=409, detail='Kodex section is currently processing.')
     if kodex_status == 'complete':
@@ -1249,6 +1343,7 @@ async def upload_kodex(
     await ingestion_service.update_section(
         case_id, 'kodex', 'processing',
         extra_fields={'ai_status': 'processing'},
+        subject_index=subject_index,
     )
 
     # Run the three-stage pipeline (foreground)
@@ -1262,6 +1357,7 @@ async def upload_kodex(
             case_id, 'kodex', 'error',
             error=str(e),
             extra_fields={'ai_status': 'error'},
+            subject_index=subject_index,
         )
         raise HTTPException(status_code=500, detail=f'Processing failed: {e}')
 
@@ -1304,6 +1400,7 @@ async def upload_kodex(
             'per_case': result['per_case'],
             'case_count': result['case_count'],
         },
+        subject_index=subject_index,
     )
 
     return {
@@ -1318,11 +1415,12 @@ async def upload_kodex(
 @router.get('/cases/{case_id}/kodex')
 async def get_kodex_output(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Return Kodex section data including per-case extractions and summary."""
     case = await _get_case_or_404(case_id)
-    section = case.get('sections', {}).get('kodex', {})
+    section = _get_section(case, 'kodex', subject_index)
     return {
         'status': section.get('status', 'empty'),
         'output': section.get('output'),
@@ -1338,6 +1436,7 @@ async def get_kodex_output(
 @router.post('/cases/{case_id}/kodex/reset')
 async def reset_kodex(
     case_id: str,
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """Reset Kodex section to empty, clearing all PDF data and AI output."""
@@ -1352,6 +1451,7 @@ async def reset_kodex(
             'case_count': 0,
             'ai_status': None,
         },
+        subject_index=subject_index,
     )
     return {'section': 'kodex', 'status': 'empty'}
 
@@ -1368,6 +1468,7 @@ async def add_entry_with_images(
     section_key: str,
     text: str = Form(...),
     files: Optional[List[UploadFile]] = File(None),
+    subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -1414,6 +1515,7 @@ async def add_entry_with_images(
         case_id, section_key, text,
         images=image_refs if image_refs else None,
         entry_id=entry_id,
+        subject_index=subject_index,
     )
     return entry
 
@@ -1444,6 +1546,47 @@ async def get_ingestion_image(
     filepath = matches[0]
     media_type = mimetypes.guess_type(str(filepath))[0] or 'application/octet-stream'
     return FileResponse(filepath, media_type=media_type)
+
+
+# ── Multi-User Subject Management ─────────────────────────────────
+
+
+@router.post('/cases/{case_id}/submit-subject')
+async def submit_subject(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Mark the current subject as complete and advance to the next subject.
+
+    Only valid for multi-user cases. Checks that all required sections are
+    terminal for the current subject before marking complete.
+    """
+    try:
+        result = await ingestion_service.submit_subject(case_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch('/cases/{case_id}/subjects/{subject_index}/uid')
+async def set_subject_uid(
+    case_id: str,
+    subject_index: int,
+    body: SetSubjectUidRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Set the UID for a subject in a multi-user case.
+
+    Called when the investigator enters the UID for a subsequent subject
+    (subject 0's UID is set at case creation or via C360 processing).
+    """
+    try:
+        await ingestion_service.set_subject_uid(case_id, subject_index, body.user_id)
+        return {'ok': True, 'subject_index': subject_index, 'user_id': body.user_id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Reset ─────────────────────────────────────────────────────────

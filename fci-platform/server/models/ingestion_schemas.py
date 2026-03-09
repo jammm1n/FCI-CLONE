@@ -42,6 +42,13 @@ class CreateIngestionCaseRequest(BaseModel):
     case_id: str
     subject_uid: str = ''
     coconspirator_uids: list[str] = []
+    case_mode: str = 'single'
+    total_subjects: int = 1
+
+
+class SetSubjectUidRequest(BaseModel):
+    """PATCH /api/ingestion/cases/{case_id}/subjects/{index}/uid"""
+    user_id: str
 
 
 class ManualAddressesRequest(BaseModel):
@@ -75,11 +82,23 @@ class SectionStatus(BaseModel):
     ai_progress: Optional[dict] = None
 
 
+class SubjectStatusSummary(BaseModel):
+    """Per-subject summary for multi-user status polling."""
+    index: int
+    user_id: Optional[str] = None
+    status: str
+    sections_complete: int = 0
+    sections_total: int = 0
+
+
 class CaseStatusResponse(BaseModel):
     """GET /api/ingestion/cases/{case_id}/status — polling response."""
     case_id: str
     case_status: str
     sections: dict[str, SectionStatus]
+    case_mode: Optional[str] = None
+    current_subject_index: Optional[int] = None
+    subjects: Optional[list[SubjectStatusSummary]] = None
 
 
 class C360UploadResponse(BaseModel):
