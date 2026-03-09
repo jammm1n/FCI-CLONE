@@ -66,12 +66,13 @@ async def get_cases(
             "created_at": 1,
             "case_mode": 1,
             "total_subjects": 1,
+            "subjects.user_id": 1,
         }
     )
 
     cases = []
     async for doc in cursor:
-        cases.append({
+        entry = {
             "case_id": doc["_id"],
             "case_name": doc.get("case_name", ""),
             "case_type": doc.get("case_type", "unknown"),
@@ -82,7 +83,12 @@ async def get_cases(
             "created_at": _format_dt(doc.get("created_at")),
             "case_mode": doc.get("case_mode"),
             "total_subjects": doc.get("total_subjects"),
-        })
+        }
+        if doc.get("subjects"):
+            entry["subjects"] = [
+                {"user_id": s.get("user_id")} for s in doc["subjects"]
+            ]
+        cases.append(entry)
 
     return cases
 

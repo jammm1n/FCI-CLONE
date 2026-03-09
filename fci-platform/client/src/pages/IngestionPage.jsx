@@ -3725,7 +3725,7 @@ export default function IngestionPage() {
   // Multi-user state
   const [viewingSubjectIndex, setViewingSubjectIndex] = useState(null);
   const [submittingSubject, setSubmittingSubject] = useState(false);
-  const [showUidEntry, setShowUidEntry] = useState(false);
+  // showUidEntry removed — UID comes from C360 upload automatically
 
   // Multi-user derived state
   const isMulti = caseData?.case_mode === 'multi';
@@ -3883,7 +3883,6 @@ export default function IngestionPage() {
       setCaseData(null);
       setConfirmReset(false);
       setViewingSubjectIndex(null);
-      setShowUidEntry(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3897,32 +3896,14 @@ export default function IngestionPage() {
     setError('');
     try {
       await ingestionApi.submitSubject(token, caseData.case_id);
-      // Check if there's a next subject that needs a UID
-      const nextIndex = currentSubjectIndex + 1;
-      const totalSubjects = caseData.total_subjects || caseData.subjects?.length || 0;
-      if (nextIndex < totalSubjects) {
-        setShowUidEntry(true);
-      } else {
-        // All subjects submitted — re-fetch to get ready status
-        const full = await ingestionApi.getCase(token, caseData.case_id);
-        setCaseData(full);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmittingSubject(false);
-    }
-  }
-
-  // After UID is set for next subject, re-fetch full case
-  async function handleUidSet() {
-    setShowUidEntry(false);
-    setViewingSubjectIndex(null);
-    try {
+      // Re-fetch full case — next subject's sections will be populated by backend
+      setViewingSubjectIndex(null);
       const full = await ingestionApi.getCase(token, caseData.case_id);
       setCaseData(full);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setSubmittingSubject(false);
     }
   }
 
@@ -4041,15 +4022,6 @@ export default function IngestionPage() {
           />
         )}
 
-        {/* Multi-user: UID entry form for next subject */}
-        {caseData && showUidEntry && (
-          <SubjectUidEntryForm
-            subjectIndex={currentSubjectIndex + 1}
-            caseId={caseData.case_id}
-            onComplete={handleUidSet}
-          />
-        )}
-
         {/* Multi-user: read-only banner when viewing completed subject */}
         {isViewingCompleted && (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-sm text-blue-400 flex items-center justify-between">
@@ -4064,8 +4036,8 @@ export default function IngestionPage() {
         )}
 
         {/* Active case — show ingestion sections */}
-        {caseData && !showUidEntry && (
-          <div className="space-y-4">
+        {caseData && (
+          <div key={activeSubjectIndex ?? 'single'} className="space-y-4">
             {/* C360 */}
             <C360Section
               caseData={effectiveCaseData}
@@ -4163,7 +4135,7 @@ export default function IngestionPage() {
             />
 
             {/* Multi-user: Submit Subject & Continue */}
-            {isMulti && !isViewingCompleted && !showUidEntry && (
+            {isMulti && !isViewingCompleted && (
               <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
                 <button
                   onClick={handleSubmitSubject}

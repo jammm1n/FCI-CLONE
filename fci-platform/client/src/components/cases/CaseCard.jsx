@@ -74,6 +74,11 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
             <span className={`${statusColor(caseData.status)}`}>
               {capitalize(caseData.status?.replace('_', ' '))}
             </span>
+            {caseData.case_mode === 'multi' && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                Multi-User ({caseData.total_subjects || caseData.subjects?.length || 0})
+              </span>
+            )}
           </div>
 
           {/* Summary */}
@@ -89,7 +94,9 @@ export default function CaseCard({ caseData, index = 0, onArchive }) {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 opacity-60">
                 <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
               </svg>
-              {caseData.subject_user_id}
+              {caseData.case_mode === 'multi' && caseData.subjects?.length
+                ? caseData.subjects.map((s) => s.user_id || 'Unknown').join(', ')
+                : caseData.subject_user_id}
             </span>
             {caseData.created_at && (
               <span className="inline-flex items-center gap-1.5">
