@@ -45,6 +45,7 @@ MongoDB document structure (conversations collection):
 }
 """
 
+import asyncio
 import logging
 import uuid
 import base64
@@ -1487,25 +1488,45 @@ async def _generate_step_summary(
     Returns:
         dict with summary (str), model (str), token_usage (dict).
     """
-    # Extract step messages and rebuild as API-format messages
+    # Extract step messages and rebuild as API-format messages.
+    # Retry once after a short delay if no messages found — handles the
+    # race condition where advance-step is called before the streaming
+    # response has been fully persisted to MongoDB.
     step_api_messages = []
-    for msg in conversation.get("messages", []):
-        if msg.get("step") != step:
-            continue
-        role = msg["role"]
-        if role == "step_divider":
-            continue
-        if role == "system_injected":
-            step_api_messages.append({"role": "user", "content": msg["content"]})
-        elif role == "user":
-            step_api_messages.append({"role": "user", "content": msg["content"]})
-        elif role == "assistant":
-            step_api_messages.append({"role": "assistant", "content": msg["content"]})
-        elif role == "tool_exchange":
-            step_api_messages.append({
-                "role": msg.get("original_role", "user"),
-                "content": msg["content"],
-            })
+    for attempt in range(2):
+        step_api_messages = []
+        for msg in conversation.get("messages", []):
+            if msg.get("step") != step:
+                continue
+            role = msg["role"]
+            if role == "step_divider":
+                continue
+            if role == "system_injected":
+                step_api_messages.append({"role": "user", "content": msg["content"]})
+            elif role == "user":
+                step_api_messages.append({"role": "user", "content": msg["content"]})
+            elif role == "assistant":
+                step_api_messages.append({"role": "assistant", "content": msg["content"]})
+            elif role == "tool_exchange":
+                step_api_messages.append({
+                    "role": msg.get("original_role", "user"),
+                    "content": msg["content"],
+                })
+
+        if step_api_messages:
+            break
+
+        if attempt == 0:
+            logger.warning(
+                "No messages found for step %d on first read — "
+                "retrying after 1s (possible write race)",
+                step,
+            )
+            await asyncio.sleep(1)
+            db = get_database()
+            conversation = await db.conversations.find_one(
+                {"_id": conversation["_id"]}
+            )
 
     if not step_api_messages:
         raise ValueError(f"No messages found for step {step}")

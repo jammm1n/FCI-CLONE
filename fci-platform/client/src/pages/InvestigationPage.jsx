@@ -732,7 +732,7 @@ export default function InvestigationPage() {
             onSend={sendMessage}
             disabled={sending || autoExecuting || oneshotExecuting}
             currentStep={currentStep}
-            stepComplete={stepComplete && !autoExecuting}
+            stepComplete={stepComplete && !autoExecuting && !sending}
             onAdvanceStep={handleAdvanceStep}
             onQCCheck={() => setShowQCModal(true)}
             onContinueDiscussion={() => setStepComplete(false)}
