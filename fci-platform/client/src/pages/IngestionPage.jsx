@@ -272,14 +272,14 @@ function C360PreviewModal({ title, data, onClose }) {
 
 // ── Preview Button (simple — used for non-C360 sections) ────────
 
-function PreviewButton({ token, caseId, sectionKey, label }) {
+function PreviewButton({ token, caseId, sectionKey, label, subjectIndex }) {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
 
   async function handleClick() {
     setLoading(true);
     try {
-      const data = await ingestionApi.getSectionOutput(token, caseId, sectionKey);
+      const data = await ingestionApi.getSectionOutput(token, caseId, sectionKey, subjectIndex);
       setPreview(data.output || 'No output available.');
     } catch (err) {
       setPreview(`Error loading preview: ${err.message}`);
@@ -318,14 +318,14 @@ function PreviewButton({ token, caseId, sectionKey, label }) {
 
 // ── C360 Preview Button (per-processor modal) ────────────────────
 
-function C360PreviewButton({ token, caseId, label }) {
+function C360PreviewButton({ token, caseId, label, subjectIndex }) {
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
 
   async function handleClick() {
     setLoading(true);
     try {
-      const data = await ingestionApi.getC360Output(token, caseId);
+      const data = await ingestionApi.getC360Output(token, caseId, subjectIndex);
       setPreviewData(data);
     } catch (err) {
       setPreviewData({ output: `Error loading preview: ${err.message}` });
@@ -399,8 +399,12 @@ function UserInfoCard({ userInfo, uid }) {
 function CaseCreationForm({ onCreated }) {
   const { token } = useAuth();
   const [caseId, setCaseId] = useState('');
+  const [caseMode, setCaseMode] = useState('single');
+  const [totalSubjects, setTotalSubjects] = useState(2);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+
+  const isMulti = caseMode === 'multi';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -408,7 +412,10 @@ function CaseCreationForm({ onCreated }) {
     setCreating(true);
     setError('');
     try {
-      const result = await ingestionApi.createCase(token, caseId.trim());
+      const opts = isMulti
+        ? { caseMode: 'multi', totalSubjects }
+        : {};
+      const result = await ingestionApi.createCase(token, caseId.trim(), opts);
       onCreated(result);
     } catch (err) {
       if (err.data?.existing_case_id) {
@@ -424,6 +431,38 @@ function CaseCreationForm({ onCreated }) {
   return (
     <form onSubmit={handleSubmit} className="bg-surface-100 dark:bg-surface-800 rounded-xl p-6 border border-surface-200 dark:border-surface-700">
       <h3 className="text-lg font-semibold text-surface-900 dark:text-surface-100 mb-4">Create New Case</h3>
+
+      {/* Case Mode Toggle */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-2">
+          Case Type
+        </label>
+        <div className="flex bg-surface-200 dark:bg-surface-900 rounded-lg p-0.5 w-fit">
+          <button
+            type="button"
+            onClick={() => setCaseMode('single')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              !isMulti
+                ? 'bg-gold-500 text-surface-900'
+                : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+            }`}
+          >
+            Single User
+          </button>
+          <button
+            type="button"
+            onClick={() => setCaseMode('multi')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              isMulti
+                ? 'bg-gold-500 text-surface-900'
+                : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+            }`}
+          >
+            Multi-User
+          </button>
+        </div>
+      </div>
+
       <div className="mb-4">
         <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
           HowDesk Case Number
@@ -436,6 +475,26 @@ function CaseCreationForm({ onCreated }) {
           className="w-full max-w-sm px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
         />
       </div>
+
+      {/* Subject count (multi-user only) */}
+      {isMulti && (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-surface-600 dark:text-surface-400 mb-1">
+            Total Subjects
+          </label>
+          <input
+            type="number"
+            min={2}
+            value={totalSubjects}
+            onChange={(e) => setTotalSubjects(Math.max(2, parseInt(e.target.value, 10) || 2))}
+            className="w-20 px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+          />
+          <p className="text-xs text-surface-400 mt-1">
+            Subjects are ingested one at a time, sequentially.
+          </p>
+        </div>
+      )}
+
       {error && (
         <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>
       )}
@@ -504,7 +563,7 @@ function C360ProcessingStatus({ c360 }) {
 
 // ── C360 Upload Section ──────────────────────────────────────────
 
-function C360Section({ caseData, onProcessingStarted }) {
+function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
   const { token } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -534,7 +593,7 @@ function C360Section({ caseData, onProcessingStarted }) {
     setUploading(true);
     setError('');
     try {
-      const result = await ingestionApi.uploadC360(token, caseData.case_id, files);
+      const result = await ingestionApi.uploadC360(token, caseData.case_id, files, subjectIndex);
       // Store quick info from synchronous response
       setQuickInfo({
         file_uid: result.file_uid || '',
@@ -584,6 +643,7 @@ function C360Section({ caseData, onProcessingStarted }) {
               token={token}
               caseId={caseData.case_id}
               label={SECTION_LABELS.c360}
+              subjectIndex={subjectIndex}
             />
           )}
           <StatusDot status={status} />
@@ -668,7 +728,7 @@ function C360Section({ caseData, onProcessingStarted }) {
               ))}
             </div>
           )}
-          <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} />
+          <CsvDownloadButton caseId={caseData.case_id} filename={c360.csv_filename} subjectIndex={subjectIndex} />
         </div>
       )}
 
@@ -683,14 +743,14 @@ function C360Section({ caseData, onProcessingStarted }) {
 
 // ── CSV Download Button ──────────────────────────────────────────
 
-function CsvDownloadButton({ caseId, filename }) {
+function CsvDownloadButton({ caseId, filename, subjectIndex }) {
   const { token } = useAuth();
   const [downloading, setDownloading] = useState(false);
 
   async function handleDownload() {
     setDownloading(true);
     try {
-      const res = await fetch(ingestionApi.c360CsvUrl(caseId), {
+      const res = await fetch(ingestionApi.c360CsvUrl(caseId, subjectIndex), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Download failed');
@@ -725,10 +785,11 @@ function CsvDownloadButton({ caseId, filename }) {
 
 // ── Additional Inputs Section ─────────────────────────────────────
 
-function AdditionalInputsSection({ caseData, onSaved }) {
+function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
   const { token } = useAuth();
+  const isMulti = caseData.case_mode === 'multi';
 
-  const existingUids = caseData.coconspirator_uids || [];
+  const existingUids = isMulti ? [] : (caseData.coconspirator_uids || []);
   const existingWallets = caseData.sections?.elliptic?.manual_addresses || [];
   const hasSavedData = existingUids.length > 0 || existingWallets.length > 0;
 
@@ -745,24 +806,26 @@ function AdditionalInputsSection({ caseData, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      // Save extra UIDs
-      const uids = extraUids.split('\n').map((u) => u.trim()).filter(Boolean);
-      await fetch(`/api/ingestion/cases/${caseData.case_id}/uids`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ coconspirator_uids: uids }),
-      });
+      // Save extra UIDs (single-user only — multi-user uses subjects array)
+      const uids = isMulti ? [] : extraUids.split('\n').map((u) => u.trim()).filter(Boolean);
+      if (!isMulti) {
+        await fetch(`/api/ingestion/cases/${caseData.case_id}/uids`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ coconspirator_uids: uids }),
+        });
+      }
 
       // Save extra wallets
       const wallets = extraWallets.split('\n').map((w) => w.trim()).filter(Boolean);
-      await ingestionApi.addManualAddresses(token, caseData.case_id, wallets);
+      await ingestionApi.addManualAddresses(token, caseData.case_id, wallets, subjectIndex);
 
       // Run address cross-reference (includes manual wallets vs UOL)
-      await ingestionApi.runAddressXref(token, caseData.case_id);
+      await ingestionApi.runAddressXref(token, caseData.case_id, subjectIndex);
 
       // Run UID search if UIDs were provided
       if (uids.length > 0) {
-        await ingestionApi.runUidSearch(token, caseData.case_id);
+        await ingestionApi.runUidSearch(token, caseData.case_id, subjectIndex);
       }
 
       setEditing(false);
@@ -811,19 +874,21 @@ function AdditionalInputsSection({ caseData, onSaved }) {
             Optional. Add any additional UIDs of interest (victims, co-suspects) and extra wallet addresses not in the C360 data.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">
-                Additional UIDs (one per line)
-              </label>
-              <textarea
-                value={extraUids}
-                onChange={(e) => setExtraUids(e.target.value)}
-                placeholder="e.g. BIN-12345678"
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
-              />
-            </div>
+          <div className={`grid grid-cols-1 ${isMulti ? '' : 'sm:grid-cols-2'} gap-4 mb-4`}>
+            {!isMulti && (
+              <div>
+                <label className="block text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">
+                  Additional UIDs (one per line)
+                </label>
+                <textarea
+                  value={extraUids}
+                  onChange={(e) => setExtraUids(e.target.value)}
+                  placeholder="e.g. BIN-12345678"
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">
                 Additional Wallets (one per line)
@@ -863,7 +928,7 @@ function AdditionalInputsSection({ caseData, onSaved }) {
 
 // ── Elliptic Section ─────────────────────────────────────────────
 
-function EllipticSection({ caseData, onProcessingStarted }) {
+function EllipticSection({ caseData, onProcessingStarted, subjectIndex }) {
   const { token } = useAuth();
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -878,7 +943,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
     setSubmitting(true);
     setError('');
     try {
-      await ingestionApi.submitElliptic(token, caseData.case_id);
+      await ingestionApi.submitElliptic(token, caseData.case_id, subjectIndex);
       onProcessingStarted();
     } catch (err) {
       setError(err.message);
@@ -889,7 +954,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, 'elliptic');
+      await ingestionApi.markSectionNone(token, caseData.case_id, 'elliptic', subjectIndex);
       onProcessingStarted();
     } catch (err) {
       setError(err.message);
@@ -909,6 +974,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
               caseId={caseData.case_id}
               sectionKey="elliptic"
               label={SECTION_LABELS.elliptic}
+              subjectIndex={subjectIndex}
             />
           )}
           <StatusDot status={ellStatus} />
@@ -964,7 +1030,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
           <button
             onClick={async () => {
               try {
-                await ingestionApi.reopenSection(token, caseData.case_id, 'elliptic');
+                await ingestionApi.reopenSection(token, caseData.case_id, 'elliptic', subjectIndex);
                 onProcessingStarted();
               } catch (err) {
                 setError(err.message);
@@ -1005,7 +1071,7 @@ function EllipticSection({ caseData, onProcessingStarted }) {
 
 // ── Notes Section ────────────────────────────────────────────────
 
-function NotesSection({ caseData, onSaved }) {
+function NotesSection({ caseData, onSaved, subjectIndex }) {
   const sectionKey = 'investigator_notes';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
@@ -1027,7 +1093,7 @@ function NotesSection({ caseData, onSaved }) {
     if (!notes.trim()) return;
     setSaving(true);
     try {
-      await ingestionApi.saveNotes(token, caseData.case_id, notes);
+      await ingestionApi.saveNotes(token, caseData.case_id, notes, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to save notes:', err);
@@ -1038,9 +1104,7 @@ function NotesSection({ caseData, onSaved }) {
 
   async function handleReopen() {
     try {
-      // Re-save existing notes to set status back to complete (reopens for editing)
-      // We just need to toggle a local editing state — notes stay in MongoDB
-      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to reopen notes:', err);
@@ -1049,7 +1113,7 @@ function NotesSection({ caseData, onSaved }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to mark notes N/A:', err);
@@ -1059,7 +1123,7 @@ function NotesSection({ caseData, onSaved }) {
   if (isNone) {
     async function handleReopenNone() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error('Failed to reopen notes:', err);
@@ -1145,7 +1209,7 @@ function NotesSection({ caseData, onSaved }) {
 
 // ── Text Section with AI Processing ──────────────────────────────
 
-function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
+function TextAISection({ sectionKey, caseData, placeholder, onSaved, subjectIndex }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const [text, setText] = useState(section.raw_text || section.output || '');
@@ -1164,7 +1228,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
     setSaving(true);
     setSaved(false);
     try {
-      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, text);
+      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, text, subjectIndex);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       if (onSaved) onSaved();
@@ -1177,7 +1241,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handleReset() {
     try {
-      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, '');
+      await ingestionApi.saveTextSection(token, caseData.case_id, sectionKey, '', subjectIndex);
       setText('');
       if (onSaved) onSaved();
     } catch (err) {
@@ -1187,7 +1251,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getTextSection(token, caseData.case_id, sectionKey);
+      const data = await ingestionApi.getTextSection(token, caseData.case_id, sectionKey, subjectIndex);
       setPreviewData(data);
       setPreviewTab('ai');
       setShowPreview(true);
@@ -1198,7 +1262,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to mark ${sectionKey} N/A:`, err);
@@ -1208,7 +1272,7 @@ function TextAISection({ sectionKey, caseData, placeholder, onSaved }) {
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error(`Failed to reopen ${sectionKey}:`, err);
@@ -1384,7 +1448,7 @@ function TextPreviewModal({ title, data, activeTab, onTabChange, onClose }) {
 
 // ── Iterative Entry Section (Prior ICR) ──────────────────────────
 
-function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, showTotalCount = false }) {
+function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, showTotalCount = false, subjectIndex }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const [text, setText] = useState('');
@@ -1408,7 +1472,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to mark ${sectionKey} N/A:`, err);
@@ -1419,7 +1483,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
     if (!text.trim()) return;
     setAdding(true);
     try {
-      await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text);
+      await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text, subjectIndex);
       setText('');
       if (onSaved) onSaved();
     } catch (err) {
@@ -1431,7 +1495,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
 
   async function handleRemoveEntry(entryId) {
     try {
-      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId);
+      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to remove entry:`, err);
@@ -1442,9 +1506,9 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
     setProcessing(true);
     try {
       if (text.trim()) {
-        await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text);
+        await ingestionApi.addEntry(token, caseData.case_id, sectionKey, text, subjectIndex);
       }
-      await ingestionApi.processEntries(token, caseData.case_id, sectionKey);
+      await ingestionApi.processEntries(token, caseData.case_id, sectionKey, subjectIndex);
       setText('');
       if (onSaved) onSaved();
     } catch (err) {
@@ -1458,7 +1522,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
     try {
       // Remove all entries by clearing the section
       for (const entry of entries) {
-        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id);
+        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id, subjectIndex);
       }
       setText('');
       if (onSaved) onSaved();
@@ -1469,7 +1533,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey);
+      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey, subjectIndex);
       setPreviewData(data);
       setPreviewTab('ai');
       setShowPreview(true);
@@ -1482,7 +1546,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
     const parsed = totalCount === '' ? null : parseInt(totalCount, 10);
     if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
     try {
-      await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed);
+      await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to save total count:`, err);
@@ -1492,7 +1556,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error(`Failed to reopen ${sectionKey}:`, err);
@@ -1672,7 +1736,7 @@ function IterativeEntrySection({ sectionKey, caseData, placeholder, onSaved, sho
 
 // ── RFI Entry Section (iterative entries with image support) ─────
 
-function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
+function RFIEntrySection({ caseData, onSaved, showTotalCount = false, subjectIndex }) {
   const sectionKey = 'rfis';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
@@ -1699,7 +1763,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to mark RFIs N/A:', err);
@@ -1753,7 +1817,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
     setAdding(true);
     try {
       await ingestionApi.addEntryWithImages(
-        token, caseData.case_id, sectionKey, text, selectedFiles,
+        token, caseData.case_id, sectionKey, text, selectedFiles, subjectIndex,
       );
       setText('');
       setSelectedFiles([]);
@@ -1767,7 +1831,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
 
   async function handleRemoveEntry(entryId) {
     try {
-      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId);
+      await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entryId, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to remove entry:', err);
@@ -1780,12 +1844,12 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
       // Auto-add pending text+files before processing
       if (text.trim()) {
         await ingestionApi.addEntryWithImages(
-          token, caseData.case_id, sectionKey, text, selectedFiles,
+          token, caseData.case_id, sectionKey, text, selectedFiles, subjectIndex,
         );
         setText('');
         setSelectedFiles([]);
       }
-      await ingestionApi.processEntries(token, caseData.case_id, sectionKey);
+      await ingestionApi.processEntries(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to process RFIs:', err);
@@ -1797,7 +1861,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
   async function handleReset() {
     try {
       for (const entry of entries) {
-        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id);
+        await ingestionApi.removeEntry(token, caseData.case_id, sectionKey, entry.id, subjectIndex);
       }
       setText('');
       setSelectedFiles([]);
@@ -1809,7 +1873,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey);
+      const data = await ingestionApi.getEntries(token, caseData.case_id, sectionKey, subjectIndex);
       setPreviewData(data);
       setPreviewTab('ai');
       setShowPreview(true);
@@ -1821,7 +1885,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error(`Failed to reopen ${sectionKey}:`, err);
@@ -1885,7 +1949,7 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false }) {
               const parsed = totalCount === '' ? null : parseInt(totalCount, 10);
               if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
               try {
-                await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed);
+                await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed, subjectIndex);
                 if (onSaved) onSaved();
               } catch (err) {
                 console.error('Failed to save total count:', err);
@@ -2277,7 +2341,7 @@ function extractImagesFromHtml(html) {
 
 // ── Text + Image Section (L1 Victim, L1 Suspect) ────────────────
 
-function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
+function TextImageSection({ sectionKey, caseData, placeholder, onSaved, subjectIndex }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const [text, setText] = useState(section.raw_text || '');
@@ -2359,7 +2423,7 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
     setSaving(true);
     try {
       await ingestionApi.saveTextImageSection(
-        token, caseData.case_id, sectionKey, text, selectedFiles,
+        token, caseData.case_id, sectionKey, text, selectedFiles, subjectIndex,
       );
       setSelectedFiles([]);
       if (onSaved) onSaved();
@@ -2372,7 +2436,7 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handleReset() {
     try {
-      await ingestionApi.resetTextImageSection(token, caseData.case_id, sectionKey);
+      await ingestionApi.resetTextImageSection(token, caseData.case_id, sectionKey, subjectIndex);
       setText('');
       setSelectedFiles([]);
       if (onSaved) onSaved();
@@ -2383,7 +2447,7 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getTextImageSection(token, caseData.case_id, sectionKey);
+      const data = await ingestionApi.getTextImageSection(token, caseData.case_id, sectionKey, subjectIndex);
       setPreviewData(data);
       setPreviewTab('ai');
       setShowPreview(true);
@@ -2394,7 +2458,7 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error(`Failed to mark ${sectionKey} N/A:`, err);
@@ -2404,7 +2468,7 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved }) {
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error(`Failed to reopen ${sectionKey}:`, err);
@@ -2671,7 +2735,7 @@ function TextImagePreviewModal({ title, sectionKey, data, caseId, activeTab, onT
 
 // ── KYC Document Section (Image-Only) ────────────────────────────
 
-function KYCSection({ caseData, onSaved }) {
+function KYCSection({ caseData, onSaved, subjectIndex }) {
   const sectionKey = 'kyc';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
@@ -2733,7 +2797,7 @@ function KYCSection({ caseData, onSaved }) {
     if (selectedFiles.length === 0) return;
     setUploading(true);
     try {
-      await ingestionApi.uploadKYC(token, caseData.case_id, selectedFiles);
+      await ingestionApi.uploadKYC(token, caseData.case_id, selectedFiles, subjectIndex);
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -2745,7 +2809,7 @@ function KYCSection({ caseData, onSaved }) {
 
   async function handleReset() {
     try {
-      await ingestionApi.resetKYC(token, caseData.case_id);
+      await ingestionApi.resetKYC(token, caseData.case_id, subjectIndex);
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -2755,7 +2819,7 @@ function KYCSection({ caseData, onSaved }) {
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getKYCOutput(token, caseData.case_id);
+      const data = await ingestionApi.getKYCOutput(token, caseData.case_id, subjectIndex);
       setPreviewData(data);
       setShowPreview(true);
     } catch (err) {
@@ -2765,7 +2829,7 @@ function KYCSection({ caseData, onSaved }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to mark KYC N/A:', err);
@@ -2775,7 +2839,7 @@ function KYCSection({ caseData, onSaved }) {
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error('Failed to reopen KYC:', err);
@@ -3030,7 +3094,7 @@ function KYCPreviewModal({ data, caseId, onClose }) {
 
 // ── Kodex / LE Section (PDF batch upload) ────────────────────────
 
-function KodexSection({ caseData, onSaved }) {
+function KodexSection({ caseData, onSaved, subjectIndex }) {
   const sectionKey = 'kodex';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
@@ -3075,7 +3139,7 @@ function KodexSection({ caseData, onSaved }) {
     if (selectedFiles.length === 0) return;
     setUploading(true);
     try {
-      await ingestionApi.uploadKodex(token, caseData.case_id, selectedFiles);
+      await ingestionApi.uploadKodex(token, caseData.case_id, selectedFiles, subjectIndex);
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -3087,7 +3151,7 @@ function KodexSection({ caseData, onSaved }) {
 
   async function handleReset() {
     try {
-      await ingestionApi.resetKodex(token, caseData.case_id);
+      await ingestionApi.resetKodex(token, caseData.case_id, subjectIndex);
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -3097,7 +3161,7 @@ function KodexSection({ caseData, onSaved }) {
 
   async function handlePreview() {
     try {
-      const data = await ingestionApi.getKodexOutput(token, caseData.case_id);
+      const data = await ingestionApi.getKodexOutput(token, caseData.case_id, subjectIndex);
       setPreviewData(data);
       setShowPreview(true);
     } catch (err) {
@@ -3107,7 +3171,7 @@ function KodexSection({ caseData, onSaved }) {
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to mark Kodex N/A:', err);
@@ -3117,7 +3181,7 @@ function KodexSection({ caseData, onSaved }) {
   if (isNone) {
     async function handleReopen() {
       try {
-        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+        await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
         if (onSaved) onSaved();
       } catch (err) {
         console.error('Failed to reopen Kodex:', err);
@@ -3421,14 +3485,14 @@ function KodexPreviewModal({ data, onClose }) {
 
 // ── Future Section Placeholder ───────────────────────────────────
 
-function FutureSectionCard({ sectionKey, caseData }) {
+function FutureSectionCard({ sectionKey, caseData, subjectIndex }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const status = section.status || 'empty';
 
   async function handleMarkNone() {
     try {
-      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey);
+      await ingestionApi.markSectionNone(token, caseData.case_id, sectionKey, subjectIndex);
     } catch (err) {
       console.error('Failed to mark none:', err);
     }
@@ -3436,7 +3500,7 @@ function FutureSectionCard({ sectionKey, caseData }) {
 
   async function handleReopen() {
     try {
-      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey);
+      await ingestionApi.reopenSection(token, caseData.case_id, sectionKey, subjectIndex);
     } catch (err) {
       console.error('Failed to reopen:', err);
     }
@@ -3475,6 +3539,120 @@ function FutureSectionCard({ sectionKey, caseData }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Subject Progress Header (Multi-User) ─────────────────────────
+
+function SubjectProgressHeader({ subjects, currentSubjectIndex, viewingSubjectIndex, onSelectSubject }) {
+  if (!subjects || subjects.length === 0) return null;
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-4 border border-surface-200 dark:border-surface-700">
+      <div className="flex items-center gap-2 mb-2">
+        <h4 className="text-sm font-semibold text-surface-600 dark:text-surface-300">Subject Progress</h4>
+        <span className="text-xs text-surface-400">
+          ({subjects.filter((s) => s.status === 'complete').length} of {subjects.length} complete)
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {subjects.map((subj, idx) => {
+          const isCurrent = idx === currentSubjectIndex;
+          const isViewing = idx === (viewingSubjectIndex ?? currentSubjectIndex);
+          const statusColors = {
+            complete: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400',
+            in_progress: 'bg-gold-500/20 border-gold-500/40 text-gold-400',
+            pending: 'bg-surface-200 dark:bg-surface-700 border-surface-300 dark:border-surface-600 text-surface-400',
+          };
+          const colorClass = statusColors[subj.status] || statusColors.pending;
+          const canClick = subj.status === 'complete' || isCurrent;
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => canClick && onSelectSubject(isCurrent ? null : idx)}
+              disabled={!canClick}
+              className={`
+                inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors
+                ${colorClass}
+                ${isViewing ? 'ring-2 ring-gold-500/50' : ''}
+                ${canClick ? 'cursor-pointer hover:brightness-110' : 'cursor-default opacity-60'}
+              `}
+            >
+              <span className="font-semibold">
+                {subj.label || `Subject ${idx + 1}`}
+              </span>
+              {subj.user_id && (
+                <span className="font-mono text-[10px] opacity-80">{subj.user_id}</span>
+              )}
+              {subj.status === 'complete' && (
+                <span className="text-[10px]">
+                  {subj.sections_complete}/{subj.sections_total}
+                </span>
+              )}
+              {subj.status === 'in_progress' && (
+                <span className="text-[10px]">
+                  {subj.sections_complete}/{subj.sections_total}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Subject UID Entry Form (Multi-User) ──────────────────────────
+
+function SubjectUidEntryForm({ subjectIndex, caseId, onComplete }) {
+  const { token } = useAuth();
+  const [uid, setUid] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!uid.trim()) return;
+    setSaving(true);
+    setError('');
+    try {
+      await ingestionApi.setSubjectUid(token, caseId, subjectIndex, uid.trim());
+      onComplete();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-gold-500/30">
+      <h4 className="text-base font-semibold text-surface-900 dark:text-surface-100 mb-2">
+        Enter UID for Subject {subjectIndex + 1}
+      </h4>
+      <p className="text-sm text-surface-400 mb-3">
+        The previous subject has been submitted. Enter the UID for the next subject to begin ingestion.
+      </p>
+      <form onSubmit={handleSubmit} className="flex items-center gap-3">
+        <input
+          type="text"
+          value={uid}
+          onChange={(e) => setUid(e.target.value)}
+          placeholder="e.g. BIN-12345678"
+          className="flex-1 max-w-sm px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+        />
+        <button
+          type="submit"
+          disabled={saving || !uid.trim()}
+          className="px-4 py-2 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
+        >
+          {saving ? 'Setting...' : 'Set UID & Begin Ingestion'}
+        </button>
+      </form>
+      {error && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{error}</p>}
     </div>
   );
 }
@@ -3544,6 +3722,27 @@ export default function IngestionPage() {
   const [resetting, setResetting] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
 
+  // Multi-user state
+  const [viewingSubjectIndex, setViewingSubjectIndex] = useState(null);
+  const [submittingSubject, setSubmittingSubject] = useState(false);
+  const [showUidEntry, setShowUidEntry] = useState(false);
+
+  // Multi-user derived state
+  const isMulti = caseData?.case_mode === 'multi';
+  const currentSubjectIndex = isMulti ? (caseData.current_subject_index ?? 0) : null;
+  const activeSubjectIndex = isMulti ? (viewingSubjectIndex ?? currentSubjectIndex) : null;
+  const isViewingCompleted = isMulti && viewingSubjectIndex != null && viewingSubjectIndex !== currentSubjectIndex;
+
+  // Build effective sections — for multi-user, pull from subjects array
+  const effectiveSections = isMulti
+    ? caseData?.subjects?.[activeSubjectIndex]?.sections ?? {}
+    : caseData?.sections ?? {};
+
+  // Build effective caseData to pass to section components
+  const effectiveCaseData = caseData
+    ? { ...caseData, sections: effectiveSections }
+    : null;
+
   // Fetch active case on mount
   useEffect(() => {
     async function fetchActive() {
@@ -3567,12 +3766,47 @@ export default function IngestionPage() {
       const sections = status.sections || {};
       const anyProcessing = Object.values(sections).some((s) => s.status === 'processing');
 
+      // Update multi-user metadata from status polling
+      if (status.case_mode === 'multi') {
+        setCaseData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            current_subject_index: status.current_subject_index,
+            subjects: status.subjects?.map((summary, i) => ({
+              ...prev.subjects?.[i],
+              ...summary,
+            })) ?? prev.subjects,
+          };
+        });
+      }
+
       // Update AI progress in real-time from status polling
       if (caseData?.case_id && sections.c360) {
         const c360Status = sections.c360;
         if (c360Status.ai_status && c360Status.ai_status !== 'pending') {
           setCaseData((prev) => {
             if (!prev) return prev;
+            // For multi-user, update the current subject's c360 in the subjects array
+            if (prev.case_mode === 'multi') {
+              const si = prev.current_subject_index ?? 0;
+              const updatedSubjects = [...(prev.subjects || [])];
+              if (updatedSubjects[si]?.sections?.c360) {
+                updatedSubjects[si] = {
+                  ...updatedSubjects[si],
+                  sections: {
+                    ...updatedSubjects[si].sections,
+                    c360: {
+                      ...updatedSubjects[si].sections.c360,
+                      ai_status: c360Status.ai_status,
+                      ai_progress: c360Status.ai_progress || {},
+                    },
+                  },
+                };
+              }
+              return { ...prev, subjects: updatedSubjects };
+            }
+            // Single-user: existing behavior
             return {
               ...prev,
               sections: {
@@ -3648,6 +3882,8 @@ export default function IngestionPage() {
       await ingestionApi.deleteCase(token, caseData.case_id);
       setCaseData(null);
       setConfirmReset(false);
+      setViewingSubjectIndex(null);
+      setShowUidEntry(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3655,14 +3891,68 @@ export default function IngestionPage() {
     }
   }
 
+  // Submit current subject and advance to next
+  async function handleSubmitSubject() {
+    setSubmittingSubject(true);
+    setError('');
+    try {
+      await ingestionApi.submitSubject(token, caseData.case_id);
+      // Check if there's a next subject that needs a UID
+      const nextIndex = currentSubjectIndex + 1;
+      const totalSubjects = caseData.total_subjects || caseData.subjects?.length || 0;
+      if (nextIndex < totalSubjects) {
+        setShowUidEntry(true);
+      } else {
+        // All subjects submitted — re-fetch to get ready status
+        const full = await ingestionApi.getCase(token, caseData.case_id);
+        setCaseData(full);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmittingSubject(false);
+    }
+  }
+
+  // After UID is set for next subject, re-fetch full case
+  async function handleUidSet() {
+    setShowUidEntry(false);
+    setViewingSubjectIndex(null);
+    try {
+      const full = await ingestionApi.getCase(token, caseData.case_id);
+      setCaseData(full);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   // Check if assembly is possible
-  const canAssemble = caseData?.sections && (() => {
+  const canAssemble = (() => {
+    if (!caseData) return false;
+    if (isMulti) {
+      // For multi-user, backend sets status to "ready" when all subjects are complete
+      return caseData.status === 'ready';
+    }
+    // Single-user: check sections
+    if (!caseData.sections) return false;
     const required = [
       'c360', 'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs',
       'rfis', 'kyc', 'l1_victim', 'l1_suspect', 'kodex',
     ];
     return required.every((key) => {
       const s = caseData.sections[key]?.status;
+      return s === 'complete' || s === 'none';
+    });
+  })();
+
+  // For multi-user: check if current subject's sections are all terminal
+  const canSubmitSubject = isMulti && !isViewingCompleted && (() => {
+    const required = [
+      'c360', 'elliptic', 'hexa_dump', 'raw_hex_dump', 'previous_icrs',
+      'rfis', 'kyc', 'l1_victim', 'l1_suspect', 'kodex',
+    ];
+    return required.every((key) => {
+      const s = effectiveSections[key]?.status;
       return s === 'complete' || s === 'none';
     });
   })();
@@ -3692,6 +3982,11 @@ export default function IngestionPage() {
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-200 dark:bg-surface-700 text-surface-600 dark:text-surface-300">
                   {caseData.status}
                 </span>
+                {isMulti && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    Multi-User ({caseData.total_subjects || caseData.subjects?.length || 0} subjects)
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -3736,114 +4031,185 @@ export default function IngestionPage() {
         {/* No active case — show creation form */}
         {!caseData && <CaseCreationForm onCreated={handleCaseCreated} />}
 
+        {/* Multi-user: Subject progress header */}
+        {caseData && isMulti && (
+          <SubjectProgressHeader
+            subjects={caseData.subjects}
+            currentSubjectIndex={currentSubjectIndex}
+            viewingSubjectIndex={viewingSubjectIndex}
+            onSelectSubject={(idx) => setViewingSubjectIndex(idx === currentSubjectIndex ? null : idx)}
+          />
+        )}
+
+        {/* Multi-user: UID entry form for next subject */}
+        {caseData && showUidEntry && (
+          <SubjectUidEntryForm
+            subjectIndex={currentSubjectIndex + 1}
+            caseId={caseData.case_id}
+            onComplete={handleUidSet}
+          />
+        )}
+
+        {/* Multi-user: read-only banner when viewing completed subject */}
+        {isViewingCompleted && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-sm text-blue-400 flex items-center justify-between">
+            <span>Viewing completed Subject {viewingSubjectIndex + 1} (read-only)</span>
+            <button
+              onClick={() => setViewingSubjectIndex(null)}
+              className="text-xs underline hover:text-blue-300"
+            >
+              Return to current subject
+            </button>
+          </div>
+        )}
+
         {/* Active case — show ingestion sections */}
-        {caseData && (
+        {caseData && !showUidEntry && (
           <div className="space-y-4">
             {/* C360 */}
             <C360Section
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onProcessingStarted={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* Additional UIDs + Wallets (appears after C360 completes) */}
             <AdditionalInputsSection
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* Elliptic */}
             <EllipticSection
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onProcessingStarted={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* L1 Referral Narrative */}
             <TextAISection
               sectionKey="hexa_dump"
-              caseData={caseData}
+              caseData={effectiveCaseData}
               placeholder="Paste the L1 referral narrative here..."
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* HaoDesk Case Data */}
             <TextAISection
               sectionKey="raw_hex_dump"
-              caseData={caseData}
+              caseData={effectiveCaseData}
               placeholder="Paste the HaoDesk case data here..."
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* KYC Document Summary (image-only) */}
             <KYCSection
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* Prior ICR Summary (iterative entries) */}
             <IterativeEntrySection
               sectionKey="previous_icrs"
-              caseData={caseData}
+              caseData={effectiveCaseData}
               placeholder="Paste a prior ICR here (one at a time)..."
               onSaved={handleProcessingStarted}
               showTotalCount
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* RFI Summary (iterative entries with images) */}
             <RFIEntrySection
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onSaved={handleProcessingStarted}
               showTotalCount
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* Kodex / LE Cases */}
             <KodexSection
-              caseData={caseData}
+              caseData={effectiveCaseData}
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* L1 Victim Communications */}
             <TextImageSection
               sectionKey="l1_victim"
-              caseData={caseData}
+              caseData={effectiveCaseData}
               placeholder="Paste victim communications here — chat transcripts, case notes, screenshots. Embedded images will be auto-extracted..."
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* L1 Suspect Communications */}
             <TextImageSection
               sectionKey="l1_suspect"
-              caseData={caseData}
+              caseData={effectiveCaseData}
               placeholder="Paste suspect communications here — chat transcripts, case notes, screenshots. Embedded images will be auto-extracted..."
               onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
             />
 
             {/* Notes */}
-            <NotesSection caseData={caseData} onSaved={handleProcessingStarted} />
+            <NotesSection
+              caseData={effectiveCaseData}
+              onSaved={handleProcessingStarted}
+              subjectIndex={activeSubjectIndex}
+            />
+
+            {/* Multi-user: Submit Subject & Continue */}
+            {isMulti && !isViewingCompleted && !showUidEntry && (
+              <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
+                <button
+                  onClick={handleSubmitSubject}
+                  disabled={!canSubmitSubject || submittingSubject}
+                  className="w-full px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {submittingSubject
+                    ? 'Submitting...'
+                    : `Submit Subject ${currentSubjectIndex + 1} & Continue`}
+                </button>
+                {!canSubmitSubject && (
+                  <p className="text-xs text-surface-400 mt-2 text-center">
+                    All sections must be complete or marked N/A before submitting this subject.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Assembly */}
-            <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
-              <div className="flex gap-3">
-                <button
-                  onClick={handlePreviewAssembly}
-                  disabled={!canAssemble || loadingPreview}
-                  className="flex-1 px-5 py-3 rounded-xl border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 font-semibold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {loadingPreview ? 'Loading...' : 'Preview Case Document'}
-                </button>
-                <button
-                  onClick={() => setShowAssemblyConfirm(true)}
-                  disabled={!canAssemble || assembling}
-                  className="flex-1 px-5 py-3 rounded-xl bg-gold-500 hover:bg-gold-600 text-surface-900 font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Assemble Case Data
-                </button>
+            {(!isMulti || canAssemble) && !isViewingCompleted && (
+              <div className="pt-4 border-t border-surface-200 dark:border-surface-700">
+                <div className="flex gap-3">
+                  <button
+                    onClick={handlePreviewAssembly}
+                    disabled={!canAssemble || loadingPreview}
+                    className="flex-1 px-5 py-3 rounded-xl border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 font-semibold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {loadingPreview ? 'Loading...' : 'Preview Case Document'}
+                  </button>
+                  <button
+                    onClick={() => setShowAssemblyConfirm(true)}
+                    disabled={!canAssemble || assembling}
+                    className="flex-1 px-5 py-3 rounded-xl bg-gold-500 hover:bg-gold-600 text-surface-900 font-bold text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Assemble Case Data
+                  </button>
+                </div>
+                {!canAssemble && (
+                  <p className="text-xs text-surface-400 mt-2 text-center">
+                    {isMulti
+                      ? 'All subjects must be submitted before assembly.'
+                      : 'All sections must be complete or marked N/A before assembly.'}
+                  </p>
+                )}
               </div>
-              {!canAssemble && caseData.sections && (
-                <p className="text-xs text-surface-400 mt-2 text-center">
-                  All sections must be complete or marked N/A before assembly.
-                </p>
-              )}
-            </div>
+            )}
           </div>
         )}
       </div>

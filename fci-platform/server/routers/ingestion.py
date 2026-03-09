@@ -1563,7 +1563,12 @@ async def submit_subject(
     terminal for the current subject before marking complete.
     """
     try:
-        result = await ingestion_service.submit_subject(case_id)
+        # Look up current_subject_index from the case
+        case_doc = await ingestion_service.get_case(case_id)
+        if not case_doc:
+            raise HTTPException(status_code=404, detail='Case not found')
+        current_index = case_doc.get('current_subject_index', 0)
+        result = await ingestion_service.submit_subject(case_id, current_index)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

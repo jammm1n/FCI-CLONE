@@ -25,15 +25,23 @@ async function handleResponse(res) {
   return res.json();
 }
 
+/** Build ?subject_index=N query param for multi-user cases. */
+function sq(subjectIndex) {
+  return subjectIndex != null ? `?subject_index=${subjectIndex}` : '';
+}
+
 // ── Case Management ──────────────────────────────────────────────
 
-export async function createCase(token, caseId) {
+export async function createCase(token, caseId, { subjectUid, coconspirators, caseMode, totalSubjects } = {}) {
+  const body = { case_id: caseId };
+  if (subjectUid != null) body.subject_uid = subjectUid;
+  if (coconspirators?.length) body.coconspirator_uids = coconspirators;
+  if (caseMode != null) body.case_mode = caseMode;
+  if (totalSubjects != null) body.total_subjects = totalSubjects;
   const res = await fetch(`${BASE_URL}/cases`, {
     method: 'POST',
     headers: authHeaders(token),
-    body: JSON.stringify({
-      case_id: caseId,
-    }),
+    body: JSON.stringify(body),
   });
   return handleResponse(res);
 }
@@ -75,14 +83,33 @@ export async function deleteCase(token, caseId) {
   return handleResponse(res);
 }
 
+// ── Subject Lifecycle (Multi-User) ───────────────────────────────
+
+export async function submitSubject(token, caseId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/submit-subject`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+export async function setSubjectUid(token, caseId, subjectIndex, userId) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/subjects/${subjectIndex}/uid`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ user_id: userId }),
+  });
+  return handleResponse(res);
+}
+
 // ── C360 ─────────────────────────────────────────────────────────
 
-export async function uploadC360(token, caseId, files) {
+export async function uploadC360(token, caseId, files, subjectIndex) {
   const formData = new FormData();
   for (const file of files) {
     formData.append('files', file);
   }
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/c360`, {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/c360${sq(subjectIndex)}`, {
     method: 'POST',
     headers: bearerOnly(token),
     body: formData,
@@ -90,21 +117,21 @@ export async function uploadC360(token, caseId, files) {
   return handleResponse(res);
 }
 
-export async function getC360Output(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/c360`, {
+export async function getC360Output(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/c360${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export function c360CsvUrl(caseId) {
-  return `${BASE_URL}/cases/${caseId}/c360/csv`;
+export function c360CsvUrl(caseId, subjectIndex) {
+  return `${BASE_URL}/cases/${caseId}/c360/csv${sq(subjectIndex)}`;
 }
 
 // ── Elliptic ─────────────────────────────────────────────────────
 
-export async function addManualAddresses(token, caseId, addresses) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic/addresses`, {
+export async function addManualAddresses(token, caseId, addresses, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic/addresses${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ manual_addresses: addresses }),
@@ -112,16 +139,16 @@ export async function addManualAddresses(token, caseId, addresses) {
   return handleResponse(res);
 }
 
-export async function submitElliptic(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic/submit`, {
+export async function submitElliptic(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic/submit${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function getEllipticOutput(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic`, {
+export async function getEllipticOutput(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/elliptic${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
@@ -129,16 +156,16 @@ export async function getEllipticOutput(token, caseId) {
 
 // ── Cross-Reference & UID Search ─────────────────────────────────
 
-export async function runAddressXref(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/address-xref`, {
+export async function runAddressXref(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/address-xref${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function runUidSearch(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/uid-search`, {
+export async function runUidSearch(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/uid-search${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
@@ -147,8 +174,8 @@ export async function runUidSearch(token, caseId) {
 
 // ── Section Output (for preview) ─────────────────────────────────
 
-export async function getSectionOutput(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/${sectionKey}`, {
+export async function getSectionOutput(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/${sectionKey}${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
@@ -156,16 +183,16 @@ export async function getSectionOutput(token, caseId, sectionKey) {
 
 // ── Sections ─────────────────────────────────────────────────────
 
-export async function markSectionNone(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/sections/${sectionKey}/none`, {
+export async function markSectionNone(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/sections/${sectionKey}/none${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function reopenSection(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/sections/${sectionKey}/reopen`, {
+export async function reopenSection(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/sections/${sectionKey}/reopen${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
@@ -174,8 +201,8 @@ export async function reopenSection(token, caseId, sectionKey) {
 
 // ── Notes ────────────────────────────────────────────────────────
 
-export async function saveNotes(token, caseId, notes) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/notes`, {
+export async function saveNotes(token, caseId, notes, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/notes${sq(subjectIndex)}`, {
     method: 'PUT',
     headers: authHeaders(token),
     body: JSON.stringify({ notes }),
@@ -185,8 +212,8 @@ export async function saveNotes(token, caseId, notes) {
 
 // ── Text Sections with AI ────────────────────────────────────────
 
-export async function saveTextSection(token, caseId, sectionKey, text) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}`, {
+export async function saveTextSection(token, caseId, sectionKey, text, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}${sq(subjectIndex)}`, {
     method: 'PUT',
     headers: authHeaders(token),
     body: JSON.stringify({ text }),
@@ -194,8 +221,8 @@ export async function saveTextSection(token, caseId, sectionKey, text) {
   return handleResponse(res);
 }
 
-export async function getTextSection(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}`, {
+export async function getTextSection(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-section/${sectionKey}${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
@@ -203,8 +230,8 @@ export async function getTextSection(token, caseId, sectionKey) {
 
 // ── Iterative Entry Sections ─────────────────────────────────────
 
-export async function addEntry(token, caseId, sectionKey, text) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}`, {
+export async function addEntry(token, caseId, sectionKey, text, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ text }),
@@ -212,7 +239,7 @@ export async function addEntry(token, caseId, sectionKey, text) {
   return handleResponse(res);
 }
 
-export async function addEntryWithImages(token, caseId, sectionKey, text, files) {
+export async function addEntryWithImages(token, caseId, sectionKey, text, files, subjectIndex) {
   const formData = new FormData();
   formData.append('text', text);
   if (files && files.length > 0) {
@@ -220,7 +247,7 @@ export async function addEntryWithImages(token, caseId, sectionKey, text, files)
       formData.append('files', file);
     }
   }
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/with-images`, {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/with-images${sq(subjectIndex)}`, {
     method: 'POST',
     headers: bearerOnly(token),
     body: formData,
@@ -228,31 +255,31 @@ export async function addEntryWithImages(token, caseId, sectionKey, text, files)
   return handleResponse(res);
 }
 
-export async function removeEntry(token, caseId, sectionKey, entryId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/${entryId}`, {
+export async function removeEntry(token, caseId, sectionKey, entryId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/${entryId}${sq(subjectIndex)}`, {
     method: 'DELETE',
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function processEntries(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/process`, {
+export async function processEntries(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/process${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function getEntries(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}`, {
+export async function getEntries(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function setTotalCount(token, caseId, sectionKey, count) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/total-count`, {
+export async function setTotalCount(token, caseId, sectionKey, count, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/entries/${sectionKey}/total-count${sq(subjectIndex)}`, {
     method: 'PATCH',
     headers: authHeaders(token),
     body: JSON.stringify({ count }),
@@ -262,7 +289,7 @@ export async function setTotalCount(token, caseId, sectionKey, count) {
 
 // ── Text + Image Sections (L1 Victim, L1 Suspect) ───────────────
 
-export async function saveTextImageSection(token, caseId, sectionKey, text, files) {
+export async function saveTextImageSection(token, caseId, sectionKey, text, files, subjectIndex) {
   const formData = new FormData();
   formData.append('text', text || '');
   if (files && files.length > 0) {
@@ -270,7 +297,7 @@ export async function saveTextImageSection(token, caseId, sectionKey, text, file
       formData.append('files', file);
     }
   }
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}`, {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}${sq(subjectIndex)}`, {
     method: 'PUT',
     headers: bearerOnly(token),
     body: formData,
@@ -278,15 +305,15 @@ export async function saveTextImageSection(token, caseId, sectionKey, text, file
   return handleResponse(res);
 }
 
-export async function getTextImageSection(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}`, {
+export async function getTextImageSection(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function resetTextImageSection(token, caseId, sectionKey) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}/reset`, {
+export async function resetTextImageSection(token, caseId, sectionKey, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/text-image-section/${sectionKey}/reset${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
@@ -295,12 +322,12 @@ export async function resetTextImageSection(token, caseId, sectionKey) {
 
 // ── KYC (Image-Only) ────────────────────────────────────────────
 
-export async function uploadKYC(token, caseId, files) {
+export async function uploadKYC(token, caseId, files, subjectIndex) {
   const formData = new FormData();
   for (const file of files) {
     formData.append('files', file);
   }
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc`, {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc${sq(subjectIndex)}`, {
     method: 'POST',
     headers: bearerOnly(token),
     body: formData,
@@ -308,15 +335,15 @@ export async function uploadKYC(token, caseId, files) {
   return handleResponse(res);
 }
 
-export async function getKYCOutput(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc`, {
+export async function getKYCOutput(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function resetKYC(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc/reset`, {
+export async function resetKYC(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kyc/reset${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
@@ -325,12 +352,12 @@ export async function resetKYC(token, caseId) {
 
 // ── Kodex / LE (PDF batch upload) ────────────────────────────────
 
-export async function uploadKodex(token, caseId, files) {
+export async function uploadKodex(token, caseId, files, subjectIndex) {
   const formData = new FormData();
   for (const file of files) {
     formData.append('files', file);
   }
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex`, {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex${sq(subjectIndex)}`, {
     method: 'POST',
     headers: bearerOnly(token),
     body: formData,
@@ -338,15 +365,15 @@ export async function uploadKodex(token, caseId, files) {
   return handleResponse(res);
 }
 
-export async function getKodexOutput(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex`, {
+export async function getKodexOutput(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex${sq(subjectIndex)}`, {
     headers: authHeaders(token),
   });
   return handleResponse(res);
 }
 
-export async function resetKodex(token, caseId) {
-  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex/reset`, {
+export async function resetKodex(token, caseId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex/reset${sq(subjectIndex)}`, {
     method: 'POST',
     headers: authHeaders(token),
   });
