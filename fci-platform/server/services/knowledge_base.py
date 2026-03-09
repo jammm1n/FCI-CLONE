@@ -10,10 +10,11 @@ step-aware system prompts for investigation steps, and a processing
 prompt library accessible via get_prompt tool call.
 """
 
+import re
 import yaml
 from pathlib import Path
 
-from server.config import settings, STEP_CONFIG
+from server.config import settings, STEP_CONFIG, MULTI_USER_STEP_CONFIG
 
 
 # ---------------------------------------------------------------------------
@@ -45,10 +46,12 @@ class KnowledgeBase:
         self.oneshot_system_prompt: str = ""
         self.prompt_index: list[dict] = []
         self.prompt_index_text: str = ""
+        self.multi_user_system_prompt: str = ""
         self.global_rules: str = ""  # prompts/_global-rules.md (prepended to prompts)
         self.general_rules: str = ""  # core/icr-general-rules.md (step system prompt)
         self.qc_quick_reference: str = ""  # qc-quick-reference.md (steps 1-4)
         self._documents: dict[str, str] = {}  # doc_id → content
+        self._filtered_step_cache: dict[str, str] = {}  # "doc_id:steps" → filtered content
 
     def load_on_startup(self):
         """Load system prompts, core documents, reference index, and prompt index."""
@@ -64,6 +67,10 @@ class KnowledgeBase:
         oneshot_sp = self.base_path / "system-prompt-oneshot.md"
         if oneshot_sp.exists():
             self.oneshot_system_prompt = oneshot_sp.read_text(encoding="utf-8")
+
+        multi_sp = self.base_path / "system-prompt-multi-user.md"
+        if multi_sp.exists():
+            self.multi_user_system_prompt = multi_sp.read_text(encoding="utf-8")
 
         # 2. Load shared core documents (everything in core/) — backward compat
         core_parts = []
@@ -170,24 +177,103 @@ class KnowledgeBase:
                 f"{self.reference_index_text}"
             )
 
-    def get_step_system_prompt(self, step: int) -> str:
+    def get_filtered_step_doc(self, doc_id: str, step_numbers: list[int]) -> str:
+        """Extract preamble + specific ## STEP N sections from a step document.
+
+        Used for multi-user cases to send only relevant steps per block.
+        Returns the preamble (everything before first ## STEP header) plus
+        only the ## STEP sections whose numbers are in step_numbers.
+
+        If step_numbers is empty, returns the full document (no filtering).
+        Caches results to avoid re-parsing on every call.
+        """
+        if not step_numbers:
+            return self.get_document(doc_id)
+
+        cache_key = f"{doc_id}:{','.join(str(n) for n in sorted(step_numbers))}"
+        if cache_key in self._filtered_step_cache:
+            return self._filtered_step_cache[cache_key]
+
+        full_doc = self.get_document(doc_id)
+        if full_doc.startswith("Error:"):
+            return full_doc
+
+        # Split on ## STEP N headers (keep the delimiter with each section)
+        pattern = r'(## STEP \d+)'
+        parts = re.split(pattern, full_doc)
+
+        # parts[0] is the preamble (before first ## STEP)
+        preamble = parts[0].rstrip()
+
+        # Reconstruct step sections: pairs of (header, body)
+        filtered_sections = []
+        for i in range(1, len(parts), 2):
+            header = parts[i]  # e.g. "## STEP 7"
+            body = parts[i + 1] if i + 1 < len(parts) else ""
+            # Extract step number from header
+            match = re.search(r'## STEP (\d+)', header)
+            if match and int(match.group(1)) in step_numbers:
+                filtered_sections.append(header + body)
+
+        result = preamble
+        if filtered_sections:
+            result += "\n\n" + "\n".join(filtered_sections)
+
+        self._filtered_step_cache[cache_key] = result
+        return result
+
+    def get_step_system_prompt(self, step: int, multi_user: bool = False) -> str:
         """Assemble the system prompt for a specific investigation step.
 
-        Uses STEP_CONFIG to determine which documents to include.
-        Always includes: case system prompt, general rules, reference index.
-        Steps 1-4 also get the QC quick reference.
+        Uses STEP_CONFIG (or MULTI_USER_STEP_CONFIG) to determine which
+        documents to include.
+
+        Always includes: system prompt, general rules, reference index.
+        For single-user, steps 1-4 get QC quick reference.
+        For multi-user, all blocks get QC quick reference.
         Step-specific docs are appended per the injection map.
+        For multi-user, step docs are filtered to only include relevant
+        ## STEP sections via get_filtered_step_doc.
         """
+        if multi_user:
+            config = MULTI_USER_STEP_CONFIG
+            base_prompt = self.multi_user_system_prompt or self.case_system_prompt
+            include_qc = True  # All multi-user blocks get QC quick ref
+        else:
+            config = STEP_CONFIG
+            base_prompt = self.case_system_prompt
+            include_qc = step <= 4
+
         parts = [
-            self.case_system_prompt,
+            base_prompt,
             self.general_rules,
-            self.qc_quick_reference if step <= 4 else "",
+            self.qc_quick_reference if include_qc else "",
             self.reference_index_text,
         ]
 
-        step_docs = STEP_CONFIG[step].get("docs", [])
+        step_cfg = config[step]
+        step_docs = step_cfg.get("docs", [])
+        steps_covered = step_cfg.get("steps_covered", [])
+
+        # Docs that have ## STEP headers and should be filtered
+        step_doc_ids = {"icr-steps-setup", "icr-steps-analysis",
+                        "icr-steps-decision", "icr-steps-post"}
+
+        first_step_doc = True
         for doc_id in step_docs:
-            parts.append(self.get_document(doc_id))
+            if multi_user and doc_id in step_doc_ids and steps_covered:
+                filtered = self.get_filtered_step_doc(doc_id, steps_covered)
+                # Include preamble only from the first step doc
+                if not first_step_doc:
+                    # Strip preamble from subsequent docs
+                    match = re.search(r'## STEP \d+', filtered)
+                    if match:
+                        filtered = filtered[match.start():]
+                first_step_doc = False
+                parts.append(filtered)
+            else:
+                # Non-step docs (decision-matrix, mlro, qc-checklist) loaded as-is
+                parts.append(self.get_document(doc_id))
 
         return "\n\n---\n\n".join(p for p in parts if p)
 

@@ -70,3 +70,99 @@ STEP_CONFIG = {
 }
 
 STEP_PHASES = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}
+
+
+# ---------------------------------------------------------------------------
+# Multi-user step configuration — 9 investigation blocks
+# Block-based structure: each block covers a subset of ICR steps.
+# ---------------------------------------------------------------------------
+
+MULTI_USER_STEP_CONFIG = {
+    1: {
+        "phase": "setup",
+        "label": "Identity & Account Overview",
+        "steps_covered": [1, 2, 3],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-setup"],
+    },
+    2: {
+        "phase": "setup",
+        "label": "Case History & Context",
+        "steps_covered": [4, 5, 6],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-setup"],
+    },
+    3: {
+        "phase": "analysis",
+        "label": "Transaction & Alert Analysis",
+        "steps_covered": [7, 8],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-analysis"],
+    },
+    4: {
+        "phase": "analysis",
+        "label": "On-Chain Analysis",
+        "steps_covered": [9, 10, 11],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-analysis"],
+    },
+    5: {
+        "phase": "analysis",
+        "label": "Counterparty & Device Analysis",
+        "steps_covered": [12, 13, 14],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-analysis"],
+    },
+    6: {
+        "phase": "analysis",
+        "label": "Communications & OSINT",
+        "steps_covered": [15, 16, 17, 18, 19],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-analysis", "icr-steps-decision"],
+    },
+    7: {
+        "phase": "summary",
+        "label": "Summary of Unusual Activity",
+        "steps_covered": [20],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-decision"],
+    },
+    8: {
+        "phase": "decision",
+        "label": "Decision & Recommendation",
+        "steps_covered": [21],
+        "model": "claude-opus-4-6",
+        "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"],
+    },
+    9: {
+        "phase": "qc_check",
+        "label": "QC Check",
+        "steps_covered": [],
+        "model": "claude-opus-4-6",
+        "docs": ["qc-full-checklist"],
+    },
+    "summary": {
+        "model": "claude-opus-4-6",
+    },
+}
+
+MULTI_USER_STEP_PHASES = {
+    1: "setup", 2: "setup", 3: "analysis", 4: "analysis",
+    5: "analysis", 6: "analysis", 7: "summary", 8: "decision", 9: "qc_check",
+}
+
+# Sentinel constants for block-to-data mapping
+ALL_SECTIONS = "all"      # Inject all case data sections (unfiltered)
+NO_INJECTION = "none"     # No case data injected for this block
+
+MULTI_USER_BLOCK_DATA = {
+    1: ALL_SECTIONS,
+    2: ["l1_referral", "haoDesk", "prior_icr", "kodex", "l1_victim", "l1_suspect"],
+    3: ["tx_summary", "ctm_alerts", "ftm_alerts"],
+    4: ["elliptic", "address_xref", "privacy_coin"],
+    5: ["counterparty", "failed_fiat", "device_ip"],
+    6: ["investigator_notes", "rfi"],
+    7: ["tx_summary"],
+    8: NO_INJECTION,
+    9: NO_INJECTION,
+}

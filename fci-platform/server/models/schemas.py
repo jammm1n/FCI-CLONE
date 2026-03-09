@@ -58,6 +58,8 @@ class CaseSummary(BaseModel):
     summary: str
     created_at: datetime
     conversation_id: str | None = None
+    case_mode: str | None = None
+    total_subjects: int | None = None
 
 
 class CaseListResponse(BaseModel):
@@ -96,6 +98,13 @@ class PreprocessedData(BaseModel):
     investigator_notes: str | None = None
 
 
+class SubjectData(BaseModel):
+    """Per-subject data in a multi-user case."""
+    user_id: str
+    label: str = ""
+    preprocessed_data: PreprocessedData = PreprocessedData()
+
+
 class CaseDetailResponse(BaseModel):
     """GET /api/cases/{case_id} response body."""
     case_id: str
@@ -108,6 +117,9 @@ class CaseDetailResponse(BaseModel):
     created_at: datetime
     preprocessed_data: PreprocessedData
     assembled_case_data: str | None = None
+    case_mode: str | None = None
+    total_subjects: int | None = None
+    subjects: list[SubjectData] = []
 
 
 # --- Conversations ---

@@ -64,6 +64,8 @@ async def get_cases(
             "summary": 1,
             "conversation_id": 1,
             "created_at": 1,
+            "case_mode": 1,
+            "total_subjects": 1,
         }
     )
 
@@ -78,6 +80,8 @@ async def get_cases(
             "summary": doc.get("summary", ""),
             "conversation_id": doc.get("conversation_id"),
             "created_at": _format_dt(doc.get("created_at")),
+            "case_mode": doc.get("case_mode"),
+            "total_subjects": doc.get("total_subjects"),
         })
 
     return cases
@@ -95,7 +99,7 @@ async def get_case(case_id: str) -> dict | None:
     if doc is None:
         return None
 
-    return {
+    result = {
         "case_id": doc["_id"],
         "case_name": doc.get("case_name", ""),
         "case_type": doc.get("case_type", "unknown"),
@@ -106,7 +110,15 @@ async def get_case(case_id: str) -> dict | None:
         "created_at": _format_dt(doc.get("created_at")),
         "preprocessed_data": doc.get("preprocessed_data", {}),
         "assembled_case_data": doc.get("assembled_case_data"),
+        "case_mode": doc.get("case_mode"),
+        "total_subjects": doc.get("total_subjects"),
     }
+
+    # Multi-user: include subjects array with per-subject data
+    if doc.get("subjects"):
+        result["subjects"] = doc["subjects"]
+
+    return result
 
 
 async def update_case_status(case_id: str, status: str) -> bool:

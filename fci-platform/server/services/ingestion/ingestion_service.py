@@ -109,6 +109,70 @@ SECTION_TO_PREPROCESSED = {
 }
 
 
+def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]:
+    """
+    Build preprocessed_data dict from an ingestion sections dict.
+
+    Returns (preprocessed_data, sections_included, sections_none).
+    Shared by single-user and multi-user assembly paths.
+    """
+    preprocessed_data = {}
+    sections_included = []
+    sections_none = []
+
+    # C360 expanded sub-sections
+    c360 = sections.get('c360', {})
+    if c360.get('status') == 'complete':
+        ai_outputs = c360.get('ai_outputs', {})
+        processor_outputs = c360.get('processor_outputs', {})
+
+        for ai_key, pp_key, _heading in C360_AI_TO_PREPROCESSED:
+            ai_output = ai_outputs.get(ai_key, {}).get('ai_output')
+            if ai_output:
+                preprocessed_data[pp_key] = ai_output
+                sections_included.append(pp_key)
+
+        up = processor_outputs.get('user_profile', {})
+        if up.get('content'):
+            preprocessed_data['user_profile'] = up['content']
+            sections_included.append('user_profile')
+
+        if c360.get('address_xref'):
+            preprocessed_data['address_xref'] = c360['address_xref']
+            sections_included.append('address_xref')
+
+        if c360.get('uid_search'):
+            preprocessed_data['uid_search'] = c360['uid_search']
+            sections_included.append('uid_search')
+    else:
+        sections_none.append('c360')
+
+    # Standalone sections
+    for section_key, _heading, _none_stmt in ASSEMBLY_ORDER:
+        if section_key == 'c360':
+            continue
+        section = sections.get(section_key, {})
+        output = section.get('output')
+
+        # Total count qualifiers
+        entries_count = len(section.get('entries', []))
+        total_count = section.get('total_count')
+        if section_key in ('previous_icrs', 'rfis') and total_count and total_count > entries_count:
+            if section_key == 'previous_icrs':
+                preprocessed_data['prior_icr_count'] = total_count
+            else:
+                preprocessed_data['rfi_count'] = total_count
+
+        if section.get('status') == 'complete' and output:
+            pp_key = SECTION_TO_PREPROCESSED.get(section_key, section_key)
+            preprocessed_data[pp_key] = output
+            sections_included.append(section_key)
+        else:
+            sections_none.append(section_key)
+
+    return preprocessed_data, sections_included, sections_none
+
+
 def _empty_sections():
     """Build the initial sections object with all sections set to 'empty'."""
     sections = {}
@@ -1428,108 +1492,55 @@ async def reset_case(case_id: str) -> dict:
 # ── Assembly ──────────────────────────────────────────────────────
 
 
-async def preview_assembled_case_data(case_id: str) -> dict:
-    """
-    Build the assembled case data markdown without creating the case
-    or marking ingestion as completed. Read-only preview.
-
-    Returns {case_id, assembled_case_data, sections_included, sections_none, preprocessed_data}.
-    """
-    doc = await _collection().find_one({'_id': case_id})
-    if not doc:
-        raise ValueError(f'Case not found: {case_id}')
-
-    sections = doc.get('sections', {})
-
-    # Validate all required sections are terminal
-    incomplete = []
-    for key in REQUIRED_TERMINAL_KEYS:
-        sec_status = sections.get(key, {}).get('status', 'empty')
-        if sec_status not in TERMINAL_STATUSES:
-            incomplete.append(key)
-
-    if incomplete:
-        raise ValueError(f'incomplete:{",".join(incomplete)}')
-
-    # ── Build preprocessed_data and assembled markdown ──────────
-
-    preprocessed_data = {}
+def _build_assembled_markdown_single(doc: dict, sections: dict, preprocessed_data: dict) -> list[str]:
+    """Build assembled markdown parts for a single-user case (or one subject)."""
     parts = []
-    sections_included = []
-    sections_none = []
 
-    parts.append('# Case Data: {}'.format(case_id))
-    parts.append('')
-    parts.append('**Subject UID:** {}'.format(doc.get('subject_uid', 'Unknown')))
-    if doc.get('coconspirator_uids'):
-        parts.append('**Co-conspirator UIDs:** {}'.format(
-            ', '.join(doc['coconspirator_uids'])
-        ))
-    parts.append('')
-
-    # ── C360 expanded sub-sections ──
+    # C360 expanded sub-sections
     c360 = sections.get('c360', {})
-    c360_status = c360.get('status', 'empty')
-
-    if c360_status == 'complete':
+    if c360.get('status') == 'complete':
         ai_outputs = c360.get('ai_outputs', {})
         processor_outputs = c360.get('processor_outputs', {})
 
-        # AI-processed sub-sections
         for ai_key, pp_key, heading in C360_AI_TO_PREPROCESSED:
-            ai_entry = ai_outputs.get(ai_key, {})
-            ai_output = ai_entry.get('ai_output')
+            ai_output = ai_outputs.get(ai_key, {}).get('ai_output')
             if ai_output:
-                preprocessed_data[pp_key] = ai_output
                 parts.append('## {}'.format(heading))
                 parts.append('')
                 parts.append(ai_output)
                 parts.append('')
-                sections_included.append(pp_key)
 
-        # user_profile — raw processor output, no AI
         up = processor_outputs.get('user_profile', {})
         if up.get('content'):
-            preprocessed_data['user_profile'] = up['content']
             parts.append('## User Profile')
             parts.append('')
             parts.append(up['content'])
             parts.append('')
-            sections_included.append('user_profile')
 
-        # address_xref
         if c360.get('address_xref'):
-            preprocessed_data['address_xref'] = c360['address_xref']
             parts.append('## Address Cross-Reference')
             parts.append('')
             parts.append(c360['address_xref'])
             parts.append('')
-            sections_included.append('address_xref')
 
-        # uid_search
         if c360.get('uid_search'):
-            preprocessed_data['uid_search'] = c360['uid_search']
             parts.append('## UID Search Results')
             parts.append('')
             parts.append(c360['uid_search'])
             parts.append('')
-            sections_included.append('uid_search')
     else:
         parts.append('## C360 Transaction Summary')
         parts.append('')
         parts.append('C360 data not provided.')
         parts.append('')
-        sections_none.append('c360')
 
-    # ── Standalone sections ──
+    # Standalone sections
     for section_key, heading, none_statement in ASSEMBLY_ORDER:
         if section_key == 'c360':
-            continue  # Already handled above
+            continue
         section = sections.get(section_key, {})
-        sec_status = section.get('status', 'empty')
         output = section.get('output')
 
-        # Total count qualifier (prior ICRs / RFIs)
         section_heading = heading
         entries_count = len(section.get('entries', []))
         total_count = section.get('total_count')
@@ -1537,47 +1548,141 @@ async def preview_assembled_case_data(case_id: str) -> dict:
             section_heading = '{} ({} of {} included)'.format(
                 heading, entries_count, total_count
             )
-            if section_key == 'previous_icrs':
-                preprocessed_data['prior_icr_count'] = total_count
-            else:
-                preprocessed_data['rfi_count'] = total_count
 
         parts.append('## {}'.format(section_heading))
         parts.append('')
 
-        if sec_status == 'complete' and output:
-            pp_key = SECTION_TO_PREPROCESSED.get(section_key, section_key)
-            preprocessed_data[pp_key] = output
-            # Add contextual note about subset
+        if section.get('status') == 'complete' and output:
+            # Context notes for subset counts
             if section_key == 'previous_icrs' and preprocessed_data.get('prior_icr_count'):
                 total = preprocessed_data['prior_icr_count']
                 parts.append('*Note: {} prior ICRs exist for this subject. '
-                             'The {} most recent are summarised below.*'.format(
-                                 total, entries_count))
+                             'The {} most recent are summarised below.*'.format(total, entries_count))
                 parts.append('')
             elif section_key == 'rfis' and preprocessed_data.get('rfi_count'):
                 total = preprocessed_data['rfi_count']
                 parts.append('*Note: {} RFIs exist for this subject. '
-                             'The {} most recent are summarised below.*'.format(
-                                 total, entries_count))
+                             'The {} most recent are summarised below.*'.format(total, entries_count))
                 parts.append('')
             parts.append(output)
-            sections_included.append(section_key)
         else:
             parts.append(none_statement)
-            sections_none.append(section_key)
 
         parts.append('')
 
-    assembled = '\n'.join(parts)
+    return parts
 
-    return {
-        'case_id': case_id,
-        'assembled_case_data': assembled,
-        'sections_included': sections_included,
-        'sections_none': sections_none,
-        'preprocessed_data': preprocessed_data,
-    }
+
+async def preview_assembled_case_data(case_id: str) -> dict:
+    """
+    Build the assembled case data markdown without creating the case
+    or marking ingestion as completed. Read-only preview.
+
+    Returns {case_id, assembled_case_data, sections_included, sections_none,
+             preprocessed_data, subjects (multi-user only)}.
+    """
+    doc = await _collection().find_one({'_id': case_id})
+    if not doc:
+        raise ValueError(f'Case not found: {case_id}')
+
+    is_multi = doc.get('case_mode') == 'multi'
+
+    if is_multi:
+        # ── Multi-user assembly ──
+        subjects = doc.get('subjects', [])
+
+        # Validate all subjects are complete
+        incomplete_subjects = [
+            i for i, s in enumerate(subjects) if s.get('status') != 'complete'
+        ]
+        if incomplete_subjects:
+            raise ValueError(
+                'Not all subjects are complete. Incomplete: {}'.format(
+                    ', '.join(f'Subject {i+1}' for i in incomplete_subjects)
+                )
+            )
+
+        all_sections_included = []
+        all_sections_none = []
+        subject_results = []
+
+        parts = ['# Multi-User Case Data: {}'.format(case_id)]
+        parts.append('')
+        parts.append('**Total Subjects:** {}'.format(len(subjects)))
+        parts.append('**Subject UIDs:** {}'.format(
+            ', '.join(s.get('user_id', 'Unknown') for s in subjects)
+        ))
+        parts.append('')
+        parts.append('---')
+        parts.append('')
+
+        for i, subject in enumerate(subjects):
+            subj_sections = subject.get('sections', {})
+            pp_data, incl, none_list = _build_preprocessed_from_sections(subj_sections)
+
+            all_sections_included.extend(incl)
+            all_sections_none.extend(none_list)
+
+            subject_results.append({
+                'user_id': subject.get('user_id', ''),
+                'label': subject.get('label', f'Subject {i+1}'),
+                'preprocessed_data': pp_data,
+            })
+
+            parts.append('# SUBJECT {} — UID {}'.format(i + 1, subject.get('user_id', 'Unknown')))
+            parts.append('')
+            parts.extend(_build_assembled_markdown_single(doc, subj_sections, pp_data))
+            parts.append('---')
+            parts.append('')
+
+        assembled = '\n'.join(parts)
+
+        return {
+            'case_id': case_id,
+            'assembled_case_data': assembled,
+            'sections_included': all_sections_included,
+            'sections_none': all_sections_none,
+            'preprocessed_data': {},  # empty for multi-user — data lives in subjects
+            'subjects': subject_results,
+        }
+
+    else:
+        # ── Single-user assembly (unchanged) ──
+        sections = doc.get('sections', {})
+
+        # Validate all required sections are terminal
+        incomplete = []
+        for key in REQUIRED_TERMINAL_KEYS:
+            sec_status = sections.get(key, {}).get('status', 'empty')
+            if sec_status not in TERMINAL_STATUSES:
+                incomplete.append(key)
+
+        if incomplete:
+            raise ValueError(f'incomplete:{",".join(incomplete)}')
+
+        preprocessed_data, sections_included, sections_none = (
+            _build_preprocessed_from_sections(sections)
+        )
+
+        parts = ['# Case Data: {}'.format(case_id)]
+        parts.append('')
+        parts.append('**Subject UID:** {}'.format(doc.get('subject_uid', 'Unknown')))
+        if doc.get('coconspirator_uids'):
+            parts.append('**Co-conspirator UIDs:** {}'.format(
+                ', '.join(doc['coconspirator_uids'])
+            ))
+        parts.append('')
+        parts.extend(_build_assembled_markdown_single(doc, sections, preprocessed_data))
+
+        assembled = '\n'.join(parts)
+
+        return {
+            'case_id': case_id,
+            'assembled_case_data': assembled,
+            'sections_included': sections_included,
+            'sections_none': sections_none,
+            'preprocessed_data': preprocessed_data,
+        }
 
 
 async def assemble_case_data(case_id: str) -> dict:
@@ -1604,6 +1709,7 @@ async def assemble_case_data(case_id: str) -> dict:
     doc = await _collection().find_one({'_id': case_id})
 
     # Step 2: Create the cases collection document
+    is_multi = doc.get('case_mode') == 'multi'
     now = _utcnow()
     cases_doc = {
         '_id': case_id,
@@ -1619,6 +1725,11 @@ async def assemble_case_data(case_id: str) -> dict:
         'created_at': now,
         'updated_at': now,
     }
+
+    if is_multi:
+        cases_doc['case_mode'] = 'multi'
+        cases_doc['total_subjects'] = doc.get('total_subjects', len(doc.get('subjects', [])))
+        cases_doc['subjects'] = preview.get('subjects', [])
 
     await case_service.create_case(cases_doc)
 

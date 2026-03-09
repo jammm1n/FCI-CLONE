@@ -1196,60 +1196,49 @@ def _rebuild_step_api_messages(
 # Case data assembly
 # ---------------------------------------------------------------------------
 
-def _build_case_data_markdown(case: dict) -> str:
+_CASE_DATA_SECTION_MAP = {
+    # C360 sub-processors
+    "tx_summary": "Transaction Summary",
+    "user_profile": "User Profile",
+    "privacy_coin": "Privacy Coin Breakdown",
+    "counterparty": "Counterparty Analysis",
+    "device_ip": "Device & IP Analysis",
+    "failed_fiat": "Failed Fiat Withdrawals",
+    "ctm_alerts": "CTM Alerts",
+    "ftm_alerts": "FTM Alerts",
+    "account_blocks": "Account Blocks",
+    "address_xref": "Address Cross-Reference",
+    "uid_search": "UID Search Results",
+    # Standalone sections
+    "elliptic": "Elliptic Wallet Screening",
+    "l1_referral": "L1 Referral Narrative",
+    "haoDesk": "HaoDesk Case Data",
+    "kyc": "KYC Document Summary",
+    "prior_icr": "Prior ICR Summary",
+    "rfi": "RFI Summary",
+    "kodex": "Law Enforcement / Kodex",
+    "l1_victim": "L1 Victim Communications",
+    "l1_suspect": "L1 Suspect Communications",
+    "investigator_notes": "Investigator Notes & OSINT",
+}
+
+
+def _render_preprocessed_sections(
+    preprocessed: dict,
+    sections_filter: list[str] | None = None,
+) -> list[str]:
+    """Render preprocessed_data fields as markdown parts.
+
+    If sections_filter is provided, only include fields in that list.
     """
-    Build a markdown document from a case's preprocessed_data fields.
-
-    Concatenates all available data sections with headers.
-    Only includes sections that have data.
-    """
-    preprocessed = case.get("preprocessed_data", {})
-    if not preprocessed:
-        return "(No preprocessed data available for this case.)"
-
-    # Map field names to display headers (matches ingestion assembly output)
-    section_map = {
-        # C360 sub-processors
-        "tx_summary": "Transaction Summary",
-        "user_profile": "User Profile",
-        "privacy_coin": "Privacy Coin Breakdown",
-        "counterparty": "Counterparty Analysis",
-        "device_ip": "Device & IP Analysis",
-        "failed_fiat": "Failed Fiat Withdrawals",
-        "ctm_alerts": "CTM Alerts",
-        "ftm_alerts": "FTM Alerts",
-        "account_blocks": "Account Blocks",
-        "address_xref": "Address Cross-Reference",
-        "uid_search": "UID Search Results",
-        # Standalone sections
-        "elliptic": "Elliptic Wallet Screening",
-        "l1_referral": "L1 Referral Narrative",
-        "haoDesk": "HaoDesk Case Data",
-        "kyc": "KYC Document Summary",
-        "prior_icr": "Prior ICR Summary",
-        "rfi": "RFI Summary",
-        "kodex": "Law Enforcement / Kodex",
-        "l1_victim": "L1 Victim Communications",
-        "l1_suspect": "L1 Suspect Communications",
-        "investigator_notes": "Investigator Notes & OSINT",
-    }
-
-    parts = [
-        f"**Case ID:** {case.get('_id', 'Unknown')}",
-        f"**Case Type:** {case.get('case_type', 'Unknown')}",
-        f"**Subject User:** {case.get('subject_user_id', 'Unknown')}",
-        f"**Summary:** {case.get('summary', 'No summary available')}",
-        "",
-        "---",
-        "",
-    ]
-
-    for field, header in section_map.items():
+    parts = []
+    for field, header in _CASE_DATA_SECTION_MAP.items():
+        if sections_filter and field not in sections_filter:
+            continue
         content = preprocessed.get(field)
         if content:
             parts.append(f"## {header}")
             parts.append("")
-            # Add subset count context if available
             if field == "prior_icr":
                 total_count = preprocessed.get("prior_icr_count")
                 if total_count:
@@ -1270,6 +1259,63 @@ def _build_case_data_markdown(case: dict) -> str:
             parts.append("")
             parts.append("---")
             parts.append("")
+    return parts
+
+
+def _build_case_data_markdown(
+    case: dict,
+    sections: list[str] | None = None,
+) -> str:
+    """
+    Build a markdown document from a case's preprocessed_data fields.
+
+    For single-user: concatenates top-level preprocessed_data with headers.
+    For multi-user: iterates over subjects, rendering per-subject data.
+
+    Args:
+        case: The case document (from cases collection).
+        sections: Optional list of section keys to include. None = all sections.
+    """
+    subjects = case.get("subjects", [])
+
+    if subjects:
+        # ── Multi-user ──
+        parts = [
+            f"# Multi-User Case — Case ID {case.get('_id', 'Unknown')}",
+            f"**Case Type:** {case.get('case_type', 'Unknown')}",
+            f"**Total Subjects:** {len(subjects)}",
+            f"**Subject UIDs:** {', '.join(s.get('user_id', 'Unknown') for s in subjects)}",
+            "",
+            "---",
+            "",
+        ]
+        for i, subject in enumerate(subjects):
+            preprocessed = subject.get("preprocessed_data", {})
+            parts.append(f"# SUBJECT {i+1} — UID {subject.get('user_id', 'Unknown')}")
+            parts.append("")
+            subject_parts = _render_preprocessed_sections(preprocessed, sections)
+            if subject_parts:
+                parts.extend(subject_parts)
+            else:
+                parts.append("(No data available for this subject.)")
+                parts.append("")
+        return "\n".join(parts)
+
+    # ── Single-user (unchanged behavior) ──
+    preprocessed = case.get("preprocessed_data", {})
+    if not preprocessed:
+        return "(No preprocessed data available for this case.)"
+
+    parts = [
+        f"**Case ID:** {case.get('_id', 'Unknown')}",
+        f"**Case Type:** {case.get('case_type', 'Unknown')}",
+        f"**Subject User:** {case.get('subject_user_id', 'Unknown')}",
+        f"**Summary:** {case.get('summary', 'No summary available')}",
+        "",
+        "---",
+        "",
+    ]
+    parts.extend(_render_preprocessed_sections(preprocessed, sections))
 
     return "\n".join(parts)
 
