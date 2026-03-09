@@ -1,1 +1,4 @@
 /fci-platform - Copy-prior to step context plan
+fci-platform/start.sh
+fci-platform/stop.sh
+start.sh
