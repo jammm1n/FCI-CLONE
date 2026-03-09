@@ -51,7 +51,11 @@ import base64
 from datetime import datetime, timezone
 from pathlib import Path
 
-from server.config import settings, STEP_CONFIG, STEP_PHASES
+from server.config import (
+    settings, STEP_CONFIG, STEP_PHASES,
+    MULTI_USER_STEP_CONFIG, MULTI_USER_STEP_PHASES,
+    MULTI_USER_BLOCK_DATA, ALL_SECTIONS, NO_INJECTION,
+)
 from server.database import get_database
 from server.services.ai_client import (
     get_ai_response,
@@ -127,6 +131,20 @@ Up to 3,000 for complex steps with many findings.
 ### Case Form Sections Completed
 [Which sections of the case template were drafted and approved]"""
 
+MULTI_USER_SUMMARY_ADDENDUM = """
+This is a multi-user case. Your summary MUST:
+- Use UID labels to distinguish per-subject findings
+- Cover all subjects, even if a subject had no relevant data at this step
+- This summary will be the primary context for subsequent blocks"""
+
+MULTI_USER_INITIAL_ASSESSMENT = (
+    "Case data loaded. This is a multi-user case with {n} subjects: {uids}. "
+    "Execute Phase 0A from icr-steps-setup.md: case type classification, "
+    "data inventory for EACH subject (hard blockers, soft gaps, received), "
+    "anomalies, connections between subjects, and clarifying questions. "
+    "Do NOT produce a narrative yet — that comes in Phase 0B."
+)
+
 
 def _generate_id(prefix: str = "msg") -> str:
     """Generate a short unique ID with a prefix."""
@@ -184,11 +202,30 @@ async def create_conversation(
                 "mode": "case",
             }
 
+        # Detect multi-user case
+        is_multi = case.get("case_mode") == "multi"
+        logger.info("create_conversation: case_id=%s, case_mode=%s, is_multi=%s", case_id, case.get("case_mode"), is_multi)
+        step_config = MULTI_USER_STEP_CONFIG if is_multi else STEP_CONFIG
+        step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+        total_steps = 9 if is_multi else 5
+
         # Build case data markdown and pre-store the system_injected message
         case_data_markdown = _build_case_data_markdown(case)
+
+        if is_multi:
+            subjects = case.get("subjects", [])
+            uids = ", ".join(
+                s.get("user_id") or f"Subject {i+1}"
+                for i, s in enumerate(subjects)
+            )
+            instruction = MULTI_USER_INITIAL_ASSESSMENT.format(
+                n=len(subjects), uids=uids,
+            )
+        else:
+            instruction = INITIAL_ASSESSMENT_INSTRUCTION
+
         initial_user_content = (
-            f"[CASE DATA]\n\n{case_data_markdown}\n\n"
-            f"{INITIAL_ASSESSMENT_INSTRUCTION}"
+            f"[CASE DATA]\n\n{case_data_markdown}\n\n{instruction}"
         )
 
         case_data_message = {
@@ -200,19 +237,30 @@ async def create_conversation(
             "visible": False,
         }
 
+        # Build step labels for frontend StepIndicator
+        step_labels = {}
+        for block_num, block_config in step_config.items():
+            if block_num == "summary":
+                continue
+            step_labels[str(block_num)] = block_config.get("label", "")
+
         conversation_doc = {
             "_id": conversation_id,
             "case_id": case_id,
             "user_id": user_id,
             "mode": "case",
+            "case_mode": "multi" if is_multi else "single",
             "title": "",
             "status": "active",
             "investigation_state": {
                 "current_step": 1,
+                "total_steps": total_steps,
+                "step_labels": step_labels,
                 "steps": [
                     {
                         "step_number": 1,
-                        "phase": "setup",
+                        "phase": step_phases[1],
+                        "label": step_labels.get("1", ""),
                         "status": "active",
                         "summary": None,
                         "summary_model": None,
@@ -353,11 +401,19 @@ async def send_message(
     # 2. Build system prompt and API messages based on mode
     if conversation.get("investigation_state"):
         step = conversation["investigation_state"]["current_step"]
-        system_prompt = knowledge_base.get_step_system_prompt(step)
-        model = STEP_CONFIG[step]["model"]
+        is_multi_sr = conversation.get("case_mode") == "multi"
+        sr_config = MULTI_USER_STEP_CONFIG if is_multi_sr else STEP_CONFIG
+        system_prompt = knowledge_base.get_step_system_prompt(step, multi_user=is_multi_sr)
+        model = sr_config[step]["model"]
         case = None
-        if step <= 4 and conversation.get("case_id"):
-            case = await db.cases.find_one({"_id": conversation["case_id"]})
+        if conversation.get("case_id"):
+            if is_multi_sr:
+                block_data = MULTI_USER_BLOCK_DATA.get(step)
+                needs_case = block_data is not NO_INJECTION
+            else:
+                needs_case = step <= 4
+            if needs_case:
+                case = await db.cases.find_one({"_id": conversation["case_id"]})
         api_messages = _rebuild_step_api_messages(conversation, case)
     else:
         system_prompt = knowledge_base.get_system_prompt(mode=conversation.get("mode", "case"))
@@ -487,11 +543,22 @@ async def send_message_streaming(
 
     if has_step_state:
         step = conversation["investigation_state"]["current_step"]
-        system_prompt = knowledge_base.get_step_system_prompt(step)
-        model = STEP_CONFIG[step]["model"]
+        is_multi = conversation.get("case_mode") == "multi"
+        config = MULTI_USER_STEP_CONFIG if is_multi else STEP_CONFIG
+        system_prompt = knowledge_base.get_step_system_prompt(step, multi_user=is_multi)
+        model = config[step]["model"]
+
+        # Determine whether to load case data for injection
         case = None
-        if step <= 4 and conversation.get("case_id"):
-            case = await db.cases.find_one({"_id": conversation["case_id"]})
+        if conversation.get("case_id"):
+            if is_multi:
+                block_data = MULTI_USER_BLOCK_DATA.get(step)
+                needs_case = block_data is not NO_INJECTION
+            else:
+                needs_case = step <= 4
+            if needs_case:
+                case = await db.cases.find_one({"_id": conversation["case_id"]})
+
         api_messages = _rebuild_step_api_messages(conversation, case)
     elif conv_mode == "oneshot":
         system_prompt = knowledge_base.get_system_prompt(mode="oneshot")
@@ -562,7 +629,7 @@ async def store_streamed_response(
     # Read conversation for step and mode info
     conv = await db.conversations.find_one(
         {"_id": conversation_id},
-        {"investigation_state.current_step": 1, "mode": 1, "title": 1},
+        {"investigation_state.current_step": 1, "mode": 1, "title": 1, "case_mode": 1},
     )
     current_step = conv.get("investigation_state", {}).get("current_step") if conv else None
 
@@ -571,10 +638,15 @@ async def store_streamed_response(
     if is_initial_assessment and current_step:
         # Step-based initial assessment: store the instruction as a hidden
         # user message so _rebuild_step_api_messages can replay it
+        # Use the correct instruction based on case mode
+        if conv and conv.get("case_mode") == "multi":
+            stored_instruction = MULTI_USER_INITIAL_ASSESSMENT
+        else:
+            stored_instruction = INITIAL_ASSESSMENT_INSTRUCTION
         instruction_msg = {
             "message_id": _generate_id("msg"),
             "role": "user",
-            "content": INITIAL_ASSESSMENT_INSTRUCTION,
+            "content": stored_instruction,
             "step": current_step,
             "timestamp": now,
             "visible": False,
@@ -626,14 +698,17 @@ async def store_streamed_response(
             "qc-full-checklist": "QC Submission Checklist",
             "icr-general-rules": "ICR General Rules",
         }
-        # Always-included docs for this step
+        # Always-included docs for this step (mode-aware)
+        is_multi_tu = conv.get("case_mode") == "multi"
+        tu_config = MULTI_USER_STEP_CONFIG if is_multi_tu else STEP_CONFIG
+        sp_doc_id = "system-prompt-multi-user" if is_multi_tu else "system-prompt-case"
         injected = []
-        injected.append({"tool": "system_injected", "document_id": "system-prompt-case", "document_title": "System Prompt"})
+        injected.append({"tool": "system_injected", "document_id": sp_doc_id, "document_title": "System Prompt"})
         injected.append({"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"})
-        if current_step <= 4:
+        if is_multi_tu or current_step <= 4:
             injected.append({"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"})
         # Step-specific docs
-        for doc_id in STEP_CONFIG.get(current_step, {}).get("docs", []):
+        for doc_id in tu_config.get(current_step, {}).get("docs", []):
             title = step_doc_titles.get(doc_id, doc_id)
             injected.append({"tool": "system_injected", "document_id": doc_id, "document_title": title})
         all_tools_used = injected + all_tools_used
@@ -749,11 +824,16 @@ async def get_history(conversation_id: str) -> dict:
     # Include investigation state if present
     state = conversation.get("investigation_state")
     if state:
+        is_multi_hist = conversation.get("case_mode") == "multi"
+        hist_phases = MULTI_USER_STEP_PHASES if is_multi_hist else STEP_PHASES
         result["investigation_state"] = {
             "current_step": state["current_step"],
-            "phase": STEP_PHASES.get(state["current_step"], "unknown"),
+            "total_steps": state.get("total_steps", 5),
+            "step_labels": state.get("step_labels", {}),
+            "phase": hist_phases.get(state["current_step"], "unknown"),
             "steps": state["steps"],
             "step_complete_signalled": state.get("step_complete_signalled", False),
+            "case_mode": conversation.get("case_mode", "single"),
         }
 
     # Include oneshot state if present
@@ -1138,8 +1218,28 @@ def _rebuild_step_api_messages(
             "content": "Understood. I have the context from previous steps.",
         })
 
-    # 2. Inject fresh case data (steps 1-4 only, not step 5)
-    if current_step <= 4 and case:
+    # 2. Inject fresh case data — mode-aware
+    is_multi = conversation.get("case_mode") == "multi"
+
+    if is_multi and case:
+        block_data_keys = MULTI_USER_BLOCK_DATA.get(current_step)
+        if block_data_keys is ALL_SECTIONS:
+            case_data_md = _build_case_data_markdown(case, sections=None)
+        elif block_data_keys is NO_INJECTION:
+            case_data_md = None
+        else:
+            case_data_md = _build_case_data_markdown(case, sections=block_data_keys)
+
+        if case_data_md:
+            api_messages.append({
+                "role": "user",
+                "content": f"[CASE DATA]\n\n{case_data_md}",
+            })
+            api_messages.append({
+                "role": "assistant",
+                "content": "Case data received. Ready to proceed with this step.",
+            })
+    elif not is_multi and current_step <= 4 and case:
         case_data_md = _build_case_data_markdown(case)
         api_messages.append({
             "role": "user",
@@ -1410,25 +1510,33 @@ async def _generate_step_summary(
     if not step_api_messages:
         raise ValueError(f"No messages found for step {step}")
 
+    # Mode-aware config
+    is_multi = conversation.get("case_mode") == "multi"
+    step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+    config = MULTI_USER_STEP_CONFIG if is_multi else STEP_CONFIG
+
     # Ensure the messages end with a user message (API requirement)
     if step_api_messages[-1]["role"] != "user":
+        block_label = "Block" if is_multi else "Step"
         step_api_messages.append({
             "role": "user",
             "content": (
-                f"Generate a structured summary of Step {step} "
-                f"({STEP_PHASES[step].replace('_', ' ').title()}) "
+                f"Generate a structured summary of {block_label} {step} "
+                f"({step_phases[step].replace('_', ' ').title()}) "
                 "using the template provided in your instructions."
             ),
         })
 
     # Build summary system prompt with step info
-    phase_name = STEP_PHASES[step].replace("_", " ").title()
+    phase_name = step_phases[step].replace("_", " ").title()
     system_prompt = SUMMARY_SYSTEM_PROMPT.format(
         step_number=step,
         phase_name=phase_name,
     )
+    if is_multi:
+        system_prompt += MULTI_USER_SUMMARY_ADDENDUM
 
-    summary_model = STEP_CONFIG["summary"]["model"]
+    summary_model = config["summary"]["model"]
 
     result = await get_ai_response(
         system_prompt=system_prompt,
@@ -1475,11 +1583,16 @@ async def approve_and_continue(
         raise ValueError("Conversation has no investigation state")
 
     current_step = state["current_step"]
-    if current_step > 3:
+    is_multi = conversation.get("case_mode") == "multi"
+    max_approve_step = 8 if is_multi else 3
+    if current_step > max_approve_step:
         raise ValueError(
             f"Cannot advance from step {current_step}. "
-            "Use QC check for step 4→5."
+            "Use QC check for the final transition."
         )
+
+    step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+    step_labels = state.get("step_labels", {})
 
     # Generate summary
     summary_result = await _generate_step_summary(
@@ -1488,7 +1601,8 @@ async def approve_and_continue(
 
     now = _now()
     next_step = current_step + 1
-    next_phase = STEP_PHASES[next_step]
+    next_phase = step_phases[next_step]
+    next_label = step_labels.get(str(next_step), next_phase.replace("_", " ").title())
 
     # Build updated steps array
     steps = [dict(s) for s in state["steps"]]
@@ -1503,6 +1617,7 @@ async def approve_and_continue(
     steps.append({
         "step_number": next_step,
         "phase": next_phase,
+        "label": next_label,
         "status": "active",
         "summary": None,
         "summary_model": None,
@@ -1512,12 +1627,13 @@ async def approve_and_continue(
     })
 
     # Step divider message
+    block_label = "Block" if is_multi else "Step"
     divider_msg = {
         "message_id": _generate_id("msg"),
         "role": "step_divider",
         "content": (
-            f"Step {current_step} ({STEP_PHASES[current_step].replace('_', ' ').title()}) "
-            f"complete. Moving to Step {next_step}: {next_phase.replace('_', ' ').title()}."
+            f"{block_label} {current_step} ({step_phases[current_step].replace('_', ' ').title()}) "
+            f"complete. Moving to {block_label} {next_step}: {next_label}."
         ),
         "step": current_step,
         "timestamp": now,
@@ -1573,18 +1689,24 @@ async def qc_check(
         raise ValueError("Conversation has no investigation state")
 
     current_step = state["current_step"]
-    if current_step != 4:
+    is_multi = conversation.get("case_mode") == "multi"
+    expected_step = 8 if is_multi else 4
+    qc_step = 9 if is_multi else 5
+
+    if current_step != expected_step:
         raise ValueError(
-            f"QC check can only be initiated from step 4, "
+            f"QC check can only be initiated from step {expected_step}, "
             f"currently on step {current_step}"
         )
 
-    # Generate summary for step 4
+    # Generate summary for the pre-QC step
     summary_result = await _generate_step_summary(
         conversation, current_step, knowledge_base
     )
 
     now = _now()
+    step_labels = state.get("step_labels", {})
+    qc_label = step_labels.get(str(qc_step), "QC Check")
 
     # Build updated steps array
     steps = [dict(s) for s in state["steps"]]
@@ -1597,8 +1719,9 @@ async def qc_check(
         "approved_by": user_id,
     })
     steps.append({
-        "step_number": 5,
+        "step_number": qc_step,
         "phase": "qc_check",
+        "label": qc_label,
         "status": "active",
         "summary": None,
         "summary_model": None,
@@ -1608,11 +1731,17 @@ async def qc_check(
     })
 
     # Step divider message
+    block_label = "Block" if is_multi else "Step"
+    prev_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
     divider_msg = {
         "message_id": _generate_id("msg"),
         "role": "step_divider",
-        "content": "Step 4 (Post) complete. Moving to Step 5: QC Check.",
-        "step": 4,
+        "content": (
+            f"{block_label} {current_step} "
+            f"({prev_phases[current_step].replace('_', ' ').title()}) "
+            f"complete. Moving to {block_label} {qc_step}: {qc_label}."
+        ),
+        "step": current_step,
         "timestamp": now,
         "visible": True,
     }
@@ -1623,7 +1752,7 @@ async def qc_check(
         {
             "$set": {
                 "investigation_state.steps": steps,
-                "investigation_state.current_step": 5,
+                "investigation_state.current_step": qc_step,
                 "investigation_state.step_complete_signalled": False,
                 "updated_at": now,
             },
@@ -1632,12 +1761,12 @@ async def qc_check(
     )
 
     logger.info(
-        "QC check initiated for conversation %s. Step 4 summary: %d chars",
-        conversation_id, len(summary_result["summary"]),
+        "QC check initiated for conversation %s. Step %d summary: %d chars",
+        conversation_id, current_step, len(summary_result["summary"]),
     )
 
     return {
-        "step": 5,
+        "step": qc_step,
         "phase": "qc_check",
     }
 
@@ -1663,12 +1792,18 @@ async def lightweight_step_advance(
         raise ValueError("Conversation has no investigation state")
 
     current_step = state["current_step"]
-    if current_step >= 4:
+    is_multi = conversation.get("case_mode") == "multi"
+    max_step = 8 if is_multi else 3
+    if current_step > max_step:
         raise ValueError(f"Cannot advance from step {current_step}")
+
+    step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+    step_labels = state.get("step_labels", {})
 
     now = _now()
     next_step = current_step + 1
-    next_phase = STEP_PHASES[next_step]
+    next_phase = step_phases[next_step]
+    next_label = step_labels.get(str(next_step), next_phase.replace("_", " ").title())
 
     steps = [dict(s) for s in state["steps"]]
     steps[current_step - 1].update({
@@ -1682,6 +1817,7 @@ async def lightweight_step_advance(
     steps.append({
         "step_number": next_step,
         "phase": next_phase,
+        "label": next_label,
         "status": "active",
         "summary": None,
         "summary_model": None,
@@ -1690,12 +1826,13 @@ async def lightweight_step_advance(
         "approved_by": None,
     })
 
+    block_label = "Block" if is_multi else "Step"
     divider_msg = {
         "message_id": _generate_id("msg"),
         "role": "step_divider",
         "content": (
-            f"Step {current_step} ({STEP_PHASES[current_step].replace('_', ' ').title()}) "
-            f"complete. Moving to Step {next_step}: {next_phase.replace('_', ' ').title()}."
+            f"{block_label} {current_step} ({step_phases[current_step].replace('_', ' ').title()}) "
+            f"complete. Moving to {block_label} {next_step}: {next_label}."
         ),
         "step": current_step,
         "timestamp": now,
@@ -1736,7 +1873,7 @@ async def get_investigation_state(conversation_id: str) -> dict:
 
     conversation = await db.conversations.find_one(
         {"_id": conversation_id},
-        {"investigation_state": 1},
+        {"investigation_state": 1, "case_mode": 1},
     )
     if conversation is None:
         raise ValueError(f"Conversation not found: {conversation_id}")
@@ -1745,8 +1882,14 @@ async def get_investigation_state(conversation_id: str) -> dict:
     if not state:
         raise ValueError("Conversation has no investigation state")
 
+    is_multi = conversation.get("case_mode") == "multi"
+    step_phases = MULTI_USER_STEP_PHASES if is_multi else STEP_PHASES
+
     return {
         "current_step": state["current_step"],
-        "phase": STEP_PHASES.get(state["current_step"], "unknown"),
+        "total_steps": state.get("total_steps", 5),
+        "step_labels": state.get("step_labels", {}),
+        "phase": step_phases.get(state["current_step"], "unknown"),
         "steps": state["steps"],
+        "case_mode": conversation.get("case_mode", "single"),
     }

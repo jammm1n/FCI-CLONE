@@ -31,6 +31,8 @@ export default function InvestigationPage() {
   const [leftWidth, setLeftWidth] = useState(35);
   const [currentStep, setCurrentStep] = useState(null);
   const [stepPhase, setStepPhase] = useState(null);
+  const [totalSteps, setTotalSteps] = useState(5);
+  const [stepLabels, setStepLabels] = useState({});
   const [stepLoading, setStepLoading] = useState(false);
   const [showQCModal, setShowQCModal] = useState(false);
   const [stepSignalled, setStepSignalled] = useState(false);
@@ -103,6 +105,8 @@ export default function InvestigationPage() {
             if (history?.investigation_state) {
               setCurrentStep(history.investigation_state.current_step);
               setStepPhase(history.investigation_state.phase);
+              if (history.investigation_state.total_steps) setTotalSteps(history.investigation_state.total_steps);
+              if (history.investigation_state.step_labels) setStepLabels(history.investigation_state.step_labels);
               if (history.investigation_state.step_complete_signalled) {
                 setStepComplete(true);
                 setStepSignalled(true);
@@ -122,14 +126,20 @@ export default function InvestigationPage() {
             status: 'in_progress',
           }));
 
-          if (createMode === 'case') {
+          // Check if this conversation already has messages (e.g. race condition)
+          const history = await api.getConversationHistory(token, result.conversation_id);
+          if (cancelled) return;
+
+          if (createMode === 'case' && history?.investigation_state) {
+            setCurrentStep(history.investigation_state.current_step);
+            setStepPhase(history.investigation_state.phase);
+            if (history.investigation_state.total_steps) setTotalSteps(history.investigation_state.total_steps);
+            if (history.investigation_state.step_labels) setStepLabels(history.investigation_state.step_labels);
+          } else if (createMode === 'case') {
             setCurrentStep(1);
             setStepPhase('setup');
           }
 
-          // Check if this conversation already has messages (e.g. race condition)
-          const history = await api.getConversationHistory(token, result.conversation_id);
-          if (cancelled) return;
           if (history.messages && history.messages.length > 0) {
             setMessages(history.messages);
           } else {
@@ -633,7 +643,12 @@ export default function InvestigationPage() {
                   {oneshotExecuted ? 'Autopilot complete' : oneshotReady ? 'Ready to execute' : 'Autopilot setup'}
                 </span>
               ) : (
-                <StepIndicator currentStep={currentStep} phase={stepPhase} />
+                <StepIndicator
+                  currentStep={currentStep}
+                  phase={stepPhase}
+                  totalSteps={totalSteps}
+                  stepLabel={stepLabels[String(currentStep)]}
+                />
               )}
             </div>
             <div className="flex items-center gap-2">

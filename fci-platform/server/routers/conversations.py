@@ -463,6 +463,10 @@ async def auto_execute(
                 yield {"data": json.dumps({"type": "error", "message": "Conversation not found"})}
                 return
 
+            if conv.get("case_mode") == "multi":
+                yield {"data": json.dumps({"type": "error", "message": "Auto-execute is not available for multi-user cases"})}
+                return
+
             state = conv.get("investigation_state")
             if not state:
                 yield {"data": json.dumps({"type": "error", "message": "No investigation state"})}
@@ -662,6 +666,12 @@ async def oneshot_execute(
         {"type": "done", "message_id": "msg_xxx", "token_usage": {...}}
     """
     kb = _get_knowledge_base(request)
+
+    # Block multi-user cases from autopilot
+    db = get_database()
+    conv = await db.conversations.find_one({"_id": conversation_id}, {"case_mode": 1})
+    if conv and conv.get("case_mode") == "multi":
+        raise HTTPException(status_code=400, detail="Autopilot is not available for multi-user cases")
 
     async def event_generator():
         done_event = None
