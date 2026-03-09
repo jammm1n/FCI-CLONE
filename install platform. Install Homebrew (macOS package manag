@@ -169,3 +169,22 @@
   If it's not installed (the earlier brew install may have been skipped or failed), install it now:
 
   brew install python@3.12
+
+
+
+  ben@th47w2x1j7 fci-platform % /opt/homebrew/bin/python3.12 -m venv venv
+zsh: no such file or directory: /opt/homebrew/bin/python3.12
+ben@th47w2x1j7 fci-platform % brew list | grep python
+ben@th47w2x1j7 fci-platform % brew install python@3.14.3
+✔︎ JSON API cask.jws.json                             Downloaded   15.4MB/ 15.4MB
+✔︎ JSON API formula.jws.json                          Downloaded   31.9MB/ 31.9MB
+Warning: No available formula with the name "python@3.14.3". Did you mean python@3.14, python@3.13, python@3.12, python@3.11 or python@3.10?
+==> Searching for similarly named formulae and casks...
+==> Formulae
+python@3.14     python@3.13     python@3.12     python@3.11     python@3.10
+
+To install python@3.14, run:
+  brew install python@3.14
+ben@th47w2x1j7 fci-platform % ls /opt/homebrew/bin/python3
+ls: /opt/homebrew/bin/python3: No such file or directory
+ben@th47w2x1j7 fci-platform % 
