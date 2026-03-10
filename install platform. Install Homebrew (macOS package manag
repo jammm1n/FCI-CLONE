@@ -184,3 +184,45 @@
 
 API Key: sk-ts02xxxxxxxxxx_xxxxxxx
 Base URL: https://litellm.safuapi.secfdg.net
+
+
+
+● Done. Four changes:
+
+  1. server/config.py — added ANTHROPIC_BASE_URL: str | None = None. When unset, clients use the default Anthropic
+  endpoint (your local dev workflow unchanged).
+  2. server/services/ai_client.py — get_client() passes base_url when configured. This covers all streaming chat and
+  non-streaming investigation calls.
+  3. server/services/ingestion/ai_processor.py — _get_client() same pattern. This covers all ingestion batch processing
+  (including Kodex).
+  4. scripts/test_litellm.py — standalone test script with three checks:
+    - Test 1: Non-streaming call (connectivity + auth)
+    - Test 2: Streaming call (SSE through proxy)
+    - Test 3: Prompt caching (two calls with cache_control — verifies the proxy passes caching headers)
+
+  On the Binance network, your .env would be:
+  ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxx_xxxxxxx
+  ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net
+
+  If the model name gets rejected in Test 1, the script tells you to try ANTHROPIC_MODEL=anthropic/claude-sonnet-4-6 —
+  that's the most common LiteLLM routing prefix.
+
+✻ Churned for 54s
+
+❯ How do I run the test script? Tell me exactly what to do.
+
+● On the Binance network, from the project root (fci-platform/):
+
+  ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxx_xxxxxxx ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net python
+  scripts/test_litellm.py
+
+  That's it. The script reads the env vars inline — no .env file needed for the test.
+
+  If Test 1 fails with a model name error, retry with:
+
+  ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxx_xxxxxxx ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net
+  ANTHROPIC_MODEL=anthropic/claude-sonnet-4-6 python scripts/test_litellm.py
+
+  You'll need pydantic-settings and anthropic installed in your Python environment there. If it's a fresh environment:
+
+  pip install anthropic pydantic-settings

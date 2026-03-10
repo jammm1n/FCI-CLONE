@@ -146,10 +146,13 @@ def get_client() -> AsyncAnthropic:
     """Get or create the async Anthropic client singleton."""
     global _client
     if _client is None:
-        _client = AsyncAnthropic(
-            api_key=settings.ANTHROPIC_API_KEY,
-            max_retries=3,  # Auto-retries 429s with exponential backoff
-        )
+        kwargs = {
+            "api_key": settings.ANTHROPIC_API_KEY,
+            "max_retries": 3,  # Auto-retries 429s with exponential backoff
+        }
+        if settings.ANTHROPIC_BASE_URL:
+            kwargs["base_url"] = settings.ANTHROPIC_BASE_URL
+        _client = AsyncAnthropic(**kwargs)
     return _client
 
 

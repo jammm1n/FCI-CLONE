@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Anthropic API
     ANTHROPIC_API_KEY: str = ""
+    ANTHROPIC_BASE_URL: str | None = None  # Custom proxy (e.g., LiteLLM). None = default Anthropic endpoint
     ANTHROPIC_MODEL: str = "claude-sonnet-4-6"  # Sonnet for dev, Opus for demo
     ANTHROPIC_MAX_TOKENS: int = 4096
 

@@ -114,7 +114,10 @@ def _get_client() -> AsyncAnthropic:
     """Lazy-init the Anthropic async client."""
     global _client
     if _client is None:
-        _client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        kwargs = {"api_key": settings.ANTHROPIC_API_KEY}
+        if settings.ANTHROPIC_BASE_URL:
+            kwargs["base_url"] = settings.ANTHROPIC_BASE_URL
+        _client = AsyncAnthropic(**kwargs)
     return _client
 
 
