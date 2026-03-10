@@ -245,3 +245,55 @@ Test 1: Non-streaming message...
 
     ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxx_xxxxxxx ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net
   ANTHROPIC_MODEL=anthropic/claude-sonnet-4.6 python3 scripts/test_litellm.py
+
+
+
+   The test prompt is probably too short. Anthropic requires a minimum of 1,024 tokens for prompt caching to kick in
+  (2,048 for Claude 3.5). The test's "You are a helpful assistant. " * 100 is only ~600 tokens.
+
+  Update the test script to use a larger system prompt. But don't bother — just run this directly:
+
+  python3 -c "
+  import asyncio
+  from anthropic import AsyncAnthropic
+
+  async def main():
+      client = AsyncAnthropic(
+          api_key='sk-ts02xxxxxxxxxx_xxxxxxx',
+          base_url='https://litellm.safuapi.secfdg.net',
+      )
+      big_system = 'You are a financial crime investigator. ' * 500
+
+      r1 = await client.messages.create(
+          model='anthropic/claude-sonnet-4.6',
+          max_tokens=20,
+          system=[{'type': 'text', 'text': big_system, 'cache_control': {'type': 'ephemeral'}}],
+          messages=[{'role': 'user', 'content': 'Say hello.'}],
+      )
+      cc1 = getattr(r1.usage, 'cache_creation_input_tokens', 0) or 0
+      cr1 = getattr(r1.usage, 'cache_read_input_tokens', 0) or 0
+      print(f'Call 1: input={r1.usage.input_tokens}, cache_created={cc1}, cache_read={cr1}')
+
+      r2 = await client.messages.create(
+          model='anthropic/claude-sonnet-4.6',
+          max_tokens=20,
+          system=[{'type': 'text', 'text': big_system, 'cache_control': {'type': 'ephemeral'}}],
+          messages=[{'role': 'user', 'content': 'Say goodbye.'}],
+      )
+      cc2 = getattr(r2.usage, 'cache_creation_input_tokens', 0) or 0
+      cr2 = getattr(r2.usage, 'cache_read_input_tokens', 0) or 0
+      print(f'Call 2: input={r2.usage.input_tokens}, cache_created={cc2}, cache_read={cr2}')
+
+      if cr2 > 0:
+          print('PASS — caching works')
+      elif cc1 > 0:
+          print('Cache created but not read — try again quickly (cache may have expired)')
+      else:
+          print('No cache headers — proxy may strip them')
+
+  asyncio.run(main())
+  "
+
+  Replace the key with your actual key. The * 500 repetition gives ~3,000 tokens — well above the minimum. If
+  cache_created shows a non-zero number on Call 1 and cache_read is non-zero on Call 2, caching works. If both remain 0,
+   the proxy is stripping the cache_control header and you'll need to raise that with the admin.
