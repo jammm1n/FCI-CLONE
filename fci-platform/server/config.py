@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     ONESHOT_MODEL: str = "claude-opus-4-6"
     ONESHOT_THINKING_ENABLED: bool = True
     ONESHOT_THINKING_BUDGET: int = 16000
-    ONESHOT_MAX_TOKENS: int = 16000
+    ONESHOT_MAX_TOKENS: int = 32000
 
     # Server
     HOST: str = "0.0.0.0"
