@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     ANTHROPIC_BASE_URL: str | None = None  # Custom proxy (e.g., LiteLLM). None = default Anthropic endpoint
     ANTHROPIC_MODEL: str = "claude-sonnet-4-6"  # Sonnet for dev, Opus for demo
-    ANTHROPIC_MAX_TOKENS: int = 4096
+    ANTHROPIC_MAX_TOKENS: int = 8192
 
     # Tool use limits
     MAX_TOOL_CALLS_PER_TURN: int = 5
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # One-shot mode
     ONESHOT_MODEL: str = "claude-opus-4-6"
     ONESHOT_THINKING_ENABLED: bool = True
-    ONESHOT_THINKING_BUDGET: int = 10000
+    ONESHOT_THINKING_BUDGET: int = 16000
     ONESHOT_MAX_TOKENS: int = 16000
 
     # Server

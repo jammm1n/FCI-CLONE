@@ -759,18 +759,21 @@ This classification should be applied to every LE
 case and the tier stated in the risk position
 statement for the LE section. See also Decision
 Matrix Rule #56.
-**Required output:** One or more narrative paragraphs
-covering all LE cases. For each case: the requesting
-authority, date, subject matter, LE target count
-(mandatory), subject role (direct target vs
-third-party), and the specificity tier (High / Medium /
-Low per the LE RISK WEIGHT ASSESSMENT above). Group
-related cases from the same agency where appropriate.
-Conclude with a risk position statement summarising the
-overall LE risk profile. Length is proportional to
-complexity — a single low-specificity data request may
-be 2-3 sentences; multiple high-specificity cases with
-freezes may require a full paragraph.
+**Required output:** Concise narrative covering all LE
+cases. For each case state: requesting authority, date,
+subject matter, LE target count (mandatory), subject
+role (direct target vs third-party), and specificity
+tier (High / Medium / Low). Group related cases from
+the same agency where appropriate. Conclude with a
+single risk position statement summarising the overall
+LE risk profile.
+**Brevity rule:** State conclusions, not the reasoning
+chain. A single case should be 2-3 sentences. Multiple
+cases should not exceed one short paragraph per case
+plus the concluding risk position. The LE Risk Weight
+Assessment is an analytical input — apply it, state the
+tier, but do not reproduce the classification logic in
+the output.
 **If no LE enquiries:** State "No law enforcement
 enquiries identified."
 **QC Check (Ref: qc-submission-checklist.md #3.11):**

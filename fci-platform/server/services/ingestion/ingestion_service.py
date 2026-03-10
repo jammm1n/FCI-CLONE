@@ -560,6 +560,28 @@ async def save_text_section_with_ai(
 
     raw_text = text.strip()
 
+    # HaoDesk: skip AI processing, pass raw text straight through
+    if section_key == 'raw_hex_dump':
+        await _collection().update_one(
+            {'_id': case_id},
+            {'$set': {
+                f'{prefix}.status': 'complete',
+                f'{prefix}.output': raw_text,
+                f'{prefix}.raw_text': raw_text,
+                f'{prefix}.ai_status': 'skipped',
+                f'{prefix}.ai_error': None,
+                f'{prefix}.updated_at': now,
+                'updated_at': now,
+            }},
+        )
+        await _check_ready_state(case_id, subject_index=subject_index)
+        return {
+            'status': 'complete',
+            'updated_at': now,
+            'ai_status': 'skipped',
+            'ai_error': None,
+        }
+
     # Save raw text immediately, mark as processing
     await _collection().update_one(
         {'_id': case_id},
