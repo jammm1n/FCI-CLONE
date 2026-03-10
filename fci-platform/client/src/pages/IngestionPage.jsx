@@ -30,6 +30,7 @@ function StatusDot({ status }) {
     empty: { color: 'bg-surface-500', label: 'Empty' },
     processing: { color: 'bg-gold-400 animate-pulse', label: 'Processing' },
     complete: { color: 'bg-emerald-500', label: 'Complete' },
+    extracted: { color: 'bg-blue-500', label: 'Extracted' },
     error: { color: 'bg-red-500', label: 'Error' },
     none: { color: 'bg-surface-400', label: 'N/A' },
   };
@@ -3105,8 +3106,8 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
   const [dragOver, setDragOver] = useState(false);
 
   const status = section.status || 'empty';
-  const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
+  const isExtracted = status === 'extracted';
   const isNone = status === 'none';
   const isProcessing = status === 'processing';
   const isError = status === 'error';
@@ -3214,15 +3215,9 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
           {SECTION_LABELS[sectionKey]}
         </h4>
         <div className="flex items-center gap-2">
-          {aiStatus && (
-            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
-              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
-              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
-            }`}>
-              {aiStatus === 'complete' ? 'AI processed' :
-               aiStatus === 'processing' ? 'AI processing...' :
-               aiStatus === 'error' ? 'AI failed' : ''}
+          {isExtracted && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+              Assessed at assembly
             </span>
           )}
           <StatusDot status={status} />
@@ -3230,7 +3225,7 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
       </div>
 
       {/* Gate: need subject UID */}
-      {!hasSubjectUid && !isComplete && !isProcessing && !isError && (
+      {!hasSubjectUid && !isComplete && !isExtracted && !isProcessing && !isError && (
         <div className="text-sm text-surface-400 py-3 flex items-center gap-2">
           <svg className="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -3240,7 +3235,7 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
       )}
 
       {/* Upload area (visible when UID present and section is empty/error) */}
-      {hasSubjectUid && !isComplete && !isProcessing && (
+      {hasSubjectUid && !isComplete && !isExtracted && !isProcessing && (
         <>
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -3268,7 +3263,7 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
               Click to select or drag &amp; drop Kodex case PDFs
             </p>
             <p className="text-[10px] text-surface-400 mt-1">
-              Drop all LE case PDFs at once — they will be processed in parallel
+              Drop all LE case PDFs at once — text will be extracted for assembly-time analysis
             </p>
           </div>
 
@@ -3308,7 +3303,7 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
                 disabled={uploading}
                 className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
               >
-                {uploading ? 'Processing...' : `Upload & Process (${selectedFiles.length} PDF${selectedFiles.length > 1 ? 's' : ''})`}
+                {uploading ? 'Extracting...' : `Upload & Extract (${selectedFiles.length} PDF${selectedFiles.length > 1 ? 's' : ''})`}
               </button>
             )}
             {selectedFiles.length === 0 && (status === 'empty' || status === 'error') && (
@@ -3339,12 +3334,21 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
       {isProcessing && (
         <div className="flex items-center gap-3 py-4">
           <LoadingSpinner size="sm" />
-          <span className="text-sm text-surface-400">Processing LE case PDFs...</span>
+          <span className="text-sm text-surface-400">Extracting text from LE case PDFs...</span>
         </div>
       )}
 
-      {/* Actions when complete */}
-      {isComplete && (
+      {/* Extracted status info */}
+      {isExtracted && (
+        <div className="mb-3">
+          <p className="text-sm text-blue-400">
+            {section.case_count || 0} PDF(s) extracted. LE assessment will be generated at assembly using full case context.
+          </p>
+        </div>
+      )}
+
+      {/* Actions when complete or extracted */}
+      {(isComplete || isExtracted) && (
         <div className="flex items-center gap-3">
           <button
             onClick={handlePreview}
@@ -3378,10 +3382,12 @@ function KodexPreviewModal({ data, onClose }) {
   const [copied, setCopied] = useState(false);
   const [expandedCase, setExpandedCase] = useState(null);
   const perCase = data.per_case || [];
+  const isExtracted = data.status === 'extracted';
 
   function handleCopy() {
-    if (data.output) {
-      navigator.clipboard.writeText(data.output);
+    const textToCopy = data.output || perCase.map((pc) => pc.extracted_text || '').join('\n\n---\n\n');
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -3395,24 +3401,29 @@ function KodexPreviewModal({ data, onClose }) {
             {SECTION_LABELS.kodex} — {data.case_count || 0} case(s)
           </h3>
           <div className="flex items-center gap-3">
+            {isExtracted && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                Text extracted — AI assessment at assembly
+              </span>
+            )}
             <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
-              {copied ? 'Copied!' : 'Copy Summary'}
+              {copied ? 'Copied!' : isExtracted ? 'Copy Raw Text' : 'Copy Assessment'}
             </button>
             <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {data.ai_error && (
+          {data.error && (
             <div className="text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
-              Error: {data.ai_error}
+              Error: {data.error}
             </div>
           )}
 
-          {/* Cross-case summary */}
+          {/* AI assessment (shown after assembly completes the section) */}
           {data.output && (
             <div>
               <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
-                Cross-Case Summary
+                LE Assessment
               </h4>
               <pre className="text-sm text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed bg-surface-50 dark:bg-surface-900/50 rounded-lg p-4">
                 {data.output}
@@ -3420,11 +3431,11 @@ function KodexPreviewModal({ data, onClose }) {
             </div>
           )}
 
-          {/* Per-case extractions (accordion) */}
+          {/* Per-PDF extracted text (accordion) */}
           {perCase.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
-                Per-Case Extractions
+                {isExtracted ? 'Extracted PDF Text' : 'Per-PDF Data'}
               </h4>
               <div className="space-y-2">
                 {perCase.map((pc, idx) => (
@@ -3434,9 +3445,10 @@ function KodexPreviewModal({ data, onClose }) {
                       className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-900/80 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xs font-mono text-gold-500">Case {idx + 1}</span>
+                        <span className="text-xs font-mono text-gold-500">PDF {idx + 1}</span>
                         <span className="text-sm text-surface-700 dark:text-surface-300 truncate">{pc.filename}</span>
                         <span className="text-[10px] text-surface-400 shrink-0">{pc.page_count}p</span>
+                        <span className="text-[10px] text-surface-400 shrink-0">{((pc.text_length || 0) / 1024).toFixed(1)}KB</span>
                         {pc.uid_count > 0 && (
                           <span className="text-[10px] text-emerald-400 shrink-0">UID: {pc.uid_count}x</span>
                         )}
@@ -3450,16 +3462,14 @@ function KodexPreviewModal({ data, onClose }) {
                     </button>
                     {expandedCase === idx && (
                       <div className="px-4 py-3 border-t border-surface-200 dark:border-surface-700">
-                        {pc.error && !pc.ai_output && (
+                        {pc.error && !pc.extracted_text && (
                           <div className="text-xs text-red-400 mb-2">{pc.error}</div>
                         )}
-                        <pre className="text-xs text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed">
-                          {pc.ai_output || 'No extraction available.'}
+                        <pre className="text-xs text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">
+                          {pc.extracted_text || 'No text extracted.'}
                         </pre>
                         <div className="mt-2 flex gap-3 text-[10px] text-surface-400">
-                          <span>Original: {(pc.original_length / 1024).toFixed(1)}KB</span>
-                          <span>Cleaned: {(pc.cleaned_length / 1024).toFixed(1)}KB</span>
-                          <span>Reduction: {pc.original_length > 0 ? Math.round((1 - pc.cleaned_length / pc.original_length) * 100) : 0}%</span>
+                          <span>Size: {((pc.text_length || 0) / 1024).toFixed(1)}KB</span>
                           <span>Other UIDs: ~{pc.approx_other_uids}</span>
                         </div>
                       </div>
@@ -3467,13 +3477,6 @@ function KodexPreviewModal({ data, onClose }) {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* PDF metadata */}
-          {(data.pdf_files || []).length > 0 && perCase.length === 0 && (
-            <div className="text-xs text-surface-400">
-              {data.pdf_files.length} PDF(s) processed
             </div>
           )}
         </div>
@@ -3922,7 +3925,7 @@ export default function IngestionPage() {
     ];
     return required.every((key) => {
       const s = caseData.sections[key]?.status;
-      return s === 'complete' || s === 'none';
+      return s === 'complete' || s === 'none' || s === 'extracted';
     });
   })();
 
@@ -3934,7 +3937,7 @@ export default function IngestionPage() {
     ];
     return required.every((key) => {
       const s = effectiveSections[key]?.status;
-      return s === 'complete' || s === 'none';
+      return s === 'complete' || s === 'none' || s === 'extracted';
     });
   })();
 

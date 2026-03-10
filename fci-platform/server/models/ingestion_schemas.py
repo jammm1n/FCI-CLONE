@@ -32,7 +32,8 @@ REQUIRED_TERMINAL_KEYS = [
 ]
 
 # Terminal statuses — a section in one of these states is "done".
-TERMINAL_STATUSES = {'complete', 'none'}
+# 'extracted' is used by Kodex: PDF text extracted, AI assessment deferred to assembly.
+TERMINAL_STATUSES = {'complete', 'none', 'extracted'}
 
 
 # ── Request Models ────────────────────────────────────────────────
