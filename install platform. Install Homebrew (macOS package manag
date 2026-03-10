@@ -297,3 +297,12 @@ Test 1: Non-streaming message...
   Replace the key with your actual key. The * 500 repetition gives ~3,000 tokens — well above the minimum. If
   cache_created shows a non-zero number on Call 1 and cache_read is non-zero on Call 2, caching works. If both remain 0,
    the proxy is stripping the cache_control header and you'll need to raise that with the admin.
+
+    Work laptop (Mac, Binance LiteLLM proxy)
+
+  Your .env in fci-platform/:
+
+  ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxx_xxxxxxx
+  ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net
+  ANTHROPIC_MODEL=anthropic/claude-sonnet-4.6
+  ONESHOT_MODEL=anthropic/claude-opus-4.6

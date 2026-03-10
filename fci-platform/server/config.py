@@ -62,12 +62,12 @@ settings = Settings()
 # ---------------------------------------------------------------------------
 
 STEP_CONFIG = {
-    1: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-setup"]},
-    2: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-analysis"]},  # TODO: revert to opus for production
-    3: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
-    4: {"model": "claude-sonnet-4-6", "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
-    5: {"model": "claude-sonnet-4-6", "docs": ["qc-full-checklist"]},  # TODO: revert to opus for production
-    "summary": {"model": "claude-sonnet-4-6"},  # TODO: revert to opus for production
+    1: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-setup"]},
+    2: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-analysis"]},  # TODO: revert to ONESHOT_MODEL for production
+    3: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
+    4: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
+    5: {"model": settings.ANTHROPIC_MODEL, "docs": ["qc-full-checklist"]},  # TODO: revert to ONESHOT_MODEL for production
+    "summary": {"model": settings.ANTHROPIC_MODEL},  # TODO: revert to ONESHOT_MODEL for production
 }
 
 STEP_PHASES = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}
@@ -83,67 +83,67 @@ MULTI_USER_STEP_CONFIG = {
         "phase": "setup",
         "label": "Identity & Account Overview",
         "steps_covered": [1, 2, 3],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-setup"],
     },
     2: {
         "phase": "setup",
         "label": "Case History & Context",
         "steps_covered": [4, 5, 6],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-setup"],
     },
     3: {
         "phase": "analysis",
         "label": "Transaction & Alert Analysis",
         "steps_covered": [7, 8],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-analysis"],
     },
     4: {
         "phase": "analysis",
         "label": "On-Chain Analysis",
         "steps_covered": [9, 10, 11],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-analysis"],
     },
     5: {
         "phase": "analysis",
         "label": "Counterparty & Device Analysis",
         "steps_covered": [12, 13, 14],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-analysis"],
     },
     6: {
         "phase": "analysis",
         "label": "Communications & OSINT",
         "steps_covered": [15, 16, 17, 18, 19],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-analysis", "icr-steps-decision"],
     },
     7: {
         "phase": "summary",
         "label": "Summary of Unusual Activity",
         "steps_covered": [20],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-decision"],
     },
     8: {
         "phase": "decision",
         "label": "Decision & Recommendation",
         "steps_covered": [21],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"],
     },
     9: {
         "phase": "qc_check",
         "label": "QC Check",
         "steps_covered": [],
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
         "docs": ["qc-full-checklist"],
     },
     "summary": {
-        "model": "claude-opus-4-6",
+        "model": settings.ONESHOT_MODEL,
     },
 }
 
