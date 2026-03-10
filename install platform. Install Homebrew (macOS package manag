@@ -179,3 +179,8 @@
   python scripts/manage_user.py delete demo.investigator
 
   Four commands: list, add, password, delete. Auto-generates user IDs. Delete confirms first and leaves cases intact
+
+
+
+API Key: sk-ts02xxxxxxxxxx_xxxxxxx
+Base URL: https://litellm.safuapi.secfdg.net
