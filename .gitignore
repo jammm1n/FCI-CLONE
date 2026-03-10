@@ -2,3 +2,4 @@
 fci-platform/start.sh
 fci-platform/stop.sh
 start.sh
+fci-platform/test_cache.py
