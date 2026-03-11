@@ -1958,51 +1958,21 @@ def _build_assembled_markdown_single(doc: dict, sections: dict, preprocessed_dat
 
 
 async def _run_kodex_assessment(
-    sections: dict,
+    kodex_raw: str,
     case_data_markdown: str,
     subject_uid: str,
+    entry_count: int,
 ) -> str | None:
     """
     Run the context-aware Kodex LE assessment at assembly time.
 
-    Takes the compiled case data markdown (all sections except Kodex) and
-    the raw extracted Kodex PDF texts. Sends both to the AI with the
-    kodex_assessment prompt to produce a comprehensive LE risk assessment.
+    Takes pre-built Kodex data (raw PDF text or structured per-entry
+    extractions) and compiled case data markdown (all sections except Kodex).
+    Sends both to the AI with the kodex_assessment prompt.
 
-    Returns the AI assessment text, or None if Kodex has no extracted data.
+    Returns the AI assessment text, or None on failure.
     """
     from server.services.ingestion.ai_processor import process_with_ai
-
-    kodex = sections.get('kodex', {})
-    if kodex.get('status') != 'extracted':
-        return None
-
-    per_case = kodex.get('per_case', [])
-    if not per_case:
-        return None
-
-    # Build the Kodex raw data block from extracted texts
-    kodex_parts = []
-    pdf_count = 0
-    for i, pc in enumerate(per_case, 1):
-        text = pc.get('extracted_text')
-        if not text:
-            continue
-        pdf_count += 1
-        filename = pc.get('filename', f'document_{i}.pdf')
-        page_count = pc.get('page_count', 0)
-        uid_count = pc.get('uid_count', 0)
-        other_uids = pc.get('approx_other_uids', 0)
-        kodex_parts.append(
-            f'--- PDF {pdf_count}: {filename} ({page_count} pages, '
-            f'subject UID appears {uid_count}x, ~{other_uids} other UIDs) ---\n'
-            f'{text}'
-        )
-
-    if not kodex_parts:
-        return None
-
-    kodex_raw = '\n\n'.join(kodex_parts)
 
     # Build the user message: case data + Kodex raw data
     user_message = (
@@ -2013,13 +1983,13 @@ async def _run_kodex_assessment(
 
     variables = {
         'subject_uid': subject_uid,
-        'pdf_count': str(pdf_count),
+        'pdf_count': str(entry_count),
     }
 
     logger.info(
-        'Running Kodex assessment for UID %s: %d PDFs, '
+        'Running Kodex assessment for UID %s: %d entries, '
         '%d chars case data, %d chars Kodex data',
-        subject_uid, pdf_count, len(case_data_markdown), len(kodex_raw),
+        subject_uid, entry_count, len(case_data_markdown), len(kodex_raw),
     )
 
     result = await process_with_ai(
@@ -2153,14 +2123,67 @@ async def preview_assembled_case_data(case_id: str) -> dict:
         }
 
 
+def _build_kodex_raw(kodex: dict) -> tuple[str, int] | tuple[None, 0]:
+    """
+    Build the Kodex raw data block from either pipeline.
+
+    New pipeline (entries with ai_output): structured per-entry extractions.
+    Legacy pipeline (per_case with extracted_text): raw PDF text.
+
+    Returns (kodex_raw, entry_count) or (None, 0) if no data.
+    """
+    entries = kodex.get('entries', [])
+
+    if entries and kodex.get('status') == 'complete':
+        # New pipeline: use per-entry AI extractions (Stage 1 outputs)
+        parts = []
+        for i, entry in enumerate(entries, 1):
+            ai_output = entry.get('ai_output')
+            if not ai_output:
+                continue
+            label = entry.get('label', f'LE Case {i}')
+            parts.append(f'--- LE Case {i}: {label} ---\n{ai_output}')
+        if not parts:
+            return None, 0
+        return '\n\n'.join(parts), len(parts)
+
+    if kodex.get('status') == 'extracted':
+        # Legacy pipeline: use raw PDF text
+        per_case = kodex.get('per_case', [])
+        parts = []
+        pdf_count = 0
+        for i, pc in enumerate(per_case, 1):
+            text = pc.get('extracted_text')
+            if not text:
+                continue
+            pdf_count += 1
+            filename = pc.get('filename', f'document_{i}.pdf')
+            page_count = pc.get('page_count', 0)
+            uid_count = pc.get('uid_count', 0)
+            other_uids = pc.get('approx_other_uids', 0)
+            parts.append(
+                f'--- PDF {pdf_count}: {filename} ({page_count} pages, '
+                f'subject UID appears {uid_count}x, ~{other_uids} other UIDs) ---\n'
+                f'{text}'
+            )
+        if not parts:
+            return None, 0
+        return '\n\n'.join(parts), pdf_count
+
+    return None, 0
+
+
 async def _run_kodex_assessment_for_case(case_id: str) -> None:
     """
-    If Kodex section has status 'extracted' (legacy pipeline), run the
-    context-aware AI assessment using full case data, then update the
-    section to 'complete'.
+    Run the context-aware Kodex AI assessment at assembly time.
 
-    New pipeline cases (with entries) reach 'complete' at process time
-    and are skipped here.
+    Handles both pipelines:
+    - New pipeline (entries + status 'complete'): builds input from
+      per-entry AI extractions (Stage 1 outputs) for Stage 3 assessment.
+    - Legacy pipeline (status 'extracted'): builds input from raw PDF text.
+
+    Both pipelines cross-reference the Kodex data against the full case
+    data (counterparty, CTM/FTM alerts, Elliptic, device/IP, etc.).
 
     For multi-user cases, runs per-subject.
     """
@@ -2175,10 +2198,9 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
         for i, subject in enumerate(subjects):
             subj_sections = subject.get('sections', {})
             kodex = subj_sections.get('kodex', {})
-            # New pipeline: entries exist and already complete — skip
-            if kodex.get('entries') and kodex.get('status') == 'complete':
-                continue
-            if kodex.get('status') != 'extracted':
+
+            kodex_raw, entry_count = _build_kodex_raw(kodex)
+            if not kodex_raw:
                 continue
 
             subject_uid = subject.get('user_id', '')
@@ -2191,7 +2213,7 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
             case_data_md = '\n'.join(parts)
 
             assessment = await _run_kodex_assessment(
-                subj_sections, case_data_md, subject_uid,
+                kodex_raw, case_data_md, subject_uid, entry_count,
             )
             if assessment:
                 await update_section(
@@ -2211,10 +2233,9 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
     else:
         sections = doc.get('sections', {})
         kodex = sections.get('kodex', {})
-        # New pipeline: entries exist and already complete — skip
-        if kodex.get('entries') and kodex.get('status') == 'complete':
-            return
-        if kodex.get('status') != 'extracted':
+
+        kodex_raw, entry_count = _build_kodex_raw(kodex)
+        if not kodex_raw:
             return
 
         subject_uid = doc.get('subject_uid', '')
@@ -2227,7 +2248,7 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
         case_data_md = '\n'.join(parts)
 
         assessment = await _run_kodex_assessment(
-            sections, case_data_md, subject_uid,
+            kodex_raw, case_data_md, subject_uid, entry_count,
         )
         if assessment:
             await update_section(
