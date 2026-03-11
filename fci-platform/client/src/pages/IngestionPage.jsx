@@ -3400,7 +3400,6 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const sectionKey = 'kodex';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
-  const [label, setLabel] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [adding, setAdding] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -3427,6 +3426,10 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const isLegacy = !entries.length && (
     (section.per_case?.length > 0) || status === 'extracted'
   );
+
+  // Effective count includes pending staged files (not yet saved to MongoDB)
+  const hasPending = selectedFiles.length > 0;
+  const effectiveEntryCount = entries.length + (hasPending ? 1 : 0);
 
   const fileInputRef = useRef(null);
 
@@ -3458,13 +3461,13 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   }
 
   async function handleAddEntry() {
-    if (!label.trim() || selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) return;
     setAdding(true);
     try {
+      const autoLabel = `LE Case ${entries.length + 1}`;
       await ingestionApi.addKodexEntry(
-        token, caseData.case_id, label, selectedFiles, subjectIndex,
+        token, caseData.case_id, autoLabel, selectedFiles, subjectIndex,
       );
-      setLabel('');
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -3486,12 +3489,12 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   async function handleProcess() {
     setProcessing(true);
     try {
-      // Auto-add pending entry before processing
-      if (label.trim() && selectedFiles.length > 0) {
+      // Auto-add pending files as a new entry before processing
+      if (selectedFiles.length > 0) {
+        const autoLabel = `LE Case ${entries.length + 1}`;
         await ingestionApi.addKodexEntry(
-          token, caseData.case_id, label, selectedFiles, subjectIndex,
+          token, caseData.case_id, autoLabel, selectedFiles, subjectIndex,
         );
-        setLabel('');
         setSelectedFiles([]);
       }
       await ingestionApi.processEntries(token, caseData.case_id, sectionKey, subjectIndex);
@@ -3506,7 +3509,6 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   async function handleReset() {
     try {
       await ingestionApi.resetKodex(token, caseData.case_id, subjectIndex);
-      setLabel('');
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -3646,12 +3648,12 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
               }
             }}
             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-            placeholder={String(entries.length || 0)}
+            placeholder={String(effectiveEntryCount || 0)}
             className="w-16 px-2 py-1 rounded-md bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
           />
-          {entries.length > 0 && totalCount && parseInt(totalCount, 10) > entries.length && (
+          {effectiveEntryCount > 0 && totalCount && parseInt(totalCount, 10) > effectiveEntryCount && (
             <span className="text-xs text-surface-400">
-              ({entries.length} included below)
+              ({effectiveEntryCount} included below)
             </span>
           )}
         </div>
@@ -3718,13 +3720,6 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
             </div>
           )}
 
-          <input
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder="Case reference, e.g. BNB-12345 — Subpoena"
-            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-2"
-          />
-
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -3781,21 +3776,21 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleAddEntry}
-              disabled={adding || !label.trim() || selectedFiles.length === 0}
+              disabled={adding || selectedFiles.length === 0}
               className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
             >
               {adding ? 'Adding...' : 'Add Entry'}
             </button>
-            {(entries.length > 0 || (label.trim() && selectedFiles.length > 0)) && (
+            {effectiveEntryCount > 0 && (
               <button
                 onClick={handleProcess}
-                disabled={processing || (entries.length === 0 && (!label.trim() || selectedFiles.length === 0))}
+                disabled={processing}
                 className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
               >
-                {processing ? 'Processing...' : `Done — Process All (${entries.length + (label.trim() && selectedFiles.length > 0 ? 1 : 0)})`}
+                {processing ? 'Processing...' : `Done — Process All (${effectiveEntryCount})`}
               </button>
             )}
-            {entries.length === 0 && !label.trim() && selectedFiles.length === 0 && (
+            {effectiveEntryCount === 0 && (
               <button
                 onClick={handleMarkNone}
                 className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
