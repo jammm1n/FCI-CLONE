@@ -570,6 +570,7 @@ def _run_sync_pipeline(files_bytes, params):
         uol_raw_data = {
             'crypto_withdrawals': uol_data.get('crypto_withdrawals', []),
             'crypto_deposits': uol_data.get('crypto_deposits', []),
+            'attempted_withdrawals': uol_data.get('attempted_withdrawals', []),
             'binance_pay': uol_data.get('binance_pay', []),
             'p2p_transactions': uol_data.get('p2p_transactions', []),
             'fiat_withdrawals': uol_data.get('fiat_withdrawals', []),
