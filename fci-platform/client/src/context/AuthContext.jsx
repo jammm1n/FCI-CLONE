@@ -36,6 +36,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setToken(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem('c360_cookie');
     navigate('/login');
   }, [navigate]);
 

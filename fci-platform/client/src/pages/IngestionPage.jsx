@@ -617,7 +617,7 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
 
   // C360 auto-fetch fields
   const [fetchUid, setFetchUid] = useState(caseData.subject_uid || '');
-  const [fetchCookie, setFetchCookie] = useState('');
+  const [fetchCookie, setFetchCookie] = useState(() => sessionStorage.getItem('c360_cookie') || '');
   const [fetching, setFetching] = useState(false);
 
   const c360 = caseData.sections?.c360 || {};
@@ -662,7 +662,7 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
     setError('');
     try {
       await ingestionApi.fetchC360(token, caseData.case_id, fetchUid.trim(), fetchCookie.trim(), subjectIndex);
-      setFetchCookie('');
+      sessionStorage.setItem('c360_cookie', fetchCookie.trim());
       onProcessingStarted();
     } catch (err) {
       setError(err.message);
