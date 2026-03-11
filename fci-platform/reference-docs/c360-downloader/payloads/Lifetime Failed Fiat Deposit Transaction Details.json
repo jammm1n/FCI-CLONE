@@ -5,7 +5,7 @@
         "fileFormat": "xlsx",
         "encoding": "UTF-8",
         "disableScientificNotation": true,
-        "reportName": "Lifetime Failed Fiat Deposit Transaction Details-2026-03-11 09-28-39.xlsx",
+        "reportName": "Lifetime Failed Fiat Deposit Transaction Details-2026-03-11 18-41-13.xlsx",
         "downloadOrderList": [],
         "downloadType": "default",
         "enableHiddenFields": true
@@ -71,7 +71,8 @@
                 "uniqueId": 240105001616972,
                 "op": "in",
                 "val": [
-                    "card"
+                    "card",
+                    "non-card"
                 ],
                 "valOption": {},
                 "option": {
@@ -87,10 +88,10 @@
                 "name": "major_user_id",
                 "id": "1874067",
                 "preRelation": "and",
-                "uniqueId": 260311080733088,
+                "uniqueId": 260311181902064,
                 "op": "in",
                 "val": [
-                    "466492707"
+                    "115577359"
                 ],
                 "valOption": {
                     "labelValueMap": {}
@@ -402,7 +403,8 @@
                 "filter": {
                     "op": "in",
                     "val": [
-                        "card"
+                        "card",
+                        "non-card"
                     ],
                     "valOption": {},
                     "option": {
@@ -419,7 +421,7 @@
                 "showEditComponent": false
             },
             {
-                "uniqueId": 260311080733088,
+                "uniqueId": 260311181902064,
                 "id": "1874067",
                 "location": "whereList",
                 "dimMetId": 1874067,
@@ -434,7 +436,7 @@
                 "filter": {
                     "op": "in",
                     "val": [
-                        "466492707"
+                        "115577359"
                     ],
                     "valOption": {
                         "labelValueMap": {}
