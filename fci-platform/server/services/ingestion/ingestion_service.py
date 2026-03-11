@@ -178,14 +178,16 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
     seen = set()
     all_addresses = []
     for entry in c360_addrs:
-        addr = entry['address'] if isinstance(entry, dict) else entry
+        addr = (entry['address'] if isinstance(entry, dict) else entry).strip()
         if addr and addr not in seen:
             seen.add(addr)
             all_addresses.append(addr)
-    for addr in manual_addrs:
-        if addr and addr not in seen:
-            seen.add(addr)
-            all_addresses.append(addr)
+    for raw in manual_addrs:
+        for addr in raw.split('\n'):
+            addr = addr.strip()
+            if addr and addr not in seen:
+                seen.add(addr)
+                all_addresses.append(addr)
 
     if all_addresses:
         preprocessed_data['elliptic_addresses'] = '\n'.join(all_addresses)
