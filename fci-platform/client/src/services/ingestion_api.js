@@ -372,8 +372,31 @@ export async function resetKYC(token, caseId, subjectIndex) {
   return handleResponse(res);
 }
 
-// ── Kodex / LE (PDF batch upload) ────────────────────────────────
+// ── Kodex / LE Entry Pipeline ────────────────────────────────────
 
+export async function addKodexEntry(token, caseId, label, files, subjectIndex) {
+  const formData = new FormData();
+  formData.append('label', label);
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex/entries${sq(subjectIndex)}`, {
+    method: 'POST',
+    headers: bearerOnly(token),
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
+export async function removeKodexEntry(token, caseId, entryId, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/kodex/entries/${entryId}${sq(subjectIndex)}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// Legacy batch upload (kept for backward compat)
 export async function uploadKodex(token, caseId, files, subjectIndex) {
   const formData = new FormData();
   for (const file of files) {

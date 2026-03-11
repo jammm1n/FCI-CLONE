@@ -1186,7 +1186,7 @@ async def get_text_section(
 
 # ── Iterative Entry Sections (Prior ICR) ─────────────────────────
 
-_ITERATIVE_SECTIONS = {'previous_icrs', 'rfis'}
+_ITERATIVE_SECTIONS = {'previous_icrs', 'rfis', 'kodex'}
 
 
 @router.post('/cases/{case_id}/entries/{section_key}')
@@ -1514,7 +1514,101 @@ async def reset_kyc(
     return {'section': 'kyc', 'status': 'empty'}
 
 
-# ── Kodex / LE (PDF batch upload + 3-stage pipeline) ─────────────
+# ── Kodex / LE Entry Pipeline ─────────────────────────────────────
+
+_KODEX_ALLOWED_TYPES = {
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+
+@router.post('/cases/{case_id}/kodex/entries')
+async def add_kodex_entry(
+    case_id: str,
+    label: str = Form(...),
+    files: List[UploadFile] = File(...),
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Add a Kodex entry (one LE case) with associated files (PDFs, images, Word docs).
+
+    Each entry represents one LE investigation/request. The investigator provides
+    a label (e.g., case reference) and one or more files.
+    """
+    case = await _get_case_or_404(case_id)
+
+    # Need subject UID for AI variable injection
+    if subject_index is not None:
+        subject_uid = case.get('subjects', [{}])[subject_index].get('user_id', '')
+    else:
+        subject_uid = case.get('subject_uid', '')
+    if not subject_uid:
+        raise HTTPException(
+            status_code=400,
+            detail='Subject UID is required for Kodex processing. '
+                   'Upload C360 data first to identify the subject.',
+        )
+
+    if not files:
+        raise HTTPException(status_code=400, detail='At least one file is required.')
+
+    if not label.strip():
+        raise HTTPException(status_code=400, detail='Entry label cannot be empty.')
+
+    # Read and validate all files (MUST read bytes before any async work)
+    import uuid
+    entry_id = f'entry_{uuid.uuid4().hex[:8]}'
+    file_data = []
+    for f in files:
+        content_type = f.content_type or ''
+        filename = f.filename or 'document'
+        # Infer type from extension if content_type is generic
+        if content_type == 'application/octet-stream' or not content_type:
+            lower = filename.lower()
+            if lower.endswith('.pdf'):
+                content_type = 'application/pdf'
+            elif lower.endswith('.docx'):
+                content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        if content_type not in _KODEX_ALLOWED_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f'File type not accepted: {content_type} for {filename}. '
+                       f'Accepted: PDF, DOCX, JPEG, PNG, GIF, WebP.',
+            )
+        content = await f.read()
+        file_data.append((filename, content, content_type))
+
+    # Store files to disk
+    from server.services.ingestion.ingestion_service import _store_kodex_entry_files
+    file_refs = _store_kodex_entry_files(case_id, entry_id, file_data)
+
+    # Create entry in MongoDB
+    entry = await ingestion_service.add_kodex_entry(
+        case_id, label, file_refs,
+        entry_id=entry_id,
+        subject_index=subject_index,
+    )
+    return entry
+
+
+@router.delete('/cases/{case_id}/kodex/entries/{entry_id}')
+async def remove_kodex_entry(
+    case_id: str,
+    entry_id: str,
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """Remove a Kodex entry and its files from disk."""
+    await _get_case_or_404(case_id)
+    await ingestion_service.remove_kodex_entry(
+        case_id, entry_id, subject_index=subject_index,
+    )
+    return {'deleted': True, 'entry_id': entry_id}
+
+
+# ── Kodex / LE (Legacy PDF batch upload) ─────────────────────────
 
 
 _ALLOWED_PDF_TYPES = {'application/pdf'}
@@ -1650,12 +1744,18 @@ async def get_kodex_output(
     subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
-    """Return Kodex section data including per-PDF extractions and metadata."""
+    """Return Kodex section data including entries (new) and per-PDF extractions (legacy)."""
     case = await _get_case_or_404(case_id)
     section = _get_section(case, 'kodex', subject_index)
     return {
         'status': section.get('status', 'empty'),
         'output': section.get('output'),
+        # New entry-model fields
+        'entries': section.get('entries', []),
+        'total_count': section.get('total_count'),
+        'ai_status': section.get('ai_status'),
+        'ai_error': section.get('ai_error'),
+        # Legacy fields
         'pdf_files': section.get('pdf_files', []),
         'per_case': section.get('per_case', []),
         'case_count': section.get('case_count', 0),
@@ -1670,13 +1770,31 @@ async def reset_kodex(
     subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
-    """Reset Kodex section to empty, clearing all PDF data."""
+    """Reset Kodex section to empty, clearing all data (new + legacy)."""
+    import shutil
+    from server.config import settings as _settings
+
     await _get_case_or_404(case_id)
+
+    # Clean up entry files from disk
+    kodex_dir = Path(_settings.IMAGES_DIR) / 'ingestion' / case_id / 'kodex'
+    if kodex_dir.is_dir():
+        try:
+            shutil.rmtree(kodex_dir)
+        except Exception as e:
+            logger.warning('Failed to clean up kodex files for %s: %s', case_id, e)
+
     await ingestion_service.update_section(
         case_id, 'kodex', 'empty',
         extra_fields={
             'output': None,
             'error_message': None,
+            # New entry-model fields
+            'entries': [],
+            'total_count': None,
+            'ai_status': None,
+            'ai_error': None,
+            # Legacy fields
             'pdf_files': [],
             'per_case': [],
             'case_count': 0,

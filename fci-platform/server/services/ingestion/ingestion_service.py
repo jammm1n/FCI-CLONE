@@ -157,11 +157,13 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
         # Total count qualifiers
         entries_count = len(section.get('entries', []))
         total_count = section.get('total_count')
-        if section_key in ('previous_icrs', 'rfis') and total_count and total_count > entries_count:
+        if total_count and total_count > entries_count:
             if section_key == 'previous_icrs':
                 preprocessed_data['prior_icr_count'] = total_count
-            else:
+            elif section_key == 'rfis':
                 preprocessed_data['rfi_count'] = total_count
+            elif section_key == 'kodex':
+                preprocessed_data['kodex_count'] = total_count
 
         if section.get('status') == 'complete' and output:
             pp_key = SECTION_TO_PREPROCESSED.get(section_key, section_key)
@@ -231,7 +233,12 @@ def _empty_sections():
     # Iterative entry sections
     sections['previous_icrs']['entries'] = []
     sections['rfis']['entries'] = []
-    # Kodex / LE batch upload
+    # Kodex / LE — new entry-model fields
+    sections['kodex']['entries'] = []
+    sections['kodex']['total_count'] = None
+    sections['kodex']['ai_status'] = None
+    sections['kodex']['ai_error'] = None
+    # Kodex / LE — legacy batch upload fields (backward compat)
     sections['kodex']['pdf_files'] = []
     sections['kodex']['per_case'] = []
     sections['kodex']['case_count'] = 0
@@ -1110,6 +1117,11 @@ async def process_entries_with_ai(
             case_id, section_key, entries, subject_index=subject_index,
         )
 
+    if section_key == 'kodex':
+        return await _process_kodex_entries(
+            case_id, section_key, entries, subject_index=subject_index,
+        )
+
     # Default path: combine entries into numbered text, single AI call
     parts = []
     for i, entry in enumerate(entries, 1):
@@ -1230,6 +1242,318 @@ async def _process_rfi_entries(
             f'{prefix}.status': 'complete',
             f'{prefix}.output': output,
             f'{prefix}.raw_text': combined_text,
+            f'{prefix}.ai_status': ai_status,
+            f'{prefix}.ai_error': ai_error,
+            f'{prefix}.updated_at': now,
+            'updated_at': now,
+        }},
+    )
+
+    await _check_ready_state(case_id, subject_index=subject_index)
+    return {
+        'status': 'complete',
+        'updated_at': now,
+        'ai_status': ai_status,
+        'ai_error': ai_error,
+        'entry_count': len(entries),
+    }
+
+
+# ── Kodex Entry File Storage ──────────────────────────────────────
+
+
+KODEX_ALLOWED_TYPES = {
+    'application/pdf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+}
+
+KODEX_EXT_MAP = {
+    'application/pdf': 'pdf',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+}
+
+
+def _store_kodex_entry_files(
+    case_id: str, entry_id: str, files: list[tuple[str, bytes, str]],
+) -> list[dict]:
+    """
+    Store files to disk for a Kodex entry, return reference dicts for MongoDB.
+
+    Args:
+        case_id: The ingestion case ID.
+        entry_id: The entry ID within the kodex section.
+        files: List of (filename, file_bytes, media_type) tuples.
+
+    Returns:
+        List of file reference dicts:
+        [{'file_id': str, 'filename': str, 'media_type': str, 'stored_path': str, 'file_size': int}]
+    """
+    file_dir = (
+        Path(settings.IMAGES_DIR) / 'ingestion' / case_id / 'kodex' / entry_id
+    )
+    file_dir.mkdir(parents=True, exist_ok=True)
+
+    stored = []
+    for filename, file_bytes, media_type in files:
+        file_id = f'file_{uuid.uuid4().hex[:12]}'
+        ext = KODEX_EXT_MAP.get(media_type, 'bin')
+        filepath = file_dir / f'{file_id}.{ext}'
+
+        try:
+            filepath.write_bytes(file_bytes)
+            logger.info('Stored kodex file: %s (%d bytes)', filepath, len(file_bytes))
+        except Exception as e:
+            logger.error('Failed to store kodex file %s: %s', file_id, e)
+            continue
+
+        stored.append({
+            'file_id': file_id,
+            'filename': filename,
+            'media_type': media_type,
+            'stored_path': str(filepath),
+            'file_size': len(file_bytes),
+        })
+
+    return stored
+
+
+async def add_kodex_entry(
+    case_id: str, label: str, file_refs: list[dict],
+    entry_id: str | None = None,
+    subject_index: int | None = None,
+) -> dict:
+    """
+    Add a Kodex entry (one LE case) with associated file references.
+
+    Returns the new entry dict.
+    """
+    now = _utcnow()
+    col = _collection()
+    prefix = _section_path('kodex', subject_index)
+
+    if not entry_id:
+        entry_id = f'entry_{uuid.uuid4().hex[:8]}'
+
+    entry = {
+        'id': entry_id,
+        'label': label.strip(),
+        'files': file_refs,
+        'added_at': now,
+        'ai_output': None,
+        'ai_status': None,
+    }
+
+    await col.update_one(
+        {'_id': case_id},
+        {
+            '$push': {f'{prefix}.entries': entry},
+            '$set': {
+                f'{prefix}.status': 'incomplete',
+                f'{prefix}.updated_at': now,
+                'updated_at': now,
+            },
+        },
+    )
+
+    logger.info('Added kodex entry %s (%s) to %s', entry_id, label, case_id)
+    return entry
+
+
+async def remove_kodex_entry(
+    case_id: str, entry_id: str,
+    subject_index: int | None = None,
+) -> None:
+    """
+    Remove a Kodex entry and clean up its files from disk.
+    """
+    import shutil
+
+    col = _collection()
+    prefix = _section_path('kodex', subject_index)
+
+    # Read entry to get file paths before removing
+    doc = await col.find_one({'_id': case_id}, {f'{prefix}.entries': 1})
+    entries = _get_section(doc, 'kodex', subject_index).get('entries', [])
+    target = next((e for e in entries if e.get('id') == entry_id), None)
+
+    # Pull the entry from MongoDB
+    now = _utcnow()
+    await col.update_one(
+        {'_id': case_id},
+        {
+            '$pull': {f'{prefix}.entries': {'id': entry_id}},
+            '$set': {
+                f'{prefix}.updated_at': now,
+                'updated_at': now,
+            },
+        },
+    )
+
+    # Clean up files on disk
+    if target:
+        entry_dir = (
+            Path(settings.IMAGES_DIR) / 'ingestion' / case_id / 'kodex' / entry_id
+        )
+        if entry_dir.is_dir():
+            try:
+                shutil.rmtree(entry_dir)
+                logger.info('Cleaned up kodex entry files: %s', entry_dir)
+            except Exception as e:
+                logger.warning('Failed to clean up kodex files %s: %s', entry_dir, e)
+
+    # If no entries left, reset to empty
+    doc = await col.find_one({'_id': case_id}, {f'{prefix}.entries': 1})
+    entries = _get_section(doc, 'kodex', subject_index).get('entries', [])
+    if not entries:
+        await col.update_one(
+            {'_id': case_id},
+            {'$set': {
+                f'{prefix}.status': 'empty',
+                f'{prefix}.output': None,
+                f'{prefix}.ai_status': None,
+                f'{prefix}.ai_error': None,
+            }},
+        )
+
+    logger.info('Removed kodex entry %s from %s', entry_id, case_id)
+
+
+async def _process_kodex_entries(
+    case_id: str, section_key: str, entries: list[dict],
+    subject_index: int | None = None,
+) -> dict:
+    """
+    Two-stage Kodex processing:
+      Stage 1: Each entry → per-entry extraction (Haiku) with text + images (parallel)
+      Stage 2: All per-entry outputs combined → cross-case synthesis (Sonnet)
+    """
+    import asyncio as _asyncio
+    from server.services.ingestion.ai_processor import process_with_ai
+    from server.services.ingestion.kodex_processor import extract_pdf_text, extract_docx_text
+
+    col = _collection()
+    prefix = _section_path(section_key, subject_index)
+
+    # Get subject UID for variable injection
+    doc = await col.find_one({'_id': case_id})
+    if subject_index is not None:
+        subject_uid = doc.get('subjects', [{}])[subject_index].get('user_id', '')
+    else:
+        subject_uid = doc.get('subject_uid', '')
+
+    # Stage 1: Process each entry in parallel
+    async def _process_one_entry(i: int, entry: dict) -> str:
+        """Extract text/images from all files in one entry and run AI."""
+        text_parts = []
+        images_b64 = []
+
+        for file_ref in entry.get('files', []):
+            stored_path = file_ref.get('stored_path', '')
+            media_type = file_ref.get('media_type', '')
+            filename = file_ref.get('filename', '')
+
+            if not stored_path:
+                continue
+            path = Path(stored_path)
+            if not path.is_file():
+                logger.warning('Kodex file not found: %s', stored_path)
+                continue
+
+            file_bytes = path.read_bytes()
+
+            if media_type == 'application/pdf':
+                result = await extract_pdf_text(filename, file_bytes)
+                if result.get('text'):
+                    text_parts.append(f'[PDF: {filename}]\n{result["text"]}')
+                elif result.get('error'):
+                    text_parts.append(f'[PDF: {filename}] — {result["error"]}')
+
+            elif media_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+                result = await extract_docx_text(filename, file_bytes)
+                if result.get('text'):
+                    text_parts.append(f'[DOCX: {filename}]\n{result["text"]}')
+                elif result.get('error'):
+                    text_parts.append(f'[DOCX: {filename}] — {result["error"]}')
+
+            elif media_type.startswith('image/'):
+                file_bytes, media_type = _shrink_image(file_bytes, media_type)
+                img_b64 = base64.b64encode(file_bytes).decode('ascii')
+                images_b64.append({
+                    'base64': img_b64,
+                    'media_type': media_type,
+                })
+                text_parts.append(f'[Image: {filename}]')
+
+        combined_text = '\n\n'.join(text_parts) if text_parts else '(No extractable content)'
+
+        ai_result = await process_with_ai(
+            'kodex_per_case',
+            combined_text,
+            images=images_b64 if images_b64 else None,
+            model=settings.KODEX_EXTRACTION_MODEL,
+            variables={
+                'subject_uid': subject_uid,
+                'entry_label': entry.get('label', f'Entry {i}'),
+            },
+        )
+
+        narrative = ai_result.get('ai_output') or combined_text
+
+        # Store per-entry AI output
+        await col.update_one(
+            {'_id': case_id, f'{prefix}.entries.id': entry['id']},
+            {'$set': {
+                f'{prefix}.entries.$.ai_output': narrative,
+                f'{prefix}.entries.$.ai_status': 'complete' if ai_result.get('ai_output') else 'error',
+            }},
+        )
+
+        return narrative
+
+    # Run all entries in parallel
+    tasks = [
+        _process_one_entry(i, entry)
+        for i, entry in enumerate(entries, 1)
+    ]
+    entry_narratives = await _asyncio.gather(*tasks)
+
+    # Stage 2: Cross-case synthesis
+    combined_parts = []
+    for i, (entry, narrative) in enumerate(zip(entries, entry_narratives), 1):
+        label = entry.get('label', f'LE Case {i}')
+        combined_parts.append(f'--- LE Case {i}: {label} ---\n{narrative}')
+    combined_text = '\n\n'.join(combined_parts)
+
+    ai_result = await process_with_ai(
+        'kodex_synthesis',
+        combined_text,
+        model=settings.KODEX_SYNTHESIS_MODEL,
+        variables={
+            'subject_uid': subject_uid,
+            'case_count': str(len(entries)),
+        },
+    )
+    now = _utcnow()
+
+    if ai_result.get('ai_output'):
+        output = ai_result['ai_output']
+        ai_status = 'complete'
+        ai_error = None
+    else:
+        output = combined_text
+        ai_status = 'error'
+        ai_error = ai_result.get('error', 'AI synthesis returned no output')
+
+    await col.update_one(
+        {'_id': case_id},
+        {'$set': {
+            f'{prefix}.status': 'complete',
+            f'{prefix}.output': output,
             f'{prefix}.ai_status': ai_status,
             f'{prefix}.ai_error': ai_error,
             f'{prefix}.updated_at': now,
@@ -1590,7 +1914,7 @@ def _build_assembled_markdown_single(doc: dict, sections: dict, preprocessed_dat
         section_heading = heading
         entries_count = len(section.get('entries', []))
         total_count = section.get('total_count')
-        if section_key in ('previous_icrs', 'rfis') and total_count and total_count > entries_count:
+        if section_key in ('previous_icrs', 'rfis', 'kodex') and total_count and total_count > entries_count:
             section_heading = '{} ({} of {} included)'.format(
                 heading, entries_count, total_count
             )
@@ -1609,6 +1933,11 @@ def _build_assembled_markdown_single(doc: dict, sections: dict, preprocessed_dat
                 total = preprocessed_data['rfi_count']
                 parts.append('*Note: {} RFIs exist for this subject. '
                              'The {} most recent are summarised below.*'.format(total, entries_count))
+                parts.append('')
+            elif section_key == 'kodex' and preprocessed_data.get('kodex_count'):
+                total = preprocessed_data['kodex_count']
+                parts.append('*Note: {} Kodex/LE cases exist for this subject. '
+                             '{} are summarised below.*'.format(total, entries_count))
                 parts.append('')
             parts.append(output)
         elif section_key == 'kodex' and section.get('status') == 'extracted':
@@ -1826,11 +2155,12 @@ async def preview_assembled_case_data(case_id: str) -> dict:
 
 async def _run_kodex_assessment_for_case(case_id: str) -> None:
     """
-    If Kodex section has status 'extracted', run the context-aware AI
-    assessment using full case data, then update the section to 'complete'.
+    If Kodex section has status 'extracted' (legacy pipeline), run the
+    context-aware AI assessment using full case data, then update the
+    section to 'complete'.
 
-    This must run BEFORE the normal assembly flow so that the Kodex
-    assessment is included in the assembled case data.
+    New pipeline cases (with entries) reach 'complete' at process time
+    and are skipped here.
 
     For multi-user cases, runs per-subject.
     """
@@ -1845,6 +2175,9 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
         for i, subject in enumerate(subjects):
             subj_sections = subject.get('sections', {})
             kodex = subj_sections.get('kodex', {})
+            # New pipeline: entries exist and already complete — skip
+            if kodex.get('entries') and kodex.get('status') == 'complete':
+                continue
             if kodex.get('status') != 'extracted':
                 continue
 
@@ -1878,6 +2211,9 @@ async def _run_kodex_assessment_for_case(case_id: str) -> None:
     else:
         sections = doc.get('sections', {})
         kodex = sections.get('kodex', {})
+        # New pipeline: entries exist and already complete — skip
+        if kodex.get('entries') and kodex.get('status') == 'complete':
+            return
         if kodex.get('status') != 'extracted':
             return
 

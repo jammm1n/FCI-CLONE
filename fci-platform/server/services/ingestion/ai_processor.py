@@ -52,6 +52,8 @@ SECTION_PROMPT_MAP = {
     'l1_victim':    'prompt-23-l1-communications.md',
     'l1_suspect':   'prompt-23-l1-communications.md',
     'kodex_assessment': 'prompt-15e-kodex-assessment.md',
+    'kodex_per_case': 'prompt-15e-kodex-per-case.md',
+    'kodex_synthesis': 'prompt-15e-kodex-summary.md',
 }
 
 # ── Prompt Loading ───────────────────────────────────────────────
@@ -128,6 +130,7 @@ async def process_with_ai(
     raw_content: str,
     variables: dict | None = None,
     images: list[dict] | None = None,
+    model: str | None = None,
 ) -> dict:
     """
     Send raw processor output through AI with the mapped prompt.
@@ -153,7 +156,7 @@ async def process_with_ai(
         PROCESSOR_PROMPT_MAP.get(processor_id)
         or SECTION_PROMPT_MAP.get(processor_id, '')
     )
-    model = settings.ANTHROPIC_MODEL
+    model = model or settings.ANTHROPIC_MODEL
     result = {
         'ai_output': None,
         'prompt_file': prompt_file,

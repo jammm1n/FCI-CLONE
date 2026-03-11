@@ -1,13 +1,11 @@
 """
-Kodex / Law Enforcement PDF Processor.
+Kodex / Law Enforcement PDF & Document Processor.
 
-Two-stage pipeline:
-  1. Python pre-processing per PDF: extract text, count subject UID occurrences,
-     estimate other unique UIDs
-  2. Store extracted text per PDF — AI assessment is deferred to assembly time
-     when full case context is available
+Two pipelines:
+  Legacy: batch PDF upload → text extraction → assembly-time AI assessment
+  New:    per-entry files (PDF, DOCX, images) → per-entry AI extraction → cross-case synthesis
 
-Dependencies: pdfplumber (pure Python PDF text extraction)
+Dependencies: pdfplumber (PDF text), python-docx (Word doc text)
 """
 
 import asyncio
@@ -65,6 +63,47 @@ def _extract_pdf_text_sync(filename: str, file_bytes: bytes) -> dict:
 async def extract_pdf_text(filename: str, file_bytes: bytes) -> dict:
     """Async wrapper for PDF text extraction (pdfplumber is synchronous)."""
     return await asyncio.to_thread(_extract_pdf_text_sync, filename, file_bytes)
+
+
+# ── Word Document Text Extraction ──────────────────────────────────
+
+
+def _extract_docx_text_sync(filename: str, file_bytes: bytes) -> dict:
+    """
+    Extract text from a .docx file using python-docx.
+
+    Returns {text} or {error} if extraction fails.
+    Runs synchronously — must be called via asyncio.to_thread.
+    """
+    from docx import Document
+
+    try:
+        doc = Document(io.BytesIO(file_bytes))
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        full_text = '\n\n'.join(paragraphs)
+
+        if not full_text.strip():
+            return {
+                'error': f'{filename}: Word document contains no extractable text.',
+                'text': '',
+            }
+
+        return {
+            'text': full_text,
+            'error': None,
+        }
+
+    except Exception as e:
+        logger.exception('Word doc text extraction failed for %s', filename)
+        return {
+            'error': f'{filename}: Failed to extract text — {e}',
+            'text': '',
+        }
+
+
+async def extract_docx_text(filename: str, file_bytes: bytes) -> dict:
+    """Async wrapper for Word doc text extraction (python-docx is synchronous)."""
+    return await asyncio.to_thread(_extract_docx_text_sync, filename, file_bytes)
 
 
 # ── UID Counting ────────────────────────────────────────────────────

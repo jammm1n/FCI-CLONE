@@ -3392,32 +3392,47 @@ function KYCPreviewModal({ data, caseId, onClose }) {
 }
 
 
-// ── Kodex / LE Section (PDF batch upload) ────────────────────────
+// ── Kodex / LE Entry Section (iterative per-case entry) ──────────
 
-function KodexSection({ caseData, onSaved, subjectIndex }) {
+const KODEX_ACCEPTED_TYPES = '.pdf,.docx,.doc,image/jpeg,image/png,image/gif,image/webp';
+
+function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const sectionKey = 'kodex';
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
+  const [label, setLabel] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [previewTab, setPreviewTab] = useState('ai');
+  const [totalCount, setTotalCount] = useState(section.total_count ?? '');
   const [dragOver, setDragOver] = useState(false);
 
+  useEffect(() => {
+    setTotalCount(section.total_count ?? '');
+  }, [section.total_count]);
+
+  const entries = section.entries || [];
   const status = section.status || 'empty';
+  const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
-  const isExtracted = status === 'extracted';
   const isNone = status === 'none';
   const isProcessing = status === 'processing';
   const isError = status === 'error';
   const hasSubjectUid = !!caseData.subject_uid;
 
+  // Legacy detection: old pipeline used per_case + extracted status
+  const isLegacy = !entries.length && (
+    (section.per_case?.length > 0) || status === 'extracted'
+  );
+
   const fileInputRef = useRef(null);
 
   function handleFilesSelected(e) {
     const files = Array.from(e.target.files || []);
-    const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-    setSelectedFiles((prev) => [...prev, ...pdfs]);
+    setSelectedFiles((prev) => [...prev, ...files]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -3429,29 +3444,69 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer?.files || []);
-    const pdfs = files.filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-    if (pdfs.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...pdfs]);
+    if (files.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...files]);
     }
   }
 
-  async function handleUploadAndProcess() {
-    if (selectedFiles.length === 0) return;
-    setUploading(true);
+  function fileTypeIcon(file) {
+    const name = (file.name || '').toLowerCase();
+    if (name.endsWith('.pdf')) return 'PDF';
+    if (name.endsWith('.docx') || name.endsWith('.doc')) return 'DOC';
+    if (file.type?.startsWith('image/')) return 'IMG';
+    return 'FILE';
+  }
+
+  async function handleAddEntry() {
+    if (!label.trim() || selectedFiles.length === 0) return;
+    setAdding(true);
     try {
-      await ingestionApi.uploadKodex(token, caseData.case_id, selectedFiles, subjectIndex);
+      await ingestionApi.addKodexEntry(
+        token, caseData.case_id, label, selectedFiles, subjectIndex,
+      );
+      setLabel('');
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
-      console.error('Failed to upload Kodex PDFs:', err);
+      console.error('Failed to add Kodex entry:', err);
     } finally {
-      setUploading(false);
+      setAdding(false);
+    }
+  }
+
+  async function handleRemoveEntry(entryId) {
+    try {
+      await ingestionApi.removeKodexEntry(token, caseData.case_id, entryId, subjectIndex);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to remove Kodex entry:', err);
+    }
+  }
+
+  async function handleProcess() {
+    setProcessing(true);
+    try {
+      // Auto-add pending entry before processing
+      if (label.trim() && selectedFiles.length > 0) {
+        await ingestionApi.addKodexEntry(
+          token, caseData.case_id, label, selectedFiles, subjectIndex,
+        );
+        setLabel('');
+        setSelectedFiles([]);
+      }
+      await ingestionApi.processEntries(token, caseData.case_id, sectionKey, subjectIndex);
+      if (onSaved) onSaved();
+    } catch (err) {
+      console.error('Failed to process Kodex entries:', err);
+    } finally {
+      setProcessing(false);
     }
   }
 
   async function handleReset() {
     try {
       await ingestionApi.resetKodex(token, caseData.case_id, subjectIndex);
+      setLabel('');
       setSelectedFiles([]);
       if (onSaved) onSaved();
     } catch (err) {
@@ -3463,6 +3518,7 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
     try {
       const data = await ingestionApi.getKodexOutput(token, caseData.case_id, subjectIndex);
       setPreviewData(data);
+      setPreviewTab('ai');
       setShowPreview(true);
     } catch (err) {
       console.error('Failed to load Kodex preview:', err);
@@ -3514,17 +3570,28 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
           {SECTION_LABELS[sectionKey]}
         </h4>
         <div className="flex items-center gap-2">
-          {isExtracted && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-              Assessed at assembly
+          {aiStatus && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+              aiStatus === 'complete' ? 'bg-emerald-500/20 text-emerald-400' :
+              aiStatus === 'processing' ? 'bg-gold-500/20 text-gold-400' :
+              aiStatus === 'error' ? 'bg-red-500/20 text-red-400' : ''
+            }`}>
+              {aiStatus === 'complete' ? 'AI processed' :
+               aiStatus === 'processing' ? 'AI processing...' :
+               aiStatus === 'error' ? 'AI failed (raw saved)' : ''}
             </span>
           )}
-          <StatusDot status={status} />
+          {isLegacy && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+              Legacy
+            </span>
+          )}
+          <StatusDot status={status === 'incomplete' ? 'empty' : status} />
         </div>
       </div>
 
       {/* Gate: need subject UID */}
-      {!hasSubjectUid && !isComplete && !isExtracted && !isProcessing && !isError && (
+      {!hasSubjectUid && !isComplete && !isLegacy && !isProcessing && !isError && (
         <div className="text-sm text-surface-400 py-3 flex items-center gap-2">
           <svg className="w-4 h-4 text-surface-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -3533,54 +3600,170 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
         </div>
       )}
 
-      {/* Upload area (visible when UID present and section is empty/error) */}
-      {hasSubjectUid && !isComplete && !isExtracted && !isProcessing && (
-        <>
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
-              dragOver
-                ? 'border-gold-500 bg-gold-500/5'
-                : 'border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500'
-            }`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf,.pdf"
-              multiple
-              onChange={handleFilesSelected}
-              className="hidden"
-            />
-            <svg className="w-8 h-8 mx-auto mb-2 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            <p className="text-sm text-surface-500 dark:text-surface-400">
-              Click to select or drag &amp; drop Kodex case PDFs
-            </p>
-            <p className="text-[10px] text-surface-400 mt-1">
-              Drop all LE case PDFs at once — text will be extracted for assembly-time analysis
-            </p>
+      {/* Legacy data view */}
+      {isLegacy && (
+        <div className="mb-3">
+          <p className="text-sm text-blue-400 mb-2">
+            {section.case_count || 0} PDF(s) uploaded via legacy pipeline.
+            {status === 'extracted' ? ' LE assessment will be generated at assembly.' : ''}
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePreview}
+              className="px-3 py-1.5 rounded-lg border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 text-sm transition-colors"
+            >
+              Preview
+            </button>
+            <button
+              onClick={handleReset}
+              className="px-3 py-1.5 rounded-lg border border-red-500/30 text-red-500 hover:bg-red-500/10 text-sm transition-colors"
+            >
+              Reset &amp; Re-upload
+            </button>
           </div>
+        </div>
+      )}
 
+      {/* Total count input */}
+      {hasSubjectUid && !isNone && !isLegacy && (
+        <div className="flex items-center gap-2 mb-3">
+          <label className="text-xs text-surface-500 dark:text-surface-400 whitespace-nowrap">
+            Total Kodex cases for subject:
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={totalCount}
+            onChange={(e) => setTotalCount(e.target.value)}
+            onBlur={async () => {
+              const parsed = totalCount === '' ? null : parseInt(totalCount, 10);
+              if (parsed !== null && (isNaN(parsed) || parsed < 0)) return;
+              try {
+                await ingestionApi.setTotalCount(token, caseData.case_id, sectionKey, parsed, subjectIndex);
+                if (onSaved) onSaved();
+              } catch (err) {
+                console.error('Failed to save total count:', err);
+              }
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+            placeholder={String(entries.length || 0)}
+            className="w-16 px-2 py-1 rounded-md bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500"
+          />
+          {entries.length > 0 && totalCount && parseInt(totalCount, 10) > entries.length && (
+            <span className="text-xs text-surface-400">
+              ({entries.length} included below)
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Existing entries list */}
+      {entries.length > 0 && !isLegacy && (
+        <div className={`space-y-2 mb-3 ${isComplete ? 'opacity-60' : ''}`}>
+          {entries.map((entry, idx) => (
+            <div
+              key={entry.id}
+              className="flex items-start gap-2 bg-white dark:bg-surface-900 rounded-lg p-3 border border-surface-200 dark:border-surface-700"
+            >
+              <span className="text-xs text-surface-400 font-mono mt-0.5 shrink-0">#{idx + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-surface-700 dark:text-surface-300">
+                  {entry.label}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-surface-400">
+                    {(entry.files || []).length} file{(entry.files || []).length !== 1 ? 's' : ''}
+                  </span>
+                  <div className="flex gap-1">
+                    {(entry.files || []).map((f) => {
+                      const ext = (f.filename || '').split('.').pop()?.toUpperCase() || 'FILE';
+                      const colors = ext === 'PDF' ? 'bg-red-500/20 text-red-400' :
+                                     ext === 'DOCX' ? 'bg-blue-500/20 text-blue-400' :
+                                     'bg-emerald-500/20 text-emerald-400';
+                      return (
+                        <span key={f.file_id} className={`text-[9px] px-1.5 py-0.5 rounded ${colors}`}>
+                          {ext}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {entry.ai_status === 'complete' && (
+                    <span className="text-[10px] text-emerald-400">extracted</span>
+                  )}
+                  {entry.ai_status === 'error' && (
+                    <span className="text-[10px] text-red-400">extraction failed</span>
+                  )}
+                </div>
+              </div>
+              {!isComplete && (
+                <button
+                  onClick={() => handleRemoveEntry(entry.id)}
+                  className="text-surface-400 hover:text-red-400 text-xs shrink-0 transition-colors"
+                  title="Remove entry"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new entry form (hidden when complete, legacy, or no UID) */}
+      {hasSubjectUid && !isComplete && !isLegacy && !isProcessing && (
+        <>
           {isError && section.error_message && (
-            <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
+            <div className="mb-2 text-xs text-red-400 bg-red-500/10 rounded-lg px-3 py-2">
               {section.error_message}
             </div>
           )}
 
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Case reference, e.g. BNB-12345 — Subpoena"
+            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300 dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400 text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/50 focus:border-gold-500 mb-2"
+          />
+
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`rounded-lg border-2 border-dashed p-4 text-center transition-colors cursor-pointer mb-2 ${
+              dragOver
+                ? 'border-gold-500 bg-gold-500/5'
+                : 'border-surface-300 dark:border-surface-600 hover:border-surface-400 dark:hover:border-surface-500'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={KODEX_ACCEPTED_TYPES}
+              multiple
+              onChange={handleFilesSelected}
+              className="hidden"
+            />
+            <svg className="w-6 h-6 mx-auto mb-1 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p className="text-xs text-surface-500 dark:text-surface-400">
+              Drop files here — PDFs, Word docs, images
+            </p>
+          </div>
+
           {/* Selected file list */}
           {selectedFiles.length > 0 && (
-            <div className="mt-3 space-y-1">
+            <div className="space-y-1 mb-2">
               {selectedFiles.map((file, idx) => (
                 <div key={idx} className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-surface-200/50 dark:bg-surface-700/50">
                   <div className="flex items-center gap-2 min-w-0">
-                    <svg className="w-4 h-4 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                      fileTypeIcon(file) === 'PDF' ? 'bg-red-500/20 text-red-400' :
+                      fileTypeIcon(file) === 'DOC' ? 'bg-blue-500/20 text-blue-400' :
+                      fileTypeIcon(file) === 'IMG' ? 'bg-emerald-500/20 text-emerald-400' :
+                      'bg-surface-500/20 text-surface-400'
+                    }`}>{fileTypeIcon(file)}</span>
                     <span className="text-xs text-surface-600 dark:text-surface-300 truncate">{file.name}</span>
                     <span className="text-[10px] text-surface-400 shrink-0">{(file.size / 1024).toFixed(0)} KB</span>
                   </div>
@@ -3595,22 +3778,38 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
             </div>
           )}
 
-          <div className="flex items-center gap-3 mt-3">
-            {selectedFiles.length > 0 && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleAddEntry}
+              disabled={adding || !label.trim() || selectedFiles.length === 0}
+              className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {adding ? 'Adding...' : 'Add Entry'}
+            </button>
+            {(entries.length > 0 || (label.trim() && selectedFiles.length > 0)) && (
               <button
-                onClick={handleUploadAndProcess}
-                disabled={uploading}
+                onClick={handleProcess}
+                disabled={processing || (entries.length === 0 && (!label.trim() || selectedFiles.length === 0))}
                 className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50"
               >
-                {uploading ? 'Extracting...' : `Upload & Extract (${selectedFiles.length} PDF${selectedFiles.length > 1 ? 's' : ''})`}
+                {processing ? 'Processing...' : `Done — Process All (${entries.length + (label.trim() && selectedFiles.length > 0 ? 1 : 0)})`}
               </button>
             )}
-            {selectedFiles.length === 0 && (status === 'empty' || status === 'error') && (
+            {entries.length === 0 && !label.trim() && selectedFiles.length === 0 && (
               <button
                 onClick={handleMarkNone}
                 className="px-3 py-1.5 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
               >
                 No Data
+              </button>
+            )}
+            {aiStatus === 'error' && entries.length > 0 && (
+              <button
+                onClick={handleProcess}
+                disabled={processing}
+                className="px-4 py-1.5 rounded-lg border border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
+              >
+                {processing ? 'Retrying...' : 'Retry Processing'}
               </button>
             )}
           </div>
@@ -3633,21 +3832,12 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
       {isProcessing && (
         <div className="flex items-center gap-3 py-4">
           <LoadingSpinner size="sm" />
-          <span className="text-sm text-surface-400">Extracting text from LE case PDFs...</span>
+          <span className="text-sm text-surface-400">Processing LE case entries — extracting &amp; synthesizing...</span>
         </div>
       )}
 
-      {/* Extracted status info */}
-      {isExtracted && (
-        <div className="mb-3">
-          <p className="text-sm text-blue-400">
-            {section.case_count || 0} PDF(s) extracted. LE assessment will be generated at assembly using full case context.
-          </p>
-        </div>
-      )}
-
-      {/* Actions when complete or extracted */}
-      {(isComplete || isExtracted) && (
+      {/* Actions when complete */}
+      {isComplete && !isLegacy && (
         <div className="flex items-center gap-3">
           <button
             onClick={handlePreview}
@@ -3667,6 +3857,8 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
       {showPreview && previewData && (
         <KodexPreviewModal
           data={previewData}
+          activeTab={previewTab}
+          onTabChange={setPreviewTab}
           onClose={() => setShowPreview(false)}
         />
       )}
@@ -3677,14 +3869,19 @@ function KodexSection({ caseData, onSaved, subjectIndex }) {
 
 // ── Kodex Preview Modal ──────────────────────────────────────────
 
-function KodexPreviewModal({ data, onClose }) {
+function KodexPreviewModal({ data, activeTab, onTabChange, onClose }) {
   const [copied, setCopied] = useState(false);
-  const [expandedCase, setExpandedCase] = useState(null);
+  const [expandedEntry, setExpandedEntry] = useState(null);
+  const entries = data.entries || [];
   const perCase = data.per_case || [];
-  const isExtracted = data.status === 'extracted';
+  const isLegacy = !entries.length && perCase.length > 0;
 
   function handleCopy() {
-    const textToCopy = data.output || perCase.map((pc) => pc.extracted_text || '').join('\n\n---\n\n');
+    const textToCopy = activeTab === 'ai' ? data.output : (
+      entries.length > 0
+        ? entries.map((e, i) => `--- Entry ${i + 1}: ${e.label} ---\n${e.ai_output || '(not extracted)'}`).join('\n\n')
+        : perCase.map((pc) => pc.extracted_text || '').join('\n\n---\n\n')
+    );
     if (textToCopy) {
       navigator.clipboard.writeText(textToCopy);
       setCopied(true);
@@ -3697,16 +3894,35 @@ function KodexPreviewModal({ data, onClose }) {
       <div className="bg-white dark:bg-surface-800 rounded-xl w-full max-w-5xl max-h-[85vh] flex flex-col border border-surface-200 dark:border-surface-700 shadow-2xl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-surface-200 dark:border-surface-700">
           <h3 className="text-base font-semibold text-surface-900 dark:text-surface-100">
-            {SECTION_LABELS.kodex} — {data.case_count || 0} case(s)
+            {SECTION_LABELS.kodex} — {entries.length || data.case_count || 0} case(s)
           </h3>
           <div className="flex items-center gap-3">
-            {isExtracted && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                Text extracted — AI assessment at assembly
-              </span>
+            {!isLegacy && (
+              <div className="flex bg-surface-100 dark:bg-surface-900 rounded-lg p-0.5">
+                <button
+                  onClick={() => onTabChange('ai')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    activeTab === 'ai'
+                      ? 'bg-gold-500 text-surface-900'
+                      : 'text-surface-400 hover:text-surface-200'
+                  }`}
+                >
+                  AI Summary
+                </button>
+                <button
+                  onClick={() => onTabChange('entries')}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    activeTab === 'entries'
+                      ? 'bg-gold-500 text-surface-900'
+                      : 'text-surface-400 hover:text-surface-200'
+                  }`}
+                >
+                  Per-Entry
+                </button>
+              </div>
             )}
             <button onClick={handleCopy} className="text-xs text-surface-400 hover:text-surface-200 transition-colors">
-              {copied ? 'Copied!' : isExtracted ? 'Copy Raw Text' : 'Copy Assessment'}
+              {copied ? 'Copied!' : 'Copy'}
             </button>
             <button onClick={onClose} className="text-surface-400 hover:text-surface-200 text-lg">&times;</button>
           </div>
@@ -3718,8 +3934,8 @@ function KodexPreviewModal({ data, onClose }) {
             </div>
           )}
 
-          {/* AI assessment (shown after assembly completes the section) */}
-          {data.output && (
+          {/* AI Summary tab — cross-case synthesis output */}
+          {(activeTab === 'ai' || isLegacy) && data.output && (
             <div>
               <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
                 LE Assessment
@@ -3730,17 +3946,71 @@ function KodexPreviewModal({ data, onClose }) {
             </div>
           )}
 
-          {/* Per-PDF extracted text (accordion) */}
-          {perCase.length > 0 && (
+          {/* Per-Entry tab — accordion per entry with Stage 1 extraction output */}
+          {activeTab === 'entries' && entries.length > 0 && (
             <div>
               <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
-                {isExtracted ? 'Extracted PDF Text' : 'Per-PDF Data'}
+                Per-Entry Extractions
+              </h4>
+              <div className="space-y-2">
+                {entries.map((entry, idx) => (
+                  <div key={entry.id} className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedEntry(expandedEntry === idx ? null : idx)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-900/80 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xs font-mono text-gold-500">#{idx + 1}</span>
+                        <span className="text-sm text-surface-700 dark:text-surface-300 truncate">{entry.label}</span>
+                        <span className="text-[10px] text-surface-400 shrink-0">
+                          {(entry.files || []).length} file{(entry.files || []).length !== 1 ? 's' : ''}
+                        </span>
+                        {entry.ai_status === 'complete' && (
+                          <span className="text-[10px] text-emerald-400 shrink-0">extracted</span>
+                        )}
+                        {entry.ai_status === 'error' && (
+                          <span className="text-[10px] text-red-400 shrink-0">failed</span>
+                        )}
+                      </div>
+                      <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedEntry === idx ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {expandedEntry === idx && (
+                      <div className="px-4 py-3 border-t border-surface-200 dark:border-surface-700">
+                        {/* File list */}
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {(entry.files || []).map((f) => {
+                            const ext = (f.filename || '').split('.').pop()?.toUpperCase() || 'FILE';
+                            return (
+                              <span key={f.file_id} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400">
+                                {f.filename} ({(f.file_size / 1024).toFixed(0)} KB)
+                              </span>
+                            );
+                          })}
+                        </div>
+                        <pre className="text-xs text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">
+                          {entry.ai_output || '(Not yet extracted)'}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy per-PDF extracted text (accordion) */}
+          {isLegacy && perCase.length > 0 && (
+            <div>
+              <h4 className="text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
+                Extracted PDF Text (Legacy)
               </h4>
               <div className="space-y-2">
                 {perCase.map((pc, idx) => (
                   <div key={idx} className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
                     <button
-                      onClick={() => setExpandedCase(expandedCase === idx ? null : idx)}
+                      onClick={() => setExpandedEntry(expandedEntry === idx ? null : idx)}
                       className="w-full flex items-center justify-between px-4 py-2.5 bg-surface-50 dark:bg-surface-900/50 hover:bg-surface-100 dark:hover:bg-surface-900/80 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -3748,29 +4018,16 @@ function KodexPreviewModal({ data, onClose }) {
                         <span className="text-sm text-surface-700 dark:text-surface-300 truncate">{pc.filename}</span>
                         <span className="text-[10px] text-surface-400 shrink-0">{pc.page_count}p</span>
                         <span className="text-[10px] text-surface-400 shrink-0">{((pc.text_length || 0) / 1024).toFixed(1)}KB</span>
-                        {pc.uid_count > 0 && (
-                          <span className="text-[10px] text-emerald-400 shrink-0">UID: {pc.uid_count}x</span>
-                        )}
-                        {pc.uid_count === 0 && (
-                          <span className="text-[10px] text-amber-400 shrink-0">UID not found</span>
-                        )}
                       </div>
-                      <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedCase === idx ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className={`w-4 h-4 text-surface-400 transition-transform ${expandedEntry === idx ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
-                    {expandedCase === idx && (
+                    {expandedEntry === idx && (
                       <div className="px-4 py-3 border-t border-surface-200 dark:border-surface-700">
-                        {pc.error && !pc.extracted_text && (
-                          <div className="text-xs text-red-400 mb-2">{pc.error}</div>
-                        )}
                         <pre className="text-xs text-surface-800 dark:text-surface-200 whitespace-pre-wrap font-mono leading-relaxed max-h-96 overflow-y-auto">
                           {pc.extracted_text || 'No text extracted.'}
                         </pre>
-                        <div className="mt-2 flex gap-3 text-[10px] text-surface-400">
-                          <span>Size: {((pc.text_length || 0) / 1024).toFixed(1)}KB</span>
-                          <span>Other UIDs: ~{pc.approx_other_uids}</span>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -4405,7 +4662,7 @@ export default function IngestionPage() {
             />
 
             {/* Kodex / LE Cases */}
-            <KodexSection
+            <KodexEntrySection
               caseData={effectiveCaseData}
               onSaved={handleProcessingStarted}
               subjectIndex={activeSubjectIndex}

@@ -11,24 +11,5 @@ fpdf2>=2.8.0
 pdfplumber>=0.9.0
 markdown>=3.5
 bcrypt>=4.0.0
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 openpyxl>=3.1.0
-=======
-openpyxl>=3.1.0
->>>>>>> Stashed changes
-=======
-openpyxl>=3.1.0
->>>>>>> Stashed changes
-=======
-openpyxl>=3.1.0
->>>>>>> Stashed changes
-=======
-openpyxl>=3.1.0
->>>>>>> Stashed changes
-=======
-openpyxl>=3.1.0
->>>>>>> Stashed changes
+python-docx>=1.1.0
