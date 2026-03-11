@@ -71,7 +71,8 @@
                 "uniqueId": 240105001616972,
                 "op": "in",
                 "val": [
-                    "card"
+                    "card",
+                    "non-card"
                 ],
                 "valOption": {},
                 "option": {
@@ -402,7 +403,8 @@
                 "filter": {
                     "op": "in",
                     "val": [
-                        "card"
+                        "card",
+                        "non-card"
                     ],
                     "valOption": {},
                     "option": {
