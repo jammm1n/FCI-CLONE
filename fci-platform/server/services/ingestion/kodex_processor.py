@@ -15,6 +15,9 @@ import re
 
 logger = logging.getLogger(__name__)
 
+# Suppress noisy pdfminer font warnings (missing FontBBox metadata)
+logging.getLogger('pdfminer').setLevel(logging.ERROR)
+
 
 # ── Text Extraction ─────────────────────────────────────────────────
 

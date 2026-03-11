@@ -3403,6 +3403,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [adding, setAdding] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [processingCount, setProcessingCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [previewTab, setPreviewTab] = useState('ai');
@@ -3418,7 +3419,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const aiStatus = section.ai_status;
   const isComplete = status === 'complete';
   const isNone = status === 'none';
-  const isProcessing = status === 'processing';
+  const isProcessing = status === 'processing' || processing;
   const isError = status === 'error';
   const hasSubjectUid = !!caseData.subject_uid;
 
@@ -3487,6 +3488,8 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   }
 
   async function handleProcess() {
+    const count = effectiveEntryCount;
+    setProcessingCount(count);
     setProcessing(true);
     try {
       // Auto-add pending files as a new entry before processing
@@ -3503,6 +3506,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
       console.error('Failed to process Kodex entries:', err);
     } finally {
       setProcessing(false);
+      setProcessingCount(0);
     }
   }
 
@@ -3827,7 +3831,9 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
       {isProcessing && (
         <div className="flex items-center gap-3 py-4">
           <LoadingSpinner size="sm" />
-          <span className="text-sm text-surface-400">Processing LE case entries — extracting &amp; synthesizing...</span>
+          <span className="text-sm text-surface-400">
+            Processing {processingCount || entries.length || '?'} LE case {(processingCount || entries.length) === 1 ? 'entry' : 'entries'} — extracting &amp; synthesizing...
+          </span>
         </div>
       )}
 
