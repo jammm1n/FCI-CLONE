@@ -50,6 +50,13 @@ UOL_TAB_CHECKS = [
         'check_type': 'has_rows',
         'critical_fields': ['source_address', 'deposit_address', 'currency', 'amount', 'usdt_value', 'network', 'tx_id'],
     },
+    {
+        'sheet_name': 'attempted withdrawal history',
+        'data_key': 'attempted_withdrawals',
+        'label': 'Attempted Withdrawal History',
+        'check_type': 'has_rows',
+        'critical_fields': ['address', 'currency', 'amount', 'usdt_value', 'network', 'date'],
+    },
 ]
 
 

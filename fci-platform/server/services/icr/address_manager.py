@@ -47,6 +47,7 @@ def build_address_list(session, manual_addresses=None):
     uol_data = session.get('uol_data') or {}
     crypto_withdrawals = uol_data.get('crypto_withdrawals', [])
     crypto_deposits = uol_data.get('crypto_deposits', [])
+    attempted_withdrawals = uol_data.get('attempted_withdrawals', [])
 
     # 4. Build lookup indexes for fast matching
     withdrawal_index = {}
@@ -70,6 +71,14 @@ def build_address_list(session, manual_addresses=None):
                 deposit_index[deposit_addr] = []
             deposit_index[deposit_addr].append(tx)
 
+    attempted_index = {}
+    for tx in attempted_withdrawals:
+        addr = safe_str(tx.get('address', '')).lower()
+        if addr:
+            if addr not in attempted_index:
+                attempted_index[addr] = []
+            attempted_index[addr].append(tx)
+
     # 5. Cross-reference each address
     enriched = []
     for addr_key, addr_info in auto_addresses.items():
@@ -77,6 +86,7 @@ def build_address_list(session, manual_addresses=None):
 
         withdrawal_matches = withdrawal_index.get(addr_lower, [])
         deposit_matches = deposit_index.get(addr_lower, [])
+        attempted_matches = attempted_index.get(addr_lower, [])
 
         # Deduplicate deposit matches
         seen_tx_ids = set()
@@ -92,11 +102,14 @@ def build_address_list(session, manual_addresses=None):
                 seen_tx_ids.add(dedup_key)
                 unique_deposits.append(tx)
 
-        has_uol_match = len(withdrawal_matches) > 0 or len(unique_deposits) > 0
+        has_uol_match = (len(withdrawal_matches) > 0
+                         or len(unique_deposits) > 0
+                         or len(attempted_matches) > 0)
 
         # Compute summary stats for this address
         w_total_usd = sum(tx.get('usdt_value', 0) for tx in withdrawal_matches)
         d_total_usd = sum(tx.get('usdt_value', 0) for tx in unique_deposits)
+        a_total_usd = sum(tx.get('usdt_value', 0) for tx in attempted_matches)
 
         w_networks = sorted(set(
             safe_str(tx.get('network', '')) for tx in withdrawal_matches
@@ -106,11 +119,17 @@ def build_address_list(session, manual_addresses=None):
             safe_str(tx.get('network', '')) for tx in unique_deposits
             if safe_str(tx.get('network', ''))
         ))
+        a_networks = sorted(set(
+            safe_str(tx.get('network', '')) for tx in attempted_matches
+            if safe_str(tx.get('network', ''))
+        ))
 
         w_dates = [safe_str(tx.get('apply_time', ''))[:10] for tx in withdrawal_matches
                     if safe_str(tx.get('apply_time', ''))]
         d_dates = [safe_str(tx.get('create_time', ''))[:10] for tx in unique_deposits
                     if safe_str(tx.get('create_time', ''))]
+        a_dates = [safe_str(tx.get('date', ''))[:10] for tx in attempted_matches
+                    if safe_str(tx.get('date', ''))]
 
         entry = {
             'address': addr_info['address'],
@@ -118,14 +137,19 @@ def build_address_list(session, manual_addresses=None):
             'has_uol_match': has_uol_match,
             'withdrawal_count': len(withdrawal_matches),
             'deposit_count': len(unique_deposits),
+            'attempted_withdrawal_count': len(attempted_matches),
             'withdrawal_total_usd': w_total_usd,
             'deposit_total_usd': d_total_usd,
+            'attempted_withdrawal_total_usd': a_total_usd,
             'withdrawal_networks': w_networks,
             'deposit_networks': d_networks,
+            'attempted_withdrawal_networks': a_networks,
             'withdrawal_date_range': _date_range(w_dates),
             'deposit_date_range': _date_range(d_dates),
+            'attempted_withdrawal_date_range': _date_range(a_dates),
             'withdrawals': _format_withdrawal_matches(withdrawal_matches),
             'deposits': _format_deposit_matches(unique_deposits),
+            'attempted_withdrawals': _format_attempted_withdrawal_matches(attempted_matches),
         }
         enriched.append(entry)
 
@@ -136,8 +160,13 @@ def build_address_list(session, manual_addresses=None):
     ))
 
     # 7. Generate narrative
-    has_uol = len(crypto_withdrawals) > 0 or len(crypto_deposits) > 0
-    narrative = _generate_narrative(enriched, has_uol, len(crypto_withdrawals), len(crypto_deposits))
+    has_uol = (len(crypto_withdrawals) > 0
+               or len(crypto_deposits) > 0
+               or len(attempted_withdrawals) > 0)
+    narrative = _generate_narrative(
+        enriched, has_uol,
+        len(crypto_withdrawals), len(crypto_deposits), len(attempted_withdrawals),
+    )
 
     # 8. Stats
     total = len(enriched)
@@ -149,6 +178,7 @@ def build_address_list(session, manual_addresses=None):
         'uol_available': has_uol,
         'uol_withdrawal_count': len(crypto_withdrawals),
         'uol_deposit_count': len(crypto_deposits),
+        'uol_attempted_withdrawal_count': len(attempted_withdrawals),
     }
 
     return {
@@ -206,6 +236,23 @@ def _format_deposit_matches(matches):
     return formatted
 
 
+def _format_attempted_withdrawal_matches(matches):
+    """Format attempted withdrawal transaction matches for response."""
+    formatted = []
+    for tx in matches:
+        formatted.append({
+            'date': tx.get('date', ''),
+            'currency': tx.get('currency', ''),
+            'amount': tx.get('amount', 0),
+            'usdt_value': tx.get('usdt_value', 0),
+            'network': tx.get('network', ''),
+            'address': tx.get('address', ''),
+            'business_type': tx.get('business_type', ''),
+            'source': tx.get('source', ''),
+        })
+    return formatted
+
+
 # ── Narrative constants ────────────────────────────────────────
 
 # When an address has more than this many transactions in one
@@ -215,7 +262,8 @@ DETAIL_HEAD = 5
 DETAIL_TAIL = 3
 
 
-def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits):
+def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits,
+                        total_attempted_withdrawals=0):
     """
     Generate a structured narrative of UOL cross-reference findings.
     This text feeds an AI system for case assessment.
@@ -241,8 +289,11 @@ def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits):
             lines.append('  - {} (source: {})'.format(entry['address'], source_str))
         return '\n'.join(lines)
 
-    lines.append('UOL data: {} crypto withdrawal(s), {} crypto deposit(s)'.format(
-        total_withdrawals, total_deposits))
+    uol_parts = ['{} crypto withdrawal(s)'.format(total_withdrawals),
+                  '{} crypto deposit(s)'.format(total_deposits)]
+    if total_attempted_withdrawals:
+        uol_parts.append('{} attempted withdrawal(s)'.format(total_attempted_withdrawals))
+    lines.append('UOL data: {}'.format(', '.join(uol_parts)))
     lines.append('')
 
     matched = [e for e in enriched if e['has_uol_match']]
@@ -277,6 +328,13 @@ def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits):
                     ', '.join(entry['deposit_networks']) or 'N/A',
                     entry['deposit_date_range'] or 'N/A',
                 ))
+            if entry.get('attempted_withdrawal_count', 0) > 0:
+                summary_parts.append('{} attempted withdrawal(s) totalling {} ({}, {})'.format(
+                    entry['attempted_withdrawal_count'],
+                    fmt_usd(entry['attempted_withdrawal_total_usd']),
+                    ', '.join(entry['attempted_withdrawal_networks']) or 'N/A',
+                    entry['attempted_withdrawal_date_range'] or 'N/A',
+                ))
             for part in summary_parts:
                 lines.append('  ' + part)
 
@@ -290,6 +348,11 @@ def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits):
                 lines.append('  Deposits FROM this address:')
                 _append_tx_lines(lines, entry['deposits'], 'D', _fmt_deposit_line)
 
+            # Attempted withdrawal detail
+            if entry.get('attempted_withdrawals'):
+                lines.append('  Attempted Withdrawals TO this address:')
+                _append_tx_lines(lines, entry['attempted_withdrawals'], 'A', _fmt_attempted_withdrawal_line)
+
             lines.append('')
 
     # ── Unmatched addresses ────────────────────────────────────
@@ -298,7 +361,7 @@ def _generate_narrative(enriched, has_uol, total_withdrawals, total_deposits):
         lines.append('')
         for entry in unmatched:
             source_str = ', '.join(entry['sources'])
-            lines.append('{} [{}] — not in UOL withdrawal or deposit history'.format(
+            lines.append('{} [{}] — not in UOL withdrawal, deposit, or attempted withdrawal history'.format(
                 entry['address'], source_str))
         lines.append('')
 
@@ -363,4 +426,23 @@ def _fmt_deposit_line(tx):
     cp = tx.get('counterparty_id', '')
     if cp:
         parts.append('CP:{}'.format(cp))
+    return ' | '.join(p for p in parts if p)
+
+
+def _fmt_attempted_withdrawal_line(tx):
+    """Format a single attempted withdrawal transaction as a concise one-liner."""
+    parts = []
+    parts.append(tx.get('date', 'N/A')[:19])
+    parts.append(tx.get('currency', ''))
+    parts.append(str(tx.get('amount', 0)))
+    usdt = tx.get('usdt_value', 0)
+    if usdt:
+        parts.append(fmt_usd(usdt))
+    parts.append(tx.get('network', ''))
+    biz = tx.get('business_type', '')
+    if biz:
+        parts.append(biz)
+    source = tx.get('source', '')
+    if source:
+        parts.append('src:{}'.format(source))
     return ' | '.join(p for p in parts if p)

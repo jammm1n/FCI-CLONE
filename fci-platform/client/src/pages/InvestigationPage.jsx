@@ -748,6 +748,7 @@ export default function InvestigationPage() {
             onContinueOneshotDiscussion={() => setOneshotReady(false)}
             onOneshotQCCheck={() => setShowQCModal(true)}
             totalSteps={totalSteps}
+            draftKey={`fci-draft-case-${caseId}`}
           />
         </div>
       </div>

@@ -236,7 +236,7 @@ export default function FreeChatPage() {
             conversationId={conversationId}
           />
           {sending && <StreamingIndicator />}
-          <ChatInput onSend={handleSend} disabled={sending} maxWidth="w-[85%]" />
+          <ChatInput onSend={handleSend} disabled={sending} maxWidth="w-[85%]" draftKey={`fci-draft-chat-${conversationId || 'new'}`} />
         </div>
       </div>
     </AppLayout>

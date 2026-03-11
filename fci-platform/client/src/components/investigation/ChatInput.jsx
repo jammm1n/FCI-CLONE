@@ -1,14 +1,29 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5 }) {
-  const [text, setText] = useState('');
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5, draftKey }) {
+  const [text, setText] = useState(() => (draftKey ? localStorage.getItem(draftKey) || '' : ''));
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [showExperimental, setShowExperimental] = useState(false);
   const textareaRef = useRef(null);
   const dropRef = useRef(null);
   const experimentalRef = useRef(null);
+
+  // Load draft when draftKey changes (switching between conversations/cases)
+  useEffect(() => {
+    if (!draftKey) return;
+    setText(localStorage.getItem(draftKey) || '');
+  }, [draftKey]);
+
+  const setDraft = useCallback((value) => {
+    const v = typeof value === 'function' ? value(text) : value;
+    setText(v);
+    if (draftKey) {
+      if (v) localStorage.setItem(draftKey, v);
+      else localStorage.removeItem(draftKey);
+    }
+  }, [draftKey, text]);
 
   // Close experimental popover on click outside
   useEffect(() => {
@@ -25,9 +40,9 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
   const handleSend = useCallback(() => {
     if (!text.trim() && images.length === 0) return;
     onSend(text.trim(), images);
-    setText('');
+    setDraft('');
     setImages([]);
-  }, [text, images, onSend]);
+  }, [text, images, onSend, setDraft]);
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -303,7 +318,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
           <textarea
             ref={textareaRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder="Type a message... (Shift+Enter for new line)"

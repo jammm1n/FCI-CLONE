@@ -164,6 +164,7 @@ def _parse_uol_workbook(filename, wb):
         'fiat_withdrawals': [],
         'crypto_withdrawals': [],
         'crypto_deposits': [],
+        'attempted_withdrawals': [],
         'binance_pay': [],
         'p2p_transactions': [],
     }
@@ -192,6 +193,10 @@ def _parse_uol_workbook(filename, wb):
     if 'deposit history' in sheet_map:
         raw = _sheet_to_raw_rows(wb[sheet_map['deposit history']])
         result['crypto_deposits'] = _parse_uol_crypto_deposit_tab(raw)
+
+    if 'attempted withdrawal history' in sheet_map:
+        raw = _sheet_to_raw_rows(wb[sheet_map['attempted withdrawal history']])
+        result['attempted_withdrawals'] = _parse_uol_attempted_withdrawal_tab(raw)
 
     if 'binance pay' in sheet_map:
         raw = _sheet_to_raw_rows(wb[sheet_map['binance pay']])
@@ -558,6 +563,89 @@ def _parse_uol_crypto_deposit_tab(raw_rows):
             'status': safe_str(cell_val(row, i_status)),
             'network': safe_str(cell_val(row, i_network)),
             'counterparty_id': safe_str(cell_val(row, i_counterparty)),
+        })
+
+    return results
+
+
+def _parse_uol_attempted_withdrawal_tab(raw_rows):
+    """
+    Parse the Attempted Withdrawal History tab from a UOL workbook.
+    Columns: User ID, Asset, Network, Amount, Address, Date,
+    Business Type, Source, DecisionCode, USDT Equivalent.
+    """
+    if not raw_rows:
+        return []
+
+    header_row_idx = -1
+    header_map = {}
+
+    for i, row in enumerate(raw_rows):
+        if not row:
+            continue
+        has_address = False
+        has_asset = False
+        has_decision = False
+        for j, cell in enumerate(row):
+            cell_val = safe_str(cell).lower()
+            if cell_val == 'address':
+                has_address = True
+            if cell_val == 'asset':
+                has_asset = True
+            if cell_val == 'decisioncode':
+                has_decision = True
+        if has_address and has_asset and has_decision:
+            header_row_idx = i
+            for k, cell in enumerate(row):
+                header_name = safe_str(cell)
+                if header_name:
+                    header_map[header_name.lower()] = k
+            break
+
+    if header_row_idx < 0:
+        return []
+
+    def col_idx(possible_names):
+        for name in possible_names:
+            idx = header_map.get(name.lower())
+            if idx is not None:
+                return idx
+        return -1
+
+    i_user_id = col_idx(['User ID'])
+    i_asset = col_idx(['Asset'])
+    i_network = col_idx(['Network'])
+    i_amount = col_idx(['Amount'])
+    i_address = col_idx(['Address'])
+    i_date = col_idx(['Date'])
+    i_business_type = col_idx(['Business Type'])
+    i_source = col_idx(['Source'])
+    i_usdt = col_idx(['USDT Equivalent'])
+
+    def cell_val(row, idx):
+        if idx < 0 or idx >= len(row):
+            return ''
+        return row[idx]
+
+    results = []
+    for r in range(header_row_idx + 1, len(raw_rows)):
+        row = raw_rows[r]
+        if not row:
+            continue
+        address = safe_str(cell_val(row, i_address))
+        asset = safe_str(cell_val(row, i_asset))
+        if not address and not asset:
+            continue
+        results.append({
+            'user_id': safe_str(cell_val(row, i_user_id)),
+            'currency': asset,
+            'network': safe_str(cell_val(row, i_network)),
+            'amount': safe_float(cell_val(row, i_amount)),
+            'address': address,
+            'date': safe_str(cell_val(row, i_date)),
+            'business_type': safe_str(cell_val(row, i_business_type)),
+            'source': safe_str(cell_val(row, i_source)),
+            'usdt_value': safe_float(cell_val(row, i_usdt)),
         })
 
     return results

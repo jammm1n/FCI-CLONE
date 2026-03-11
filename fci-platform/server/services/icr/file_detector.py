@@ -207,6 +207,7 @@ def classify_files(parsed_files):
                 'fiat_withdrawals': parsed.get('fiat_withdrawals', []),
                 'crypto_withdrawals': parsed.get('crypto_withdrawals', []),
                 'crypto_deposits': parsed.get('crypto_deposits', []),
+                'attempted_withdrawals': parsed.get('attempted_withdrawals', []),
                 'binance_pay': parsed.get('binance_pay', []),
                 'p2p_transactions': parsed.get('p2p_transactions', []),
                 'sheet_names': parsed.get('sheet_names', []),
