@@ -170,6 +170,26 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
         else:
             sections_none.append(section_key)
 
+    # Elliptic address list (C360-extracted + manual, deduplicated)
+    c360_addrs = c360.get('wallet_addresses', [])
+    elliptic_sec = sections.get('elliptic', {})
+    manual_addrs = elliptic_sec.get('manual_addresses', [])
+
+    seen = set()
+    all_addresses = []
+    for entry in c360_addrs:
+        addr = entry['address'] if isinstance(entry, dict) else entry
+        if addr and addr not in seen:
+            seen.add(addr)
+            all_addresses.append(addr)
+    for addr in manual_addrs:
+        if addr and addr not in seen:
+            seen.add(addr)
+            all_addresses.append(addr)
+
+    if all_addresses:
+        preprocessed_data['elliptic_addresses'] = '\n'.join(all_addresses)
+
     return preprocessed_data, sections_included, sections_none
 
 

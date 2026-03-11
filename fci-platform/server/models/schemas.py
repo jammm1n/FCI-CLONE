@@ -86,6 +86,7 @@ class PreprocessedData(BaseModel):
     uid_search: str | None = None
 
     # Standalone sections
+    elliptic_addresses: str | None = None
     elliptic: str | None = None
     l1_referral: str | None = None
     haoDesk: str | None = None

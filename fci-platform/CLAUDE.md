@@ -151,6 +151,7 @@ address_xref     → "Address Cross-Reference"
 uid_search       → "UID Search Results"
 
 # Standalone sections
+elliptic_addresses → "Elliptic Screening Addresses"
 elliptic         → "Elliptic Wallet Screening"
 l1_referral      → "L1 Referral Narrative"
 haoDesk          → "HaoDesk Case Data"

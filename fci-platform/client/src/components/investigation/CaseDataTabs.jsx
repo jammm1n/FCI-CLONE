@@ -16,6 +16,7 @@ const TAB_GROUPS = [
       { key: 'uid_search', label: 'UID Search' },
     ],
   },
+  { id: 'elliptic_addresses', label: 'Addresses', tabs: [{ key: 'elliptic_addresses', label: 'Elliptic Addresses' }] },
   { id: 'elliptic', label: 'Elliptic', tabs: [{ key: 'elliptic', label: 'Elliptic' }] },
   { id: 'l1_referral', label: 'L1 Referral', tabs: [{ key: 'l1_referral', label: 'L1 Referral' }] },
   { id: 'haoDesk', label: 'HaoDesk', tabs: [{ key: 'haoDesk', label: 'HaoDesk' }] },
