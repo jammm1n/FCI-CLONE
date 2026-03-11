@@ -45,4 +45,4 @@ def safe_str_for_lookup(value):
     """Strip, uppercase, and remove trailing punctuation (e.g. '!') for constant lookups."""
     if value is None:
         return ''
-    return str(value).strip().rstrip('!').strip().upper()
+    return str(value).strip().strip('!').strip().upper()
