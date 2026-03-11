@@ -16,6 +16,7 @@ Endpoint overview:
   POST   /cases/{case_id}/elliptic/addresses  Add manual wallet addresses
   POST   /cases/{case_id}/elliptic/submit   Submit addresses to Elliptic API
   GET    /cases/{case_id}/elliptic          Get Elliptic section output
+  POST   /cases/{case_id}/uol              Upload standalone UOL file
   POST   /cases/{case_id}/sections/{key}/none  Mark section as N/A
   PUT    /cases/{case_id}/notes             Save investigator notes
   PUT    /cases/{case_id}/text-section/{key}  Save text section with AI processing
@@ -79,6 +80,7 @@ async def _get_case_or_404(case_id: str) -> dict:
 def _serialize_case(doc: dict) -> dict:
     """Convert MongoDB document to JSON-safe response."""
     doc['case_id'] = doc.pop('_id')
+    doc['has_uol'] = bool(doc.get('uol_raw_data'))
     doc.pop('uol_raw_data', None)  # Don't send raw UOL data to frontend
     return doc
 
@@ -810,6 +812,115 @@ async def get_elliptic_output(
         'wallet_addresses': ell.get('wallet_addresses', []),
         'manual_addresses': ell.get('manual_addresses', []),
         'updated_at': ell.get('updated_at'),
+    }
+
+
+# ── Standalone UOL Upload ─────────────────────────────────────────
+
+
+@router.post('/cases/{case_id}/uol')
+async def upload_uol(
+    case_id: str,
+    file: UploadFile = File(...),
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Upload a UOL spreadsheet separately from C360.
+
+    Parses the file, validates it contains UOL data, stores the raw UOL
+    data on the case document, and auto-runs address cross-reference.
+    """
+    case = await _get_case_or_404(case_id)
+
+    # Validate C360 is complete (UOL needs wallet addresses for xref)
+    c360_status = _get_section(case, 'c360', subject_index).get('status')
+    if c360_status != 'complete':
+        raise HTTPException(
+            status_code=409,
+            detail='C360 must be complete before uploading UOL.',
+        )
+
+    # Validate file type
+    if not file.filename or not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(
+            status_code=400,
+            detail='Only .xlsx files are accepted for UOL upload.',
+        )
+
+    # CRITICAL: Read file bytes HERE before any async work
+    file_bytes = await file.read()
+
+    # Parse and classify (sync toolkit code → thread pool)
+    from server.services.icr.parser import parse_uploaded_file
+    from server.services.icr.file_detector import classify_files
+
+    def _parse_and_classify():
+        parsed = parse_uploaded_file(file.filename, file_bytes)
+        _, _, uol_data = classify_files(parsed)
+        return uol_data
+
+    uol_data = await asyncio.to_thread(_parse_and_classify)
+
+    if not uol_data:
+        raise HTTPException(
+            status_code=400,
+            detail='File does not contain UOL data. Expected a UOL workbook with Customer Information tab.',
+        )
+
+    # Build uol_raw_data (same structure as c360_processor.py lines 570-577)
+    uol_raw_data = {
+        'crypto_withdrawals': uol_data.get('crypto_withdrawals', []),
+        'crypto_deposits': uol_data.get('crypto_deposits', []),
+        'binance_pay': uol_data.get('binance_pay', []),
+        'p2p_transactions': uol_data.get('p2p_transactions', []),
+        'fiat_withdrawals': uol_data.get('fiat_withdrawals', []),
+        'fiat_deposits': uol_data.get('fiat_deposits', []),
+    }
+
+    # Store UOL raw data on the case document
+    from server.database import get_database
+    db = get_database()['ingestion_cases']
+    await db.update_one(
+        {'_id': case_id},
+        {'$set': {'uol_raw_data': uol_raw_data}},
+    )
+
+    # Auto-run address cross-reference with stored wallet addresses
+    c360_section = _get_section(case, 'c360', subject_index)
+    wallet_addresses = c360_section.get('wallet_addresses', [])
+    xref_result = None
+
+    if wallet_addresses:
+        try:
+            address_map = {
+                e['address']: e for e in wallet_addresses if isinstance(e, dict)
+            }
+            manual_addrs = _get_section(case, 'elliptic', subject_index).get('manual_addresses', [])
+            session_like = {
+                'elliptic_addresses': address_map,
+                'uol_data': uol_raw_data,
+            }
+            xref = await asyncio.to_thread(
+                build_address_list, session_like, manual_addrs,
+            )
+            c360_prefix = _section_path('c360', subject_index)
+            await db.update_one(
+                {'_id': case_id},
+                {'$set': {f'{c360_prefix}.address_xref': xref['narrative']}},
+            )
+            xref_result = xref.get('stats')
+        except Exception:
+            logger.exception('Auto address xref failed after UOL upload for %s', case_id)
+
+    # Build UOL summary stats
+    from server.services.ingestion.c360_processor import _build_uol_info
+    uol_info = _build_uol_info(uol_data)
+
+    return {
+        'success': True,
+        'uol_info': uol_info,
+        'xref_stats': xref_result,
     }
 
 

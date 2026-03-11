@@ -925,6 +925,118 @@ function CsvDownloadButton({ caseId, filename, subjectIndex }) {
 
 // ── Additional Inputs Section ─────────────────────────────────────
 
+function UolUploadArea({ caseData, onSaved, subjectIndex }) {
+  const { token } = useAuth();
+  const hasUol = caseData.has_uol || false;
+  const uolInfo = caseData.sections?.c360?.uol_info;
+
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  async function handleFile(file) {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+      setError('Only .xlsx files are accepted.');
+      return;
+    }
+    setUploading(true);
+    setError('');
+    setResult(null);
+    try {
+      const res = await ingestionApi.uploadUol(token, caseData.case_id, file, subjectIndex);
+      setResult(res);
+      if (onSaved) onSaved();
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer?.files?.[0];
+    if (file) handleFile(file);
+  }
+
+  function handleInputChange(e) {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+    e.target.value = '';
+  }
+
+  // Show summary if UOL was uploaded (from backend or just now)
+  const displayInfo = result?.uol_info || (hasUol ? uolInfo : null);
+
+  return (
+    <div className="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
+      <div className="flex items-center justify-between mb-2">
+        <h5 className="text-sm font-semibold text-surface-900 dark:text-surface-200">
+          UOL (User Operation Log)
+        </h5>
+        {(hasUol || result) && (
+          <span className="text-xs text-emerald-500 font-medium">Uploaded</span>
+        )}
+      </div>
+
+      {displayInfo ? (
+        <div className="text-xs text-surface-400 space-y-0.5 mb-2">
+          <p>Fiat withdrawals: {displayInfo.fiat_withdrawal_count ?? 0} ({displayInfo.fiat_withdrawal_failed ?? 0} failed)</p>
+          <p>Crypto: {displayInfo.crypto_withdrawal_count ?? 0} withdrawals, {displayInfo.crypto_deposit_count ?? 0} deposits</p>
+          <p>Binance Pay: {displayInfo.binance_pay_count ?? 0} | P2P: {displayInfo.p2p_count ?? 0}</p>
+          {result?.xref_stats && (
+            <p className="text-emerald-500">
+              Address xref: {result.xref_stats.uol_matched ?? 0} matched / {result.xref_stats.total_addresses ?? 0} total
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-surface-400 mb-2">
+          Upload the UOL spreadsheet to enable address cross-referencing and failed fiat analysis.
+        </p>
+      )}
+
+      {/* Upload area */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed cursor-pointer transition-colors text-xs ${
+          dragOver
+            ? 'border-gold-500 bg-gold-500/10 text-gold-400'
+            : 'border-surface-300 dark:border-surface-600 text-surface-400 hover:border-gold-500/50 hover:text-surface-300'
+        }`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleInputChange}
+          className="hidden"
+        />
+        {uploading ? (
+          <>
+            <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span>Uploading & processing...</span>
+          </>
+        ) : (
+          <span>{hasUol || result ? 'Replace UOL file' : 'Drop UOL .xlsx here or click to browse'}</span>
+        )}
+      </div>
+
+      {error && <p className="text-xs text-red-500 dark:text-red-400 mt-1">{error}</p>}
+    </div>
+  );
+}
+
 function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
   const { token } = useAuth();
   const isMulti = caseData.case_mode === 'multi';
@@ -941,6 +1053,9 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
 
   const c360Complete = caseData.sections?.c360?.status === 'complete';
   if (!c360Complete) return null;
+
+  // Check if UOL was already included in C360 upload (has uol_info on c360 section)
+  const uolInC360 = !!caseData.sections?.c360?.uol_info;
 
   async function handleSave() {
     setSaving(true);
@@ -1061,6 +1176,15 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
             </button>
           </div>
         </>
+      )}
+
+      {/* UOL Upload — shown when UOL wasn't part of the C360 upload */}
+      {!uolInC360 && (
+        <UolUploadArea
+          caseData={caseData}
+          onSaved={onSaved}
+          subjectIndex={subjectIndex}
+        />
       )}
     </div>
   );

@@ -163,6 +163,19 @@ export async function getEllipticOutput(token, caseId, subjectIndex) {
   return handleResponse(res);
 }
 
+// ── UOL Upload ──────────────────────────────────────────────────
+
+export async function uploadUol(token, caseId, file, subjectIndex) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/uol${sq(subjectIndex)}`, {
+    method: 'POST',
+    headers: bearerOnly(token),
+    body: formData,
+  });
+  return handleResponse(res);
+}
+
 // ── Cross-Reference & UID Search ─────────────────────────────────
 
 export async function runAddressXref(token, caseId, subjectIndex) {
