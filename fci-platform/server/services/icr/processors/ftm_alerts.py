@@ -80,6 +80,8 @@ class FTMProcessor(BaseProcessor):
             info = lookup_rule_code(code)
             out.append('{} | {} [{}]'.format(
                 code.upper(), info['name'], info['platform']))
+            if info.get('red_flag'):
+                out.append('  Red flag: {}'.format(info['red_flag']))
             out.append('  {} alerts | {}'.format(r['count'], fmt_usd(r['usd'])))
         out.append('')
 

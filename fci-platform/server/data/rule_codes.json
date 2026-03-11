@@ -1,0 +1,908 @@
+{
+  "ADA": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "TLHA-I": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".com / Global",
+    "status": "Deactivated"
+  },
+  "TLHA-O": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".com / Global",
+    "status": "Deactivated"
+  },
+  "LVP-I": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "LVP-O": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".com / Global",
+    "status": "Deactivated"
+  },
+  "HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum Withdrawal",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "P2P-HCA": {
+    "name": "High Cumulative Amount - Inbound and Outbound for P2P",
+    "red_flag": "Monitors the cummulative amount of user's inbound and outbound transactions",
+    "platform": "ES/AU/NZ",
+    "status": "Active"
+  },
+  "RRN": {
+    "name": "Regulatory Reporting Netherlands",
+    "red_flag": "Local reporting obligation\n\nThis rule would only monitor for Netherlands customer only.",
+    "platform": ".com / NL",
+    "status": "Pending"
+  },
+  "FT9": {
+    "name": "Excessive Withdrawal",
+    "red_flag": "Monitors customer sum of outbound withdrawal (Fiat & Crypto) that are greater than EUR 100,000 over their lifetime",
+    "platform": ".com / EEA",
+    "status": "Pending"
+  },
+  "FT5": {
+    "name": "Excessive Incoming FIAT/Crypto Deposits (24 hours) /SMURFING",
+    "red_flag": "Monitors high frequency inbound payments (Fiat and Crypto) within 24 hours",
+    "platform": ".com / EEA",
+    "status": "Pending"
+  },
+  "ETLT1": {
+    "name": "EDD Threshold Limit (≥10,000,000 EUR)/ Equivalent in crypto amount - Tier 1\nUSD -> EUR per SE-4703",
+    "red_flag": "Rule meant to trigger EDD to obtain SOW/SOF.",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "ETLT2": {
+    "name": "EDD Threshold Limit (≥20,000,000 EUR)/ Equivalent in crypto amount - Tier 2\nUSD -> EUR per SE-4703",
+    "red_flag": "Rule meant to trigger EDD to obtain SOW/SOF.",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "CIBO": {
+    "name": "Change in Behavior (exceed current estimated investment amount)",
+    "red_flag": "Monitors for deviation from customer's original investment activity",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "EICD30D": {
+    "name": "Excessive Incoming CRYPTO Deposits (30d)",
+    "red_flag": "Monitors for excessive crypto deposits within 1 month",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "EOCR30D": {
+    "name": "Excessive Outcoming CRYPTO Withdrawals (30d)",
+    "red_flag": "Monitors for excessive crypto withdrawals within 1 month",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "DORMANT": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "HCAHAI": {
+    "name": "High Cumulative Amount - Historic Average - Inbound",
+    "red_flag": "Monitors for Sum of incoming crypto deposits over a set period of time is greater than a limit",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "HCAHAO": {
+    "name": "High Cumulative Amount - Historic Average - Outbound",
+    "red_flag": "Monitors for Sum of Outbound crypto withdrawals over a set period of time is greater than a limit",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "CIBC": {
+    "name": "Change in Behavior (exceed current estimated investment amount)",
+    "red_flag": "Monitors for deviation from customer's current investment activity",
+    "platform": "Custody",
+    "status": "Active"
+  },
+  "BF-ADA": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-TLHA-I": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "Monitors for Inbound transaction exceeding client’s historical average",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-TLHA-O": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "Monitors for Outbound transaction exceeding client’s historical average",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-LVP-I": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-LVP-O": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "TCRJ": {
+    "name": "Transaction with counterparty in \"High\" risk jurisdiction",
+    "red_flag": "Monitors for transactions made to/from a customer located in a country not a member of a FATF or FATF-style regional body",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-STR-I": {
+    "name": "Structuring Payments - Inbound",
+    "red_flag": "Monitors inbound transactions, triggering if the accumulated amount reaches or exceeds EUR 25,000 within a 7 day period",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-STR-O": {
+    "name": "Structuring Payments - Outbound",
+    "red_flag": "Monitors outbound transactions, triggering if the accumulated amount reaches or exceeds EUR 25,000 within a 7 day period",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-ULT-I": {
+    "name": "Unusually Large Transactions - Inbound",
+    "red_flag": "Monitors for unusually large aggregate inbound transactions.",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-ULT-O": {
+    "name": "Unusually Large Transactions - Outbound",
+    "red_flag": "Monitors for unusually large aggregate outbound transactions.",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-TLHA-IC": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "Monitors for Inbound transaction exceeding client’s historical average",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-TLHA-OC": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "Monitors for Outbound transaction exceeding client’s historical average",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "MCOC_1": {
+    "name": "Multiple Customers, One Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "OCMC_1": {
+    "name": "Multiple Counterparties, One Customer",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "P-SUMCI3": {
+    "name": "High Cumulative Amount - Inbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "P-SUMCO3": {
+    "name": "High Cumulative Amount - Outbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "NUMCCI": {
+    "name": "High Velocity - Inbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "NUMCCO": {
+    "name": "High Velocity - Outbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": ".com / Global",
+    "status": "Pending"
+  },
+  "BPSAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": "Binance Pay",
+    "status": "Active"
+  },
+  "BPPSUMCI": {
+    "name": "High Cumulative Amount - Inbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": "Binance Pay",
+    "status": "Active"
+  },
+  "BPPSUMCO": {
+    "name": "High Cumulative Amount - Outbound - Counterparty",
+    "red_flag": "Monitors for hidden relationship between customers",
+    "platform": "Binance Pay",
+    "status": "Active"
+  },
+  "BP-HRCOU": {
+    "name": "High Risk Country",
+    "red_flag": "Monitors for transactions involving High Risk jurisdictions",
+    "platform": "Binance Pay",
+    "status": "Active"
+  },
+  "KZ-ADA": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-LVP-I": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-LVP-O": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-HVSDL": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum Withdrawal",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-THAO": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "KZ-THHI": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".KZ",
+    "status": "Active"
+  },
+  "(AEC) TL – I": {
+    "name": "Privacy coins rule",
+    "red_flag": "Monitors for privacy coins transactions",
+    "platform": ".Com",
+    "status": "Active"
+  },
+  "(AEC) TL – O": {
+    "name": "Privacy coins rule",
+    "red_flag": "Monitors for privacy coins transactions",
+    "platform": ".Com",
+    "status": "Active"
+  },
+  "BH_ADA_MEDIUMHIGH": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_ADA_LOW": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_LVP_I_MEDIUMHIGH": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_LVP_I_LOW": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_LVP_O_MEDIUMHIGH": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_LVP_O_LOW": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_TLHA_I_MEDIUMHIGH": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_TLHA_I_LOW": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_TLHA_O_MEDIUMHIGH": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_TLHA_O_LOW": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_SAWD_MEDIUMHIGH": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_SAWD_LOW": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".Com_Bahrain",
+    "status": "Deactivated"
+  },
+  "BH_HVSDLW_MEDIUMHIGH": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum Withdrawal",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "BH_HVSDLW_LOW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum Withdrawal",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".Com_Bahrain",
+    "status": "Active"
+  },
+  "FR_ABD_G1": {
+    "name": "France Aged Based Detection Rule Group 1 - Vulnerable Population",
+    "red_flag": "Monitors when users make fiat deposits that is multiple times of their declared net worth or annual income depending on their age.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_ABD_G2": {
+    "name": "France Aged Based Detection Rule Group 2",
+    "red_flag": "Monitors when users make fiat deposits that is multiple times of their declared net worth or annual income depending on their age.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_C2C_INT": {
+    "name": "C2C Rule",
+    "red_flag": "The rule identifies unusual transactions between two binance parties using Bpay",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_ECM_I": {
+    "name": "France Enhanced Coin Monitoring - Inbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_ECM_O": {
+    "name": "France Enhanced Coin Monitoring - Outbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_LOW_ADA": {
+    "name": "Activity on Dormant Account - Low Risk_KYB",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_LOW_HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum - Low Risk_KYB",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_LOW_LVP_I": {
+    "name": "Low Value Payments - Inbound - Low Risk_KYB",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_LOW_LVP_O": {
+    "name": "Low Value Payments - Outbound - Low Risk_KYB",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_LOW_SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits - Low Risk_KYB",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYB_LOW_TLHA_I": {
+    "name": "Transaction Limit - Historic Average - Inbound – Low Risk_KYB",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYB_LOW_TLHA_O": {
+    "name": "Transaction Limit - Historic Average - Outbound – Low Risk_KYB",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYB_MEDIUMHIGH_ADA": {
+    "name": "Activity on Dormant Account - Medium/High Risk_KYB",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_MEDIUMHIGH_HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum - Medium/High Risk_KYB",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_MEDIUMHIGH_LVP_I": {
+    "name": "Low Value Payments - Inbound - Medium/High Risk_KYB",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_MEDIUMHIGH_LVP_O": {
+    "name": "Low Value Payments - Outbound - Medium/High Risk_KYB",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYB_MEDIUMHIGH_SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits - Medium/High Risk_KYB",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYB_MEDIUMHIGH_TLHA_I": {
+    "name": "Transaction Limit - Historic Average - Inbound – Medium / High Risk_KYB",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYB_MEDIUMHIGH_TLHA_O": {
+    "name": "Transaction Limit - Historic Average - Outbound – Medium/High_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_BPAY_LOW_ADA": {
+    "name": "Binance Pay Activity on Dormant Account - Low Risk_KYC",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_HVSDLW": {
+    "name": "Binance Pay High Volume of Small Deposits followed by an immediate Large sum - Low Risk_KYC",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_LVP_I": {
+    "name": "Binance Pay Low Value Payments - Inbound - Low Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_LVP_O": {
+    "name": "Binance Pay Low Value Payments - Outbound - Low Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_SAWD": {
+    "name": "Binance Pay Similar Amounts Withdrawal / Deposits - Low Risk_KYC",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_TLHA_I": {
+    "name": "Binance Pay Transaction Limit - Historic Average - Inbound - Low Risk_KYC",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_LOW_TLHA_O": {
+    "name": "Binance Pay Transaction Limit - Historic Average - Outbound - Low Risk_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_ADA": {
+    "name": "Binance Pay Activity on Dormant Account - Medium/High Risk_KYC",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_HVSDLW": {
+    "name": "Binance Pay High Volume of Small Deposits followed by an immediate Large sum - Medium/High Risk_KYC",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_LVP_I": {
+    "name": "Binance Pay Low Value Payments - Inbound - Medium/High Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_LVP_O": {
+    "name": "Binance Pay Low Value Payments - Outbound - Medium/High Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_SAWD": {
+    "name": "Binance Pay Similar Amounts Withdrawal / Deposits - Medium/High Risk_KYC",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_TLHA_I": {
+    "name": "Binance Pay Transaction Limit - Historic Average - Inbound - Medium/High Risk_KYC",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_BPAY_MEDIUMHIGH_TLHA_O": {
+    "name": "Binance Pay Transaction Limit - Historic Average - Outbound - Medium/High Risk_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": "FR_Payment_C2C",
+    "status": "Active"
+  },
+  "FR_KYC_LOW_ADA": {
+    "name": "Activity on Dormant Account - Low Risk_KYC",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_LOW_HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum - Low Risk_KYC",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_LOW_LVP_I": {
+    "name": "Low Value Payments - Inbound - Low Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_LOW_LVP_O": {
+    "name": "Low Value Payments - Outbound - Low Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_LOW_SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits - Low Risk_KYC",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_LOW_TLHA_I": {
+    "name": "Transaction Limit - Historic Average - Inbound - LowRisk_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_LOW_TLHA_O": {
+    "name": "Transaction Limit - Historic Average - Outbound – LowRisk_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_MEDIUMHIGH_ADA": {
+    "name": "Activity on Dormant Account - Medium/High Risk_KYC",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_MEDIUMHIGH_HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum - Medium/High Risk_KYC",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_MEDIUMHIGH_LVP_I": {
+    "name": "Low Value Payments - Inbound - Medium/High Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_MEDIUMHIGH_LVP_O": {
+    "name": "Low Value Payments - Outbound - Medium/High Risk_KYC",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_FR",
+    "status": "Active"
+  },
+  "FR_KYC_MEDIUMHIGH_SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits - Medium/High Risk_KYC",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_MEDIUMHIGH_TLHA_I": {
+    "name": "Transaction Limit - Historic Average - Inbound – Medium / High Risk_KYB",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_KYC_MEDIUMHIGH_TLHA_O": {
+    "name": "Transaction Limit - Historic Average - Outbound – Medium/High_KYC",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "FR_TVEA": {
+    "name": "France Trading Volume Expected Amount",
+    "red_flag": "Monitors when user trades more than what was declared.",
+    "platform": ".COM_FR",
+    "status": "Deactivated"
+  },
+  "AU_ECM_I": {
+    "name": "Australia Enhanced Coin Monitoring - Inbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_AU",
+    "status": "Active"
+  },
+  "AU_ECM_O": {
+    "name": "Australia Enhanced Coin Monitoring - Outbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_AU",
+    "status": "Active"
+  },
+  "NZ_ECM_I": {
+    "name": "New Zealand Enhanced Coin Monitoring - Inbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_NZ",
+    "status": "Active"
+  },
+  "NZ_ECM_O": {
+    "name": "New Zealand Enhanced Coin Monitoring - Outbound",
+    "red_flag": "This rule targets off-block-chain deposit and withdrawal volumes activities for coins that are not supported by Elliptic",
+    "platform": ".COM_NZ",
+    "status": "Active"
+  },
+  "BR-THA-I-NEW": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-THA-O-NEW": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-SAWD-NEW": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-HVDLW-NEW": {
+    "name": "High Volume of Small Deposits followed by a Large Withdrawal",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-ADA-NEW": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-LVPIR-NEW": {
+    "name": "Low Value Payments - Inbound - Retail",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-LVPIC-NEW": {
+    "name": "Low Value Payments - Inbound - Corporate",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-LVPOR-NEW": {
+    "name": "Low Value Payments - Outbound - Retail",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "BR-LVPOC-NEW": {
+    "name": "Low Value Payments - Outbound - Corporate",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".com / BR",
+    "status": "Active"
+  },
+  "P2P_UF_L": {
+    "name": "P2P - Unexpected Fiat - Retail",
+    "red_flag": "Monitors P2P transactions conducted using currencies from High Risk Countries.",
+    "platform": ".Com / P2P",
+    "status": "Active"
+  },
+  "P2P_HRC_R": {
+    "name": "P2P - High Risk Countries - Retail (Licensed)",
+    "red_flag": "Monitors P2P transactions with counterparties residing in jurisdictions classified as high risk",
+    "platform": ".Com / P2P\n(Licensed Only)",
+    "status": "Active"
+  },
+  "P2P_FT_R": {
+    "name": "P2P - Flowthrough - Retail",
+    "red_flag": "Monitors P2P transactions with a set of counterparties for signs of flowthrough",
+    "platform": ".Com / P2P",
+    "status": "Active"
+  },
+  "BP-HCCR": {
+    "name": "Binance Pay - High Concentration Counterparty Risk  (Licensed)",
+    "red_flag": "Monitors Binance Pay transactions with a set of counterparties for signs of flowthrough",
+    "platform": ".Com / Binance Pay",
+    "status": "Active"
+  },
+  "BP-HVPT": {
+    "name": "Binance Pay - High Value Pass Through (Licensed)",
+    "red_flag": "Monitors Binance Pay transactions for pass-through activity in the account where in the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".Com Licensed / Binance Pay",
+    "status": "Active"
+  },
+  "BF-DACM": {
+    "name": "Bifinity - Daily Assets Conversion Monitoring",
+    "red_flag": "Monitor accounts for conversions between cash and tokens occurring within a single calendar day (Applicable for High Risk Users)",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BF-WACM": {
+    "name": "Bifinity - Weekly Assets Conversion Monitoring",
+    "red_flag": "Monitor accounts for conversions between cash and tokens occurring within 7 calendar day (Applicable for High Risk Users)",
+    "platform": "Bifinity",
+    "status": "Deactivated"
+  },
+  "BP-HRC": {
+    "name": "Binance Pay - High Risk Country (Licensed)",
+    "red_flag": "Monitors Binance Pay transactions with counterparties residing in jurisdictions classified as high risk",
+    "platform": ".Com / Binance Pay",
+    "status": "Active"
+  },
+  "BPAYGLOB-ADA": {
+    "name": "Activity on Dormant Account",
+    "red_flag": "Monitors for First activity of client after a long period of dormancy.",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-TLHA-I": {
+    "name": "Transaction Limit - Historic Average - Inbound",
+    "red_flag": "Monitors for Inbound transaction exceeding client’s historical average",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-TLHA-O": {
+    "name": "Transaction Limit - Historic Average - Outbound",
+    "red_flag": "Monitors for Outbound transaction exceeding client’s historical average",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-LVP-I": {
+    "name": "Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-LVP-O": {
+    "name": "Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-SAWD": {
+    "name": "Similar Amounts Withdrawal / Deposits",
+    "red_flag": "Monitors for Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "BPAYGLOB-HVSDLW": {
+    "name": "High Volume of Small Deposits followed by an immediate Large sum",
+    "red_flag": "Monitors for high frequency of low value inbound transactions that is immediately followed by a large withdrawal in a short period.",
+    "platform": "Bpay Global",
+    "status": "Active"
+  },
+  "TLHA_I_DYNAMIC_USER_COHORT": {
+    "name": "Transaction Limit - Historic Average - Inbound (Dynamic)",
+    "red_flag": "This rule identifies significant increase in deposit values (fiat and crypto) across a rolling timeframe",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "TLHA_O_DYNAMIC_USER_COHORT": {
+    "name": "Transaction Limit - Historic Average - Outbound (Dynamic)",
+    "red_flag": "This rule identifies significant increase in withdrawal values (fiat and crypto) across a rolling timeframe.",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "SAWD_DYNAMIC_USER_COHORT": {
+    "name": "Similar Amounts Withdrawal / Deposits (Dynamic)",
+    "red_flag": "Monitors for pass-through activity in the account wherein the Total sum of inbound transactions similar to sum of outbound transactions",
+    "platform": ".com / Global",
+    "status": "Active"
+  },
+  "RJ_STR": {
+    "name": "Structuring - Regulated Jurisdiction",
+    "red_flag": "Monitors for structuring behavior",
+    "platform": ".com / Licensed",
+    "status": "Active"
+  },
+  "AU_LVP_I": {
+    "name": "Australia Low Value Payments - Inbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value incoming transactions just below a threshold",
+    "platform": ".COM_AU",
+    "status": "Active"
+  },
+  "AU_LVP_O": {
+    "name": "Australia Low Value Payments - Outbound",
+    "red_flag": "Monitors for structuring of payments - significant number of low value outbound transactions just below a threshold",
+    "platform": ".COM_AU",
+    "status": "Active"
+  },
+  "AU_STR_NEW": {
+    "name": "Australia Structuring New",
+    "red_flag": "Monitors for structuring behavior",
+    "platform": ".COM_AU",
+    "status": "Active"
+  },
+  "PIT": {
+    "name": "Physically Impossible Travel",
+    "red_flag": "This rule will flag user accounts that exhibit login behaviour from geographically disparate IP addresses within a timeframe that would require travel speeds exceeding plausible physical limits (specifically, faster than 600 km/h—faster than typical commercial airplanes).",
+    "platform": ".com / Global",
+    "status": "Active"
+  }
+}
