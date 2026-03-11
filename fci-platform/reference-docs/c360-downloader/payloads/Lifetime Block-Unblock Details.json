@@ -1,0 +1,675 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "Lifetime Block/Unblock Details-2026-03-11 09-30-11.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 512683,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19219,
+        "dataSetIdList": [
+            19219
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1858006",
+            "1858009",
+            "1858008",
+            "1858007",
+            "1858010",
+            "1858018",
+            "1858011",
+            "1858012",
+            "1858013",
+            "1858014",
+            "1858019",
+            "1858015",
+            "1858016",
+            "1858017"
+        ],
+        "selectIdList": [],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1858006",
+                "1858009",
+                "1858008",
+                "1858007",
+                "1858010",
+                "1858018",
+                "1858011",
+                "1858012",
+                "1858013",
+                "1858014",
+                "1858019",
+                "1858015",
+                "1858016",
+                "1858017"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1858004",
+                "preRelation": "and",
+                "uniqueId": 231121003407126,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "block_status",
+                "id": "1858009",
+                "preRelation": "and",
+                "uniqueId": 231127212950517,
+                "op": "in",
+                "val": [
+                    null,
+                    "block",
+                    "unblock"
+                ],
+                "valOption": {},
+                "option": {
+                    "isReportFilter": true,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "multiTile",
+                    "filterPattern": "Accurate"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1858005",
+                "preRelation": "and",
+                "uniqueId": 260311080733098,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1858006,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858006",
+                "index": 0,
+                "location": "dimensions",
+                "originId": "1858006",
+                "roleType": 0,
+                "uniqueId": 231121003407178
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858009,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858009",
+                "index": 1,
+                "location": "dimensions",
+                "originId": "1858009",
+                "roleType": 0,
+                "uniqueId": 231121003407129
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858008,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858008",
+                "index": 2,
+                "location": "dimensions",
+                "originId": "1858008",
+                "roleType": 0,
+                "uniqueId": 231121003407133
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858007,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858007",
+                "index": 3,
+                "location": "dimensions",
+                "originId": "1858007",
+                "roleType": 0,
+                "uniqueId": 231121003407137
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858010,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858010",
+                "index": 4,
+                "location": "dimensions",
+                "originId": "1858010",
+                "roleType": 0,
+                "uniqueId": 231121003407149
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858018,
+                "format": {
+                    "dataTypeName": "int"
+                },
+                "id": "1858018",
+                "index": 5,
+                "location": "dimensions",
+                "originId": "1858018",
+                "roleType": 0,
+                "uniqueId": 231121003407145
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858011,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858011",
+                "index": 6,
+                "location": "dimensions",
+                "originId": "1858011",
+                "roleType": 0,
+                "uniqueId": 231121003407157
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858012,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858012",
+                "index": 7,
+                "location": "dimensions",
+                "originId": "1858012",
+                "roleType": 0,
+                "uniqueId": 231121003407161
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858013,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858013",
+                "index": 8,
+                "location": "dimensions",
+                "originId": "1858013",
+                "roleType": 0,
+                "uniqueId": 231121003407165
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858014,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858014",
+                "index": 9,
+                "location": "dimensions",
+                "originId": "1858014",
+                "roleType": 0,
+                "uniqueId": 231121003407169
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858019,
+                "format": {
+                    "dataTypeName": "int"
+                },
+                "id": "1858019",
+                "index": 10,
+                "location": "dimensions",
+                "originId": "1858019",
+                "roleType": 0,
+                "uniqueId": 231121003407174
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858015,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858015",
+                "index": 11,
+                "location": "dimensions",
+                "originId": "1858015",
+                "roleType": 0,
+                "uniqueId": 231121003407186
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858016,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858016",
+                "index": 12,
+                "location": "dimensions",
+                "originId": "1858016",
+                "roleType": 0,
+                "uniqueId": 231121003407187
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1858017,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1858017",
+                "index": 13,
+                "location": "dimensions",
+                "originId": "1858017",
+                "roleType": 0,
+                "uniqueId": 231121003407188
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "right",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": true,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "default",
+                        "value": "auto"
+                    },
+                    {
+                        "key": "changeSource",
+                        "value": "setting"
+                    }
+                ],
+                "compact": false,
+                "display": "standard",
+                "fixedIndex": 0,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": true,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "rowPadding": null,
+                "rowSpaceMode": "tight",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": false,
+                "version": 33,
+                "render": "dom",
+                "compactDirection": "horizontal"
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [],
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1858004,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1858004",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1858004",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231121003407126,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 231127212950517,
+                "id": "1858009",
+                "location": "whereList",
+                "dimMetId": 1858009,
+                "originId": "1858009",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link",
+                    "displayName": "block_status"
+                },
+                "isMetric": false,
+                "name": "block_status",
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        null,
+                        "block",
+                        "unblock"
+                    ],
+                    "valOption": {},
+                    "option": {
+                        "isReportFilter": true,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "multiTile",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "dataSetId": 19219,
+                "index": 1,
+                "showEditComponent": false
+            },
+            {
+                "uniqueId": 260311080733098,
+                "id": "1858005",
+                "location": "whereList",
+                "dimMetId": 1858005,
+                "originId": "1858005",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19219,
+                "subFilterIds": [],
+                "index": 2,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "right",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": true,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "default",
+                    "value": "auto"
+                },
+                {
+                    "key": "changeSource",
+                    "value": "setting"
+                }
+            ],
+            "compact": false,
+            "display": "standard",
+            "fixedIndex": 0,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": true,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "rowPadding": null,
+            "rowSpaceMode": "tight",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": false,
+            "version": 33,
+            "render": "dom",
+            "compactDirection": "horizontal"
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1858006": {
+                "contentType": "link"
+            },
+            "1858007": {
+                "contentType": "link"
+            },
+            "1858008": {
+                "contentType": "link"
+            },
+            "1858009": {
+                "contentType": "link"
+            },
+            "1858010": {
+                "contentType": "link"
+            },
+            "1858011": {
+                "contentType": "link"
+            },
+            "1858012": {
+                "contentType": "link"
+            },
+            "1858013": {
+                "contentType": "link"
+            },
+            "1858014": {
+                "contentType": "link"
+            },
+            "1858015": {
+                "contentType": "link"
+            },
+            "1858016": {
+                "contentType": "link"
+            },
+            "1858017": {
+                "contentType": "link"
+            },
+            "1858018": {
+                "dataTypeName": "int"
+            },
+            "1858019": {
+                "dataTypeName": "int"
+            }
+        }
+    },
+    "dashboardId": 49098
+}

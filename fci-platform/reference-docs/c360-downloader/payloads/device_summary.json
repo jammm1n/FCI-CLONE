@@ -1,0 +1,1874 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "device_summary-2026-03-11 09-24-24.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 514334,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19138,
+        "dataSetIdList": [
+            19138
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [],
+        "selectIdList": [
+            "count_1856026",
+            "sum_1856055",
+            "sum_1856056",
+            "sum_1861621",
+            "sum_1861623",
+            "sum_1861678",
+            "sum_1861679",
+            "sum_1861682",
+            "sum_1861683"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [
+            {
+                "id": "count_1856026",
+                "originId": "1856026",
+                "dimMetId": 1856026,
+                "uniqueId": 231130161648690,
+                "name": "Device Linked User Count",
+                "expr": "link_user_id",
+                "fullExpr": "link_user_id",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "count("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1856055",
+                "originId": "1856055",
+                "dimMetId": 1856055,
+                "uniqueId": 231130161648721,
+                "name": "Device Linked Users Total Deposit Amount",
+                "expr": "if(isNull(sum_d_amt_usdt),0,sum_d_amt_usdt)",
+                "fullExpr": "if(isNull(sum_d_amt_usdt),0,sum_d_amt_usdt)",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1856056",
+                "originId": "1856056",
+                "dimMetId": 1856056,
+                "uniqueId": 231130161648732,
+                "name": "Device Linked Users Total Withdraw Amount",
+                "expr": "if(isNull(sum_w_amt_usdt),0,sum_w_amt_usdt)",
+                "fullExpr": "if(isNull(sum_w_amt_usdt),0,sum_w_amt_usdt)",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861621",
+                "originId": "1861621",
+                "dimMetId": 1861621,
+                "uniqueId": 231130130617804,
+                "name": "Device Linked user also with LE request Count",
+                "expr": "if(notEmpty(kodex_case),1,0)",
+                "fullExpr": "if(notEmpty(kodex_case),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861623",
+                "originId": "1861623",
+                "dimMetId": 1861623,
+                "uniqueId": 231130152917021,
+                "name": "Device Linked User Count also share IP",
+                "expr": "if(notEmpty(direct_shared_ip),1,0)",
+                "fullExpr": "if(notEmpty(direct_shared_ip),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861678",
+                "originId": "1861678",
+                "dimMetId": 1861678,
+                "uniqueId": 231130152917062,
+                "name": "Device Linked User Count with SAR Case",
+                "expr": "if(notEmpty(sar_case),1,0)",
+                "fullExpr": "if(notEmpty(sar_case),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861679",
+                "originId": "1861679",
+                "dimMetId": 1861679,
+                "uniqueId": 231130152917063,
+                "name": "Device Linked User also share internal CP Count",
+                "expr": "if(notEmpty(shared_wallet_address_internal),1,0)",
+                "fullExpr": "if(notEmpty(shared_wallet_address_internal),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861682",
+                "originId": "1861682",
+                "dimMetId": 1861682,
+                "uniqueId": 231130152917080,
+                "name": "Device Linked User also share ext wallet Count",
+                "expr": "if(notEmpty(shared_wallet_address_external),1,0)",
+                "fullExpr": "if(notEmpty(shared_wallet_address_external),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            },
+            {
+                "id": "sum_1861683",
+                "originId": "1861683",
+                "dimMetId": 1861683,
+                "uniqueId": 231130152917093,
+                "name": "Device Linked User also blocked Count",
+                "expr": "if(notEmpty(block_case_details),1,0)",
+                "fullExpr": "if(notEmpty(block_case_details),1,0)",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19138
+            }
+        ],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1856020",
+                "preRelation": "and",
+                "uniqueId": 231129135419202,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "mode",
+                "id": "1856030",
+                "preRelation": "and",
+                "uniqueId": 231130130617783,
+                "op": "in",
+                "option": {
+                    "customList": [],
+                    "desensitizationList": [],
+                    "displayType": "multiDropDownList",
+                    "filterPattern": "Accurate",
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    "sar device bnc_uuid direct link",
+                    "sar device fvideo_id direct link"
+                ],
+                "valOption": {}
+            },
+            {
+                "name": "user_id",
+                "id": "1856021",
+                "preRelation": "and",
+                "uniqueId": 260311080733071,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "left",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "default",
+                        "value": "auto"
+                    },
+                    {
+                        "key": "changeSource",
+                        "value": "setting"
+                    },
+                    {
+                        "key": "transpose",
+                        "value": 310
+                    }
+                ],
+                "compact": false,
+                "display": "custom",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": false,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "rowPadding": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": true,
+                "version": 33,
+                "render": "dom",
+                "compactDirection": "vertical"
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {
+                    "exprAggr": "count("
+                },
+                "dimMetId": 1856026,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648690",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648690",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Device Linked User Count",
+                    "fieldDescr": "red flag when more then 4 linked users, detail please go to associated user tab",
+                    "showFieldDescr": false
+                },
+                "id": "count_1856026",
+                "index": 0,
+                "location": "measures",
+                "originId": "1856026",
+                "roleType": 1,
+                "uniqueId": 231130161648690
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1856055,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648721",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648721",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "float",
+                    "displayName": "Device Linked Users Total Deposit Amount",
+                    "fieldDescr": "red flag when device sharing user total deposit over 100k USD",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1856055",
+                "index": 1,
+                "location": "measures",
+                "originId": "1856055",
+                "roleType": 1,
+                "uniqueId": 231130161648721
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1856056,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648732",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130161648732",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "float",
+                    "displayName": "Device Linked Users Total Withdraw Amount",
+                    "fieldDescr": "red flag when device sharing user total withdraw over 100k USD",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1856056",
+                "index": 2,
+                "location": "measures",
+                "originId": "1856056",
+                "roleType": 1,
+                "uniqueId": 231130161648732
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861621,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130130617804",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130130617804",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked user also with LE request Count",
+                    "fieldDescr": "red flag when not 0",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1861621",
+                "index": 3,
+                "location": "measures",
+                "originId": "1861621",
+                "roleType": 1,
+                "uniqueId": 231130130617804
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861623,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917021",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917021",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked User Count also share IP",
+                    "fieldDescr": "flag red when not 0",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": true
+                },
+                "id": "sum_1861623",
+                "index": 4,
+                "location": "measures",
+                "originId": "1861623",
+                "roleType": 1,
+                "uniqueId": 231130152917021
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861678,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917062",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917062",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked User Count with SAR Case",
+                    "fieldDescr": "flag red when not 0",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1861678",
+                "index": 5,
+                "location": "measures",
+                "originId": "1861678",
+                "roleType": 1,
+                "uniqueId": 231130152917062
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861679,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917063",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917063",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked User also share internal CP Count",
+                    "fieldDescr": "flag red when not 0",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1861679",
+                "index": 6,
+                "location": "measures",
+                "originId": "1861679",
+                "roleType": 1,
+                "uniqueId": 231130152917063
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861682,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917080",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917080",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked User also share ext wallet Count",
+                    "fieldDescr": "flag red when not 0 (user count, not shared address count)",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1861682",
+                "index": 7,
+                "location": "measures",
+                "originId": "1861682",
+                "roleType": 1,
+                "uniqueId": 231130152917080
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1861683,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917093",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231130152917093",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int",
+                    "displayName": "Device Linked User also blocked Count",
+                    "fieldDescr": "flag red when not 0",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1861683",
+                "index": 8,
+                "location": "measures",
+                "originId": "1861683",
+                "roleType": 1,
+                "uniqueId": 231130152917093
+            }
+        ],
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1856020,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1856020",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1856020",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231129135419202,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856030,
+                "filter": {
+                    "op": "in",
+                    "option": {
+                        "customList": [],
+                        "desensitizationList": [],
+                        "displayType": "multiDropDownList",
+                        "filterPattern": "Accurate",
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        "sar device bnc_uuid direct link",
+                        "sar device fvideo_id direct link"
+                    ],
+                    "valOption": {}
+                },
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1856030",
+                "index": 1,
+                "isRequired": false,
+                "location": "whereList",
+                "name": "mode",
+                "originId": "1856030",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "uniqueId": 231130130617783
+            },
+            {
+                "uniqueId": 260311080733071,
+                "id": "1856021",
+                "location": "whereList",
+                "dimMetId": 1856021,
+                "originId": "1856021",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19138,
+                "subFilterIds": [],
+                "index": 2,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "left",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "default",
+                    "value": "auto"
+                },
+                {
+                    "key": "changeSource",
+                    "value": "setting"
+                },
+                {
+                    "key": "transpose",
+                    "value": 310
+                }
+            ],
+            "compact": false,
+            "display": "custom",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": false,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "rowPadding": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": true,
+            "version": 33,
+            "render": "dom",
+            "compactDirection": "vertical"
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "count_1856026": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648690",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648690",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Device Linked User Count",
+                "fieldDescr": "red flag when more then 4 linked users, detail please go to associated user tab",
+                "showFieldDescr": false
+            },
+            "sum_1856055": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648721",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648721",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "float",
+                "displayName": "Device Linked Users Total Deposit Amount",
+                "fieldDescr": "red flag when device sharing user total deposit over 100k USD",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1856056": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648732",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130161648732",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "float",
+                "displayName": "Device Linked Users Total Withdraw Amount",
+                "fieldDescr": "red flag when device sharing user total withdraw over 100k USD",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1861621": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130130617804",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130130617804",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked user also with LE request Count",
+                "fieldDescr": "red flag when not 0",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1861623": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917021",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917021",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked User Count also share IP",
+                "fieldDescr": "flag red when not 0",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": true
+            },
+            "sum_1861678": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917062",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917062",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked User Count with SAR Case",
+                "fieldDescr": "flag red when not 0",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1861679": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917063",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917063",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked User also share internal CP Count",
+                "fieldDescr": "flag red when not 0",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1861682": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917080",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917080",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked User also share ext wallet Count",
+                "fieldDescr": "flag red when not 0 (user count, not shared address count)",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "sum_1861683": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917093",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231130152917093",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int",
+                "displayName": "Device Linked User also blocked Count",
+                "fieldDescr": "flag red when not 0",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            }
+        }
+    },
+    "dashboardId": 49098
+}

@@ -52,6 +52,12 @@ class SetSubjectUidRequest(BaseModel):
     user_id: str
 
 
+class C360FetchRequest(BaseModel):
+    """POST /api/ingestion/cases/{case_id}/c360/fetch"""
+    uid: str
+    cookie: str
+
+
 class ManualAddressesRequest(BaseModel):
     """POST /api/ingestion/cases/{case_id}/elliptic/addresses"""
     manual_addresses: list[str] = []

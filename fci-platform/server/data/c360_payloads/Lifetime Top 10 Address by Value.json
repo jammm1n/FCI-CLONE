@@ -1,0 +1,842 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "Lifetime Top 10 Address by Value-2026-03-11 09-28-01.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 515497,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19381,
+        "dataSetIdList": [
+            19381
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1863022",
+            "1863023",
+            "1863030",
+            "1863024",
+            "1863028",
+            "1863021"
+        ],
+        "selectIdList": [
+            "sum_1863025",
+            "sum_1863029",
+            "min_1863026",
+            "max_1863027"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1863022",
+                "1863023",
+                "1863030",
+                "1863024",
+                "1863028",
+                "1863021"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [
+            {
+                "id": "sum_1863025",
+                "originId": "1863025",
+                "dimMetId": 1863025,
+                "uniqueId": 240719103015011,
+                "name": "trans_count",
+                "expr": "CAST(trans_count as Nullable(Float64))",
+                "fullExpr": "CAST(trans_count as Nullable(Float64))",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19381
+            },
+            {
+                "id": "sum_1863029",
+                "originId": "1863029",
+                "dimMetId": 1863029,
+                "uniqueId": 240719103015014,
+                "name": "sum_amt_usd",
+                "expr": "sum_amt_usd",
+                "fullExpr": "sum_amt_usd",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19381
+            },
+            {
+                "id": "min_1863026",
+                "originId": "1863026",
+                "dimMetId": 1863026,
+                "uniqueId": 240719103015017,
+                "name": "first_trans_date",
+                "expr": "first_trans_date",
+                "fullExpr": "first_trans_date",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "string",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "min("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19381
+            },
+            {
+                "id": "max_1863027",
+                "originId": "1863027",
+                "dimMetId": 1863027,
+                "uniqueId": 240719103015020,
+                "name": "last_trans_date",
+                "expr": "last_trans_date",
+                "fullExpr": "last_trans_date",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "string",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "max("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19381
+            }
+        ],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1863019",
+                "preRelation": "and",
+                "uniqueId": 231202213415108,
+                "op": "lastSync",
+                "option": {
+                    "isDefaultPartitionField": true,
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "address",
+                "id": "1863022",
+                "preRelation": "and",
+                "uniqueId": 240306133624007,
+                "op": "not in",
+                "option": {
+                    "customList": [],
+                    "desensitizationList": [],
+                    "displayType": "multiDropDownList",
+                    "filterPattern": "Accurate",
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    "N/A"
+                ],
+                "valOption": {}
+            },
+            {
+                "name": "major_user_id",
+                "id": "1863021",
+                "preRelation": "and",
+                "uniqueId": 260311080733087,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {
+            "type": "sort",
+            "orderByList": []
+        },
+        "topN": {
+            "limit": 10,
+            "limitUnit": "rows",
+            "orderByList": [
+                {
+                    "dimensions": [],
+                    "manualSortList": [],
+                    "measure": "sum_1863029",
+                    "order": "desc",
+                    "measureUniqueId": 240719103015014,
+                    "dimensionsUniqueId": []
+                }
+            ],
+            "type": "by_result",
+            "orderByListState": [
+                {
+                    "dimensions": [],
+                    "manualSortList": [],
+                    "measure": "sum_1863029",
+                    "order": "desc",
+                    "measureUniqueId": 240719103015014,
+                    "dimensionsUniqueId": []
+                }
+            ]
+        },
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1863022,
+                "format": {
+                    "contentType": "goto"
+                },
+                "id": "1863022",
+                "index": 0,
+                "location": "dimensions",
+                "originId": "1863022",
+                "roleType": 0,
+                "uniqueId": 231202213415111
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863023,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1863023",
+                "index": 1,
+                "location": "dimensions",
+                "originId": "1863023",
+                "roleType": 0,
+                "uniqueId": 231202213415124
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863030,
+                "format": {
+                    "dataTypeName": "float"
+                },
+                "id": "1863030",
+                "index": 2,
+                "location": "dimensions",
+                "originId": "1863030",
+                "roleType": 0,
+                "sourceType": "aggr",
+                "uniqueId": 231202213416266
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863024,
+                "format": {},
+                "id": "1863024",
+                "index": 3,
+                "location": "dimensions",
+                "originId": "1863024",
+                "roleType": 0,
+                "uniqueId": 231202213415137
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863028,
+                "format": {},
+                "id": "1863028",
+                "index": 4,
+                "location": "dimensions",
+                "originId": "1863028",
+                "roleType": 0,
+                "uniqueId": 231202213415241
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863021,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1863021",
+                "index": 5,
+                "location": "dimensions",
+                "notDisplay": true,
+                "originId": "1863021",
+                "roleType": 0,
+                "uniqueId": 240305223738568
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "right",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": true,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "0#LINE_NUMBER_DIM_ID_STR",
+                        "value": 80
+                    },
+                    {
+                        "key": "231202213415111",
+                        "value": 319
+                    },
+                    {
+                        "key": "231202213415124",
+                        "value": 82
+                    },
+                    {
+                        "key": "231202213416266",
+                        "value": 161
+                    },
+                    {
+                        "key": "231202213415137",
+                        "value": 208
+                    },
+                    {
+                        "key": "231202213415214",
+                        "value": 96
+                    },
+                    {
+                        "key": "231202213416295",
+                        "value": 145
+                    },
+                    {
+                        "key": "231202213415227",
+                        "value": 141
+                    },
+                    {
+                        "key": "231202213415228",
+                        "value": 141
+                    },
+                    {
+                        "key": "231202213415241",
+                        "value": 450
+                    }
+                ],
+                "compact": false,
+                "compactDirection": "horizontal",
+                "customFields": {
+                    "enable": true
+                },
+                "display": "custom",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": true,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "render": "dom",
+                "rowPadding": null,
+                "rowSpaceMode": "tight",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": false,
+                "version": 33
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1863025,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "sum_1863025",
+                "index": 0,
+                "location": "measures",
+                "originId": "1863025",
+                "roleType": 1,
+                "uniqueId": 240719103015011
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1863029,
+                "format": {
+                    "dataTypeName": "float",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    }
+                },
+                "id": "sum_1863029",
+                "index": 1,
+                "location": "measures",
+                "originId": "1863029",
+                "roleType": 1,
+                "uniqueId": 240719103015014
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "min("
+                },
+                "dimMetId": 1863026,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "min_1863026",
+                "index": 2,
+                "location": "measures",
+                "originId": "1863026",
+                "roleType": 1,
+                "sourceType": "aggr",
+                "uniqueId": 240719103015017
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "max("
+                },
+                "dimMetId": 1863027,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "max_1863027",
+                "index": 3,
+                "location": "measures",
+                "originId": "1863027",
+                "roleType": 1,
+                "sourceType": "aggr",
+                "uniqueId": 240719103015020
+            }
+        ],
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "sort": {
+            "orderByList": [],
+            "type": "sort",
+            "orderByListState": []
+        },
+        "subMeasures": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "topN": {
+            "limit": 10,
+            "limitUnit": "rows",
+            "orderByList": [
+                {
+                    "dimensions": [],
+                    "manualSortList": [],
+                    "measure": "sum_1863029",
+                    "order": "desc",
+                    "measureUniqueId": 240719103015014,
+                    "dimensionsUniqueId": []
+                }
+            ],
+            "type": "by_result",
+            "orderByListState": [
+                {
+                    "dimensions": [],
+                    "manualSortList": [],
+                    "measure": "sum_1863029",
+                    "order": "desc",
+                    "measureUniqueId": 240719103015014,
+                    "dimensionsUniqueId": []
+                }
+            ]
+        },
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1863019,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isDefaultPartitionField": true,
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1863019",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1863019",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231202213415108,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1863022,
+                "filter": {
+                    "op": "not in",
+                    "option": {
+                        "customList": [],
+                        "desensitizationList": [],
+                        "displayType": "multiDropDownList",
+                        "filterPattern": "Accurate",
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        "N/A"
+                    ],
+                    "valOption": {}
+                },
+                "format": {
+                    "contentType": "goto"
+                },
+                "id": "1863022",
+                "index": 1,
+                "isRequired": false,
+                "location": "whereList",
+                "name": "address",
+                "originId": "1863022",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "uniqueId": 240306133624007
+            },
+            {
+                "uniqueId": 260311080733087,
+                "id": "1863021",
+                "location": "whereList",
+                "dimMetId": 1863021,
+                "originId": "1863021",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "major_user_id",
+                "dataSetId": 19381,
+                "subFilterIds": [],
+                "index": 2,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "right",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": true,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "0#LINE_NUMBER_DIM_ID_STR",
+                    "value": 80
+                },
+                {
+                    "key": "231202213415111",
+                    "value": 319
+                },
+                {
+                    "key": "231202213415124",
+                    "value": 82
+                },
+                {
+                    "key": "231202213416266",
+                    "value": 161
+                },
+                {
+                    "key": "231202213415137",
+                    "value": 208
+                },
+                {
+                    "key": "231202213415214",
+                    "value": 96
+                },
+                {
+                    "key": "231202213416295",
+                    "value": 145
+                },
+                {
+                    "key": "231202213415227",
+                    "value": 141
+                },
+                {
+                    "key": "231202213415228",
+                    "value": 141
+                },
+                {
+                    "key": "231202213415241",
+                    "value": 450
+                }
+            ],
+            "compact": false,
+            "compactDirection": "horizontal",
+            "customFields": {
+                "enable": true
+            },
+            "display": "custom",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": true,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "render": "dom",
+            "rowPadding": null,
+            "rowSpaceMode": "tight",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": false,
+            "version": 33
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1863021": {
+                "contentType": "link"
+            },
+            "1863022": {
+                "contentType": "goto"
+            },
+            "1863023": {
+                "contentType": "link"
+            },
+            "1863024": {},
+            "1863028": {},
+            "1863030": {
+                "dataTypeName": "float"
+            },
+            "sum_1863025": {
+                "contentType": "link"
+            },
+            "sum_1863029": {
+                "dataTypeName": "float",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                }
+            },
+            "min_1863026": {
+                "contentType": "link"
+            },
+            "max_1863027": {
+                "contentType": "link"
+            }
+        }
+    },
+    "dashboardId": 49098
+}

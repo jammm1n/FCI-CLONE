@@ -1,0 +1,624 @@
+{
+    "downloadConfig": {
+        "limit": 10000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "sar_360_trade_summary-2026-03-11 09-23-39.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 514331,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19276,
+        "dataSetIdList": [
+            19276
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1859715"
+        ],
+        "selectIdList": [
+            "sum_1859718",
+            "sum_1859719"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [],
+            "rows": [
+                "1859715"
+            ],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [
+            {
+                "id": "sum_1859718",
+                "originId": "1859718",
+                "dimMetId": 1859718,
+                "uniqueId": 231127222455548,
+                "name": "amt_usd",
+                "expr": "CAST(amt_usd as Nullable(Float64))",
+                "fullExpr": "CAST(amt_usd as Nullable(Float64))",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19276
+            },
+            {
+                "id": "sum_1859719",
+                "originId": "1859719",
+                "dimMetId": 1859719,
+                "uniqueId": 231127222455574,
+                "name": "trade_count",
+                "expr": "CAST(trade_count as Nullable(Float64))",
+                "fullExpr": "CAST(trade_count as Nullable(Float64))",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.cao@binance.com",
+                "dataSetId": 19276
+            }
+        ],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1859713",
+                "preRelation": "and",
+                "uniqueId": 231127222455534,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1859714",
+                "preRelation": "and",
+                "uniqueId": 260311080733027,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 10000,
+        "sort": {
+            "type": "sort",
+            "orderByList": [
+                {
+                    "depend": "1859715",
+                    "id": "1859715",
+                    "manualSortAliasList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortType": "list",
+                    "orderType": "manual",
+                    "uniqueId": 231127222455537,
+                    "dependUniqueId": 231127222455537
+                }
+            ]
+        },
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [
+            {
+                "aggrConf": {},
+                "dimMetId": 231127222455575,
+                "drillInfo": {
+                    "groupId": "ppa1lgss"
+                },
+                "format": {},
+                "highlight": false,
+                "id": "placeholder_231127222455575",
+                "index": 0,
+                "location": "columns",
+                "name": "Measure name",
+                "notJoinQuery": true,
+                "originId": "231127222455575",
+                "pillType": "placeholder",
+                "roleType": 0,
+                "sourceType": "raw",
+                "uniqueId": 231127222455575,
+                "unremovable": true
+            }
+        ],
+        "details": [],
+        "dimensions": [],
+        "display": {
+            "conf": {
+                "alignDimensionColumn": "left",
+                "alignDimensionRow": "left",
+                "alignMeasure": "left",
+                "alternateRow": false,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontColor": "#000000",
+                "bodyFontSize": 12,
+                "columnWidth": null,
+                "customColWidth": null,
+                "customRowPadding": null,
+                "dataLimit": 10000,
+                "display": "adaptive",
+                "expansionLabel": "",
+                "expansionLevel": 1,
+                "expansionType": "grid",
+                "gridLine": true,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontColor": "#F4B835",
+                "headerFontSize": 12,
+                "headerHorizontal": true,
+                "headerMenu": true,
+                "headerVertical": true,
+                "hoverHighlight": "row",
+                "pageSize": 50,
+                "pagination": true,
+                "rowHeaderWidth": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "classic",
+                "version": 33,
+                "render": "dom",
+                "compact": false,
+                "compactDirection": "horizontal"
+            },
+            "enableAdvisor": true,
+            "queryType": "pivot_table",
+            "type": "pivot_table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1859718,
+                "drillInfo": {
+                    "groupId": "iagz548x"
+                },
+                "format": {
+                    "dataTypeName": "float",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    }
+                },
+                "id": "sum_1859718",
+                "index": 0,
+                "location": "measures",
+                "originId": "1859718",
+                "roleType": 1,
+                "uniqueId": 231127222455548
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1859719,
+                "drillInfo": {
+                    "groupId": "r15ecz1e"
+                },
+                "format": {
+                    "dataTypeName": "float",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 0,
+                        "precisionType": "decimalDigits",
+                        "prefix": "",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    }
+                },
+                "id": "sum_1859719",
+                "index": 1,
+                "location": "measures",
+                "originId": "1859719",
+                "roleType": 1,
+                "uniqueId": 231127222455574
+            }
+        ],
+        "measuresGroups": [],
+        "pagination": {
+            "offset": 0,
+            "size": 50
+        },
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1859715,
+                "drillInfo": {
+                    "groupId": "k1erd7nj"
+                },
+                "format": {
+                    "contentType": "link",
+                    "displayName": "Trade Type",
+                    "showFieldDescr": false
+                },
+                "id": "1859715",
+                "index": 0,
+                "location": "rows",
+                "originId": "1859715",
+                "roleType": 0,
+                "uniqueId": 231127222455537
+            }
+        ],
+        "sizes": [],
+        "sort": {
+            "orderByList": [
+                {
+                    "depend": "1859715",
+                    "id": "1859715",
+                    "manualSortAliasList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortType": "list",
+                    "orderType": "manual",
+                    "uniqueId": 231127222455537,
+                    "dependUniqueId": 231127222455537
+                }
+            ],
+            "type": "sort",
+            "orderByListState": [
+                {
+                    "depend": "1859715",
+                    "id": "1859715",
+                    "manualSortAliasList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortList": [
+                        "spot",
+                        "ocbs",
+                        "otc_convert",
+                        "blvt",
+                        "margin",
+                        "futures",
+                        "delivery",
+                        "euro_options",
+                        "isolated_margin",
+                        "liquid_swap"
+                    ],
+                    "manualSortType": "list",
+                    "orderType": "manual",
+                    "uniqueId": 231127222455537,
+                    "dependUniqueId": 231127222455537
+                }
+            ]
+        },
+        "subMeasures": [],
+        "tableCalculations": [],
+        "tooltips": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1859713,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1859713",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1859713",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231127222455534,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859716,
+                "drillInfo": {
+                    "groupId": "iki8z6ra"
+                },
+                "filter": {
+                    "op": "in",
+                    "option": {
+                        "desensitizationList": [],
+                        "displayType": "multiDropDownList",
+                        "filterPattern": "Accurate",
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [],
+                    "valOption": {}
+                },
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1859716",
+                "index": 1,
+                "isRequired": false,
+                "location": "whereList",
+                "name": "date_key",
+                "originId": "1859716",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "uniqueId": 231127222455617
+            },
+            {
+                "uniqueId": 260311080733027,
+                "id": "1859714",
+                "location": "whereList",
+                "dimMetId": 1859714,
+                "originId": "1859714",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19276,
+                "subFilterIds": [],
+                "index": 2,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": [],
+            "hideAllEmptyRowsOrCols": false
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimensionColumn": "left",
+            "alignDimensionRow": "left",
+            "alignMeasure": "left",
+            "alternateRow": false,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontColor": "#000000",
+            "bodyFontSize": 12,
+            "columnWidth": null,
+            "customColWidth": null,
+            "customRowPadding": null,
+            "dataLimit": 10000,
+            "display": "adaptive",
+            "expansionLabel": "",
+            "expansionLevel": 1,
+            "expansionType": "grid",
+            "gridLine": true,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontColor": "#F4B835",
+            "headerFontSize": 12,
+            "headerHorizontal": true,
+            "headerMenu": true,
+            "headerVertical": true,
+            "hoverHighlight": "row",
+            "pageSize": 50,
+            "pagination": true,
+            "rowHeaderWidth": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "classic",
+            "version": 33,
+            "render": "dom",
+            "compact": false,
+            "compactDirection": "horizontal"
+        },
+        "enableAdvisor": true,
+        "queryType": "pivot_table",
+        "type": "pivot_table",
+        "fieldsFormat": {
+            "sum_1859718": {
+                "dataTypeName": "float",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                }
+            },
+            "sum_1859719": {
+                "dataTypeName": "float",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 0,
+                    "precisionType": "decimalDigits",
+                    "prefix": "",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                }
+            }
+        }
+    },
+    "dashboardId": 49098
+}

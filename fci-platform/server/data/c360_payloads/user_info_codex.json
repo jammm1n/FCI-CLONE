@@ -1,0 +1,562 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "user_info_codex-2026-03-11 09-21-02.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 529507,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19272,
+        "dataSetIdList": [
+            19272
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1859639",
+            "1859647"
+        ],
+        "selectIdList": [],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1859639",
+                "1859647"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1859604",
+                "preRelation": "and",
+                "uniqueId": 231122172130624,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1859605",
+                "preRelation": "and",
+                "uniqueId": 260311080733016,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1859639,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132369",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132369",
+                                                    "ruleType": ">",
+                                                    "value": 4
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132369",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                },
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132369",
+                                                    "ruleType": "<=",
+                                                    "value": 4
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "Kodex Case Details",
+                    "showFieldDescr": false
+                },
+                "id": "1859639",
+                "index": 0,
+                "location": "dimensions",
+                "originId": "1859639",
+                "roleType": 0,
+                "uniqueId": 231122172132216
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859647,
+                "format": {},
+                "id": "1859647",
+                "index": 1,
+                "location": "dimensions",
+                "notDisplay": true,
+                "originId": "1859647",
+                "roleType": 0,
+                "uniqueId": 231122172132369
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "left",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": true,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "default",
+                        "value": "auto"
+                    },
+                    {
+                        "key": "changeSource",
+                        "value": "setting"
+                    }
+                ],
+                "compact": false,
+                "display": "adaptive",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": false,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "rowPadding": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": false,
+                "version": 33,
+                "render": "dom",
+                "compactDirection": "horizontal"
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [],
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1859604,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1859604",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1859604",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231122172130624,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 260311080733016,
+                "id": "1859605",
+                "location": "whereList",
+                "dimMetId": 1859605,
+                "originId": "1859605",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19272,
+                "subFilterIds": [],
+                "index": 1,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "left",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": true,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "default",
+                    "value": "auto"
+                },
+                {
+                    "key": "changeSource",
+                    "value": "setting"
+                }
+            ],
+            "compact": false,
+            "display": "adaptive",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": false,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "rowPadding": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": false,
+            "version": 33,
+            "render": "dom",
+            "compactDirection": "horizontal"
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1859639": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132369",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132369",
+                                                "ruleType": ">",
+                                                "value": 4
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132369",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            },
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132369",
+                                                "ruleType": "<=",
+                                                "value": 4
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "Kodex Case Details",
+                "showFieldDescr": false
+            },
+            "1859647": {}
+        }
+    },
+    "dashboardId": 49098
+}

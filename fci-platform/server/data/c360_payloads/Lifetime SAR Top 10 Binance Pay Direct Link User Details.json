@@ -1,0 +1,3081 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "Lifetime SAR Top 10 Binance Pay Direct Link User Details-2026-03-11 09-35-02.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 518915,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19138,
+        "dataSetIdList": [
+            19138
+        ],
+        "transform": {
+            "type": "raw_table"
+        },
+        "groupByIdList": [],
+        "selectIdList": [
+            "1856021",
+            "1856026",
+            "2151316",
+            "2151317",
+            "1856030",
+            "1856031",
+            "1856032",
+            "1856033",
+            "1869159",
+            "1856055",
+            "1869160",
+            "1856056",
+            "1869161",
+            "1869163",
+            "1869162",
+            "1869164",
+            "2146830",
+            "8d52865e06adb09188bd442087b9023f",
+            "1869165",
+            "1869167",
+            "1869166",
+            "1869168",
+            "1856044",
+            "1856051",
+            "2166988",
+            "2186649",
+            "1869156",
+            "1856061",
+            "1856057",
+            "1856038",
+            "1856058",
+            "1856040",
+            "1856035",
+            "1856034",
+            "1856059",
+            "1856041",
+            "1856042",
+            "1856043",
+            "1856045",
+            "1856046",
+            "1856047",
+            "1856048",
+            "1856049",
+            "1856050"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [
+            {
+                "id": "8d52865e06adb09188bd442087b9023f",
+                "originId": "2146830",
+                "dimMetId": 2146830,
+                "uniqueId": 260209103445497,
+                "name": "total_bpay_trans_amt_usd%",
+                "expr": "`bpay_sum_d_amt_usdt`+`bpay_sum_w_amt_usdt`",
+                "fullExpr": "`bpay_sum_d_amt_usdt`+`bpay_sum_w_amt_usdt`",
+                "roleType": 1,
+                "scope": 2,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {},
+                "sourceType": "percent",
+                "persisted": false,
+                "ownerEmailPrefix": "joeann.e@binance.com",
+                "dataSetId": 19138
+            }
+        ],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1856020",
+                "preRelation": "and",
+                "uniqueId": 231114220753622,
+                "op": "lastSync",
+                "option": {
+                    "dateMode": "relative",
+                    "isDefaultPartitionField": true,
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day",
+                    "hourSharp": true
+                }
+            },
+            {
+                "name": "mode",
+                "id": "1856030",
+                "preRelation": "and",
+                "uniqueId": 231121003411517,
+                "op": "in",
+                "option": {
+                    "customList": [],
+                    "desensitizationList": [],
+                    "displayType": "multiDropDownList",
+                    "filterPattern": "Accurate",
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    "sar bpay transfer direct link"
+                ],
+                "valOption": {}
+            },
+            {
+                "name": "user_id",
+                "id": "1856021",
+                "preRelation": "and",
+                "uniqueId": 260311080733049,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            },
+            {
+                "name": "high_risk_associate_flag",
+                "id": "1869576",
+                "preRelation": "and",
+                "uniqueId": 260311080733050,
+                "op": "in",
+                "val": [
+                    "False",
+                    "True"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "displayType": "multiTile",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "percent": {
+                "calcConfList": [
+                    {
+                        "calcType": "percent",
+                        "idList": [
+                            "2146830"
+                        ]
+                    }
+                ],
+                "scope": "all"
+            },
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "pagination": {
+            "frontOnlyOffset": 0,
+            "size": 50000,
+            "offset": 0
+        },
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "details": [],
+        "dimensions": [],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "right",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "0#LINE_NUMBER_DIM_ID_STR",
+                        "value": 48
+                    },
+                    {
+                        "key": "231114220753632",
+                        "value": 81
+                    },
+                    {
+                        "key": "231114220753635",
+                        "value": 96
+                    },
+                    {
+                        "key": "231114220753688",
+                        "value": 174
+                    },
+                    {
+                        "key": "231114220753658",
+                        "value": 450
+                    },
+                    {
+                        "key": "231114220753661",
+                        "value": 139
+                    },
+                    {
+                        "key": "231114220753761",
+                        "value": 307
+                    },
+                    {
+                        "key": "231220174544425",
+                        "value": 242
+                    },
+                    {
+                        "key": "231114220753766",
+                        "value": 262
+                    },
+                    {
+                        "key": "231220174544441",
+                        "value": 237
+                    },
+                    {
+                        "key": "231114220753805",
+                        "value": 257
+                    },
+                    {
+                        "key": "231220174544685",
+                        "value": 227
+                    },
+                    {
+                        "key": "231220174544717",
+                        "value": 247
+                    },
+                    {
+                        "key": "231220174544701",
+                        "value": 222
+                    },
+                    {
+                        "key": "231220174544733",
+                        "value": 242
+                    },
+                    {
+                        "key": "251114025714103",
+                        "value": 178
+                    },
+                    {
+                        "key": "231220174544809",
+                        "value": 233
+                    },
+                    {
+                        "key": "231220174544825",
+                        "value": 253
+                    },
+                    {
+                        "key": "231220174544841",
+                        "value": 228
+                    },
+                    {
+                        "key": "231220174544857",
+                        "value": 249
+                    },
+                    {
+                        "key": "231114220753729",
+                        "value": 64
+                    },
+                    {
+                        "key": "231114220753693",
+                        "value": 92
+                    },
+                    {
+                        "key": "231220174548407",
+                        "value": 160
+                    },
+                    {
+                        "key": "231220174548426",
+                        "value": 153
+                    },
+                    {
+                        "key": "231114220753758",
+                        "value": 220
+                    },
+                    {
+                        "key": "231121003411291",
+                        "value": 103
+                    },
+                    {
+                        "key": "231114220753667",
+                        "value": 450
+                    },
+                    {
+                        "key": "231121003411299",
+                        "value": 120
+                    },
+                    {
+                        "key": "231114220753679",
+                        "value": 450
+                    },
+                    {
+                        "key": "231114220753685",
+                        "value": 450
+                    },
+                    {
+                        "key": "231114220753682",
+                        "value": 236
+                    },
+                    {
+                        "key": "231114220753720",
+                        "value": 117
+                    },
+                    {
+                        "key": "231114220753714",
+                        "value": 137
+                    },
+                    {
+                        "key": "231114220753726",
+                        "value": 372
+                    },
+                    {
+                        "key": "231121003411323",
+                        "value": 185
+                    },
+                    {
+                        "key": "231114220753732",
+                        "value": 128
+                    },
+                    {
+                        "key": "231114220753735",
+                        "value": 109
+                    },
+                    {
+                        "key": "231114220753738",
+                        "value": 111
+                    },
+                    {
+                        "key": "231114220753741",
+                        "value": 116
+                    },
+                    {
+                        "key": "231114220753744",
+                        "value": 157
+                    },
+                    {
+                        "key": "231114220753747",
+                        "value": 182
+                    }
+                ],
+                "compact": false,
+                "compactDirection": "horizontal",
+                "customFields": {
+                    "enable": true
+                },
+                "display": "custom",
+                "fixedIndex": 2,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": true,
+                "loadPartialData": false,
+                "measureFirst": false,
+                "pageSize": 100,
+                "pagination": true,
+                "render": "dom",
+                "rowPadding": null,
+                "rowSpaceMode": "tight",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": false,
+                "version": 33
+            },
+            "enableAdvisor": true,
+            "queryType": "raw_table",
+            "type": "raw_table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1856021,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1856021",
+                "index": 0,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856021",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753632
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856026,
+                "format": {
+                    "contentType": "goto"
+                },
+                "id": "1856026",
+                "index": 1,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856026",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753635
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2151316,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "2151316",
+                "index": 2,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "originId": "2151316",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 251123200917549
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2151317,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "2151317",
+                "index": 3,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "originId": "2151317",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 251123200917556
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856030,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1856030",
+                "index": 4,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856030",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753688
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856031,
+                "format": {},
+                "id": "1856031",
+                "index": 5,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856031",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753658
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856032,
+                "format": {},
+                "id": "1856032",
+                "index": 6,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856032",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753661
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856033,
+                "format": {},
+                "id": "1856033",
+                "index": 7,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856033",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753761
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869159,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "crypto_deposit_count_from_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869159",
+                "index": 8,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869159",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544425
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856055,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "crypto_deposit_amt_usdt_from_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1856055",
+                "index": 9,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856055",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753766
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869160,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "crypto_withdraw_count_to_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869160",
+                "index": 10,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869160",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544441
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856056,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "crypto_withdraw_amt_usdt_to_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1856056",
+                "index": 11,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856056",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753805
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869161,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "p2p_deposit_count_from_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869161",
+                "index": 12,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869161",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544685
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869163,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "p2p_deposit_amt_usdt_from_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869163",
+                "index": 13,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869163",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544717
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869162,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "p2p_withdraw_count_to_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869162",
+                "index": 14,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869162",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544701
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869164,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "p2p_withdraw_amt_usdt_to_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869164",
+                "index": 15,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869164",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544733
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2146830,
+                "format": {
+                    "dataTypeName": "float",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    }
+                },
+                "id": "2146830",
+                "index": 16,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "originId": "2146830",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 251114025714103
+            },
+            {
+                "aggrConf": {},
+                "compactName": [
+                    "Percentage",
+                    "total_bpay_trans_amt_usd%"
+                ],
+                "dimMetId": 2146830,
+                "enableUseDefaultStyle": false,
+                "error": "",
+                "format": {
+                    "displayName": "total_bpay_trans_amt_usd%",
+                    "numFormat": {
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "type": "percent"
+                    }
+                },
+                "id": "8d52865e06adb09188bd442087b9023f",
+                "index": 0,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "name": "total_bpay_trans_amt_usd%",
+                "originId": "2146830",
+                "roleType": 1,
+                "sourceType": "percent",
+                "type": "string",
+                "uniqueId": 260209103445497,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869165,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "bpay_deposit_count_from_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869165",
+                "index": 18,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869165",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544809
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869167,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "bpay_deposit_amt_usdt_from_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869167",
+                "index": 19,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869167",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544825
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869166,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "bpay_withdraw_count_to_link_user",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869166",
+                "index": 20,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869166",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544841
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869168,
+                "format": {
+                    "dataTypeName": "float",
+                    "displayName": "bpay_withdraw_amt_usdt_to_link_user",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1869168",
+                "index": 21,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869168",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231220174544857
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856044,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753729",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856044",
+                "index": 22,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856044",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753729
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856051,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753693",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856051",
+                "index": 23,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856051",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753693
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2166988,
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "2166988",
+                "index": 24,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "originId": "2166988",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 260106155315388
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2186649,
+                "format": {
+                    "contentType": "link",
+                    "displayName": "nationality/reg_country",
+                    "showFieldDescr": false
+                },
+                "id": "2186649",
+                "index": 25,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "originId": "2186649",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 260223125214018
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1869156,
+                "format": {
+                    "contentType": "link",
+                    "displayName": "residence/op_country",
+                    "showFieldDescr": false
+                },
+                "id": "1869156",
+                "index": 26,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1869156",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231220174548426
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856061,
+                "format": {
+                    "dataTypeName": "float",
+                    "numFormat": {
+                        "auto": false,
+                        "kSep": true,
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "prefix": "$",
+                        "suffix": "",
+                        "type": "digit",
+                        "unit": {
+                            "ratio": 1,
+                            "symbol": ""
+                        }
+                    }
+                },
+                "id": "1856061",
+                "index": 27,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856061",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753758
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856057,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231121003411291",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856057",
+                "index": 28,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856057",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231121003411291
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856038,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231121003411291",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856038",
+                "index": 29,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856038",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753667
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856058,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231121003411299",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856058",
+                "index": 30,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856058",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231121003411299
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856040,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231121003411299",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856040",
+                "index": 31,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856040",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753679
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856035,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753685",
+                                                    "ruleType": "strNotEqual",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856035",
+                "index": 32,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856035",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753685
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856034,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753682",
+                                                    "ruleType": "strNotEqual",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856034",
+                "index": 33,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856034",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753682
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856059,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753720",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "dataTypeName": "int"
+                },
+                "id": "1856059",
+                "index": 34,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856059",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753720
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856041,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753720",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856041",
+                "index": 35,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856041",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753714
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856042,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753726",
+                                                    "ruleType": "strNotEqual",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856042",
+                "index": 36,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856042",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753726
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856043,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231121003411323",
+                                                    "ruleType": "strNotEqual",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856043",
+                "index": 37,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856043",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231121003411323
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856045,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753732",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856045",
+                "index": 38,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856045",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753732
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856046,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753735",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856046",
+                "index": 39,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856046",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753735
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856047,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753738",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856047",
+                "index": 40,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856047",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753738
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856048,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753741",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856048",
+                "index": 41,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856048",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753741
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856049,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753744",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856049",
+                "index": 42,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856049",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753744
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856050,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753747",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link"
+                },
+                "id": "1856050",
+                "index": 43,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856050",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753747
+            }
+        ],
+        "measuresGroups": [],
+        "pagination": {
+            "frontOnlyOffset": 0,
+            "size": 50000
+        },
+        "parameters": [],
+        "percent": {
+            "calcConfList": [
+                {
+                    "calcType": "percent",
+                    "idList": [
+                        "2146830"
+                    ]
+                }
+            ],
+            "scope": "all"
+        },
+        "periodCompare": [],
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "tooltips": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1856020,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "dateMode": "relative",
+                        "isDefaultPartitionField": true,
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day",
+                        "hourSharp": true
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1856020",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1856020",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231114220753622,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856030,
+                "filter": {
+                    "op": "in",
+                    "option": {
+                        "customList": [],
+                        "desensitizationList": [],
+                        "displayType": "multiDropDownList",
+                        "filterPattern": "Accurate",
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        "sar bpay transfer direct link"
+                    ],
+                    "valOption": {}
+                },
+                "format": {
+                    "contentType": "link"
+                },
+                "id": "1856030",
+                "index": 1,
+                "isRequired": false,
+                "location": "whereList",
+                "name": "mode",
+                "originId": "1856030",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "uniqueId": 231121003411517
+            },
+            {
+                "uniqueId": 251016233936105,
+                "id": "1856026",
+                "location": "whereList",
+                "dimMetId": 1856026,
+                "originId": "1856026",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "goto",
+                    "displayName": "link_user_id"
+                },
+                "isMetric": false,
+                "name": "link_user_id",
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [],
+                    "valOption": {},
+                    "option": {
+                        "isReportFilter": true,
+                        "isWhereInAggr": true,
+                        "displayType": "multiDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "dataSetId": 19138,
+                "index": 2,
+                "showEditComponent": false
+            },
+            {
+                "uniqueId": 260311080733049,
+                "id": "1856021",
+                "location": "whereList",
+                "dimMetId": 1856021,
+                "originId": "1856021",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19138,
+                "subFilterIds": [],
+                "index": 3,
+                "showEditComponent": false
+            },
+            {
+                "uniqueId": 260311080733050,
+                "id": "1869576",
+                "location": "whereList",
+                "dimMetId": 1869576,
+                "originId": "1869576",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "False",
+                        "True"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "displayType": "multiTile",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "high_risk_associate_flag",
+                "dataSetId": 19138,
+                "subFilterIds": [],
+                "index": 4,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": []
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "right",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "0#LINE_NUMBER_DIM_ID_STR",
+                    "value": 48
+                },
+                {
+                    "key": "231114220753632",
+                    "value": 81
+                },
+                {
+                    "key": "231114220753635",
+                    "value": 96
+                },
+                {
+                    "key": "231114220753688",
+                    "value": 174
+                },
+                {
+                    "key": "231114220753658",
+                    "value": 450
+                },
+                {
+                    "key": "231114220753661",
+                    "value": 139
+                },
+                {
+                    "key": "231114220753761",
+                    "value": 307
+                },
+                {
+                    "key": "231220174544425",
+                    "value": 242
+                },
+                {
+                    "key": "231114220753766",
+                    "value": 262
+                },
+                {
+                    "key": "231220174544441",
+                    "value": 237
+                },
+                {
+                    "key": "231114220753805",
+                    "value": 257
+                },
+                {
+                    "key": "231220174544685",
+                    "value": 227
+                },
+                {
+                    "key": "231220174544717",
+                    "value": 247
+                },
+                {
+                    "key": "231220174544701",
+                    "value": 222
+                },
+                {
+                    "key": "231220174544733",
+                    "value": 242
+                },
+                {
+                    "key": "251114025714103",
+                    "value": 178
+                },
+                {
+                    "key": "231220174544809",
+                    "value": 233
+                },
+                {
+                    "key": "231220174544825",
+                    "value": 253
+                },
+                {
+                    "key": "231220174544841",
+                    "value": 228
+                },
+                {
+                    "key": "231220174544857",
+                    "value": 249
+                },
+                {
+                    "key": "231114220753729",
+                    "value": 64
+                },
+                {
+                    "key": "231114220753693",
+                    "value": 92
+                },
+                {
+                    "key": "231220174548407",
+                    "value": 160
+                },
+                {
+                    "key": "231220174548426",
+                    "value": 153
+                },
+                {
+                    "key": "231114220753758",
+                    "value": 220
+                },
+                {
+                    "key": "231121003411291",
+                    "value": 103
+                },
+                {
+                    "key": "231114220753667",
+                    "value": 450
+                },
+                {
+                    "key": "231121003411299",
+                    "value": 120
+                },
+                {
+                    "key": "231114220753679",
+                    "value": 450
+                },
+                {
+                    "key": "231114220753685",
+                    "value": 450
+                },
+                {
+                    "key": "231114220753682",
+                    "value": 236
+                },
+                {
+                    "key": "231114220753720",
+                    "value": 117
+                },
+                {
+                    "key": "231114220753714",
+                    "value": 137
+                },
+                {
+                    "key": "231114220753726",
+                    "value": 372
+                },
+                {
+                    "key": "231121003411323",
+                    "value": 185
+                },
+                {
+                    "key": "231114220753732",
+                    "value": 128
+                },
+                {
+                    "key": "231114220753735",
+                    "value": 109
+                },
+                {
+                    "key": "231114220753738",
+                    "value": 111
+                },
+                {
+                    "key": "231114220753741",
+                    "value": 116
+                },
+                {
+                    "key": "231114220753744",
+                    "value": 157
+                },
+                {
+                    "key": "231114220753747",
+                    "value": 182
+                }
+            ],
+            "compact": false,
+            "compactDirection": "horizontal",
+            "customFields": {
+                "enable": true
+            },
+            "display": "custom",
+            "fixedIndex": 2,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": true,
+            "loadPartialData": false,
+            "measureFirst": false,
+            "pageSize": 100,
+            "pagination": true,
+            "render": "dom",
+            "rowPadding": null,
+            "rowSpaceMode": "tight",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": false,
+            "version": 33
+        },
+        "enableAdvisor": true,
+        "queryType": "raw_table",
+        "type": "raw_table",
+        "fieldsFormat": {
+            "1856021": {
+                "contentType": "link"
+            },
+            "1856026": {
+                "contentType": "goto"
+            },
+            "1856030": {
+                "contentType": "link"
+            },
+            "1856031": {},
+            "1856032": {},
+            "1856033": {},
+            "1856034": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753682",
+                                                "ruleType": "strNotEqual",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856035": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753685",
+                                                "ruleType": "strNotEqual",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856038": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231121003411291",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856040": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231121003411299",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856041": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753720",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856042": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753726",
+                                                "ruleType": "strNotEqual",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856043": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231121003411323",
+                                                "ruleType": "strNotEqual",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856044": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753729",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856045": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753732",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856046": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753735",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856047": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753738",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856048": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753741",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856049": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753744",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856050": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753747",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856051": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753693",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link"
+            },
+            "1856055": {
+                "dataTypeName": "float",
+                "displayName": "crypto_deposit_amt_usdt_from_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "1856056": {
+                "dataTypeName": "float",
+                "displayName": "crypto_withdraw_amt_usdt_to_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "1856057": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231121003411291",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856058": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231121003411299",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856059": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753720",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "dataTypeName": "int"
+            },
+            "1856061": {
+                "dataTypeName": "float",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                }
+            },
+            "1869156": {
+                "contentType": "link",
+                "displayName": "residence/op_country",
+                "showFieldDescr": false
+            },
+            "1869159": {
+                "dataTypeName": "int",
+                "displayName": "crypto_deposit_count_from_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869160": {
+                "dataTypeName": "int",
+                "displayName": "crypto_withdraw_count_to_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869161": {
+                "dataTypeName": "int",
+                "displayName": "p2p_deposit_count_from_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869162": {
+                "dataTypeName": "int",
+                "displayName": "p2p_withdraw_count_to_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869163": {
+                "dataTypeName": "float",
+                "displayName": "p2p_deposit_amt_usdt_from_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "1869164": {
+                "dataTypeName": "float",
+                "displayName": "p2p_withdraw_amt_usdt_to_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "1869165": {
+                "dataTypeName": "int",
+                "displayName": "bpay_deposit_count_from_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869166": {
+                "dataTypeName": "int",
+                "displayName": "bpay_withdraw_count_to_link_user",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1869167": {
+                "dataTypeName": "float",
+                "displayName": "bpay_deposit_amt_usdt_from_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "1869168": {
+                "dataTypeName": "float",
+                "displayName": "bpay_withdraw_amt_usdt_to_link_user",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                },
+                "showFieldDescr": false
+            },
+            "2146830": {
+                "dataTypeName": "float",
+                "numFormat": {
+                    "auto": false,
+                    "kSep": true,
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "prefix": "$",
+                    "suffix": "",
+                    "type": "digit",
+                    "unit": {
+                        "ratio": 1,
+                        "symbol": ""
+                    }
+                }
+            },
+            "2151316": {
+                "contentType": "link"
+            },
+            "2151317": {
+                "contentType": "link"
+            },
+            "2166988": {
+                "contentType": "link"
+            },
+            "2186649": {
+                "contentType": "link",
+                "displayName": "nationality/reg_country",
+                "showFieldDescr": false
+            },
+            "8d52865e06adb09188bd442087b9023f": {
+                "displayName": "total_bpay_trans_amt_usd%",
+                "numFormat": {
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "type": "percent"
+                }
+            }
+        }
+    },
+    "dashboardId": 49098
+}

@@ -117,6 +117,15 @@ export async function uploadC360(token, caseId, files, subjectIndex) {
   return handleResponse(res);
 }
 
+export async function fetchC360(token, caseId, uid, cookie, subjectIndex) {
+  const res = await fetch(`${BASE_URL}/cases/${caseId}/c360/fetch${sq(subjectIndex)}`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ uid, cookie }),
+  });
+  return handleResponse(res);
+}
+
 export async function getC360Output(token, caseId, subjectIndex) {
   const res = await fetch(`${BASE_URL}/cases/${caseId}/c360${sq(subjectIndex)}`, {
     headers: authHeaders(token),

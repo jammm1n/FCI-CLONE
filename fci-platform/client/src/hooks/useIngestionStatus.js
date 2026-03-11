@@ -41,7 +41,7 @@ export default function useIngestionStatus(token, caseId, onUpdate, intervalMs =
         // Auto-stop when nothing is processing
         const sections = status.sections || {};
         const anyProcessing = Object.values(sections).some(
-          (s) => s.status === 'processing'
+          (s) => s.status === 'processing' || s.status === 'downloading'
         );
         if (!anyProcessing) {
           setPolling(false);

@@ -1,0 +1,2208 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "user_info_2-2026-03-11 09-16-42.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 513824,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19272,
+        "dataSetIdList": [
+            19272
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1859640",
+            "1859641",
+            "1859642",
+            "1859643",
+            "1859644",
+            "1859630",
+            "1859631",
+            "1859632",
+            "1859633",
+            "1859634",
+            "1859635",
+            "1859636",
+            "1859647",
+            "1867357",
+            "2139556"
+        ],
+        "selectIdList": [],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1859640",
+                "1859641",
+                "1859642",
+                "1859643",
+                "1859644",
+                "1859630",
+                "1859631",
+                "1859632",
+                "1859633",
+                "1859634",
+                "1859635",
+                "1859636",
+                "1859647",
+                "1867357",
+                "2139556"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1859604",
+                "preRelation": "and",
+                "uniqueId": 231122172130624,
+                "op": "lastSync",
+                "option": {
+                    "isDefaultPartitionField": true,
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1859605",
+                "preRelation": "and",
+                "uniqueId": 260311080733021,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1859640,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131748",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131748",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "FTM Open Case Count ",
+                    "showFieldDescr": false
+                },
+                "id": "1859640",
+                "index": 0,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859640",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131748
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859641,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131756",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131756",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "FTM Total Alerts Count",
+                    "showFieldDescr": false
+                },
+                "id": "1859641",
+                "index": 1,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859641",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131756
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859642,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131764",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131764",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "CTM Total Alerts Count",
+                    "showFieldDescr": false
+                },
+                "id": "1859642",
+                "index": 2,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859642",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131764
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859643,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131815",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131815",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "SAR Total Case Count",
+                    "showFieldDescr": false
+                },
+                "id": "1859643",
+                "index": 3,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859643",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131815
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859644,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131823",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131823",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "SAR Open Case Count",
+                    "showFieldDescr": false
+                },
+                "id": "1859644",
+                "index": 4,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859644",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131823
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859630,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131843",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131843",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Account Block Status",
+                    "fieldDescr": "red flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859630",
+                "index": 5,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859630",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131843
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859631,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131851",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131851",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Login Block Status",
+                    "fieldDescr": "red flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859631",
+                "index": 6,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859631",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131851
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859632,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131859",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131859",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Trade Block Status",
+                    "fieldDescr": "orange flag when is true",
+                    "showFieldDescr": true
+                },
+                "id": "1859632",
+                "index": 7,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859632",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131859
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859633,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131867",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131867",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Asset Freeze",
+                    "fieldDescr": "red flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859633",
+                "index": 8,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859633",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131867
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859634,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131875",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131875",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Withdraw Forbidden",
+                    "fieldDescr": "orange flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859634",
+                "index": 9,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859634",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131875
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859635,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131883",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131883",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Fiat Withdraw Forbidden",
+                    "fieldDescr": "orange flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859635",
+                "index": 10,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859635",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131883
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859636,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131891",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131891",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Offboard Status",
+                    "fieldDescr": "red flag when its true",
+                    "showFieldDescr": true
+                },
+                "id": "1859636",
+                "index": 11,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859636",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131891
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859647,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131907",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131907",
+                                                    "ruleType": ">",
+                                                    "value": 4
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131907",
+                                                    "ruleType": ">",
+                                                    "value": 0
+                                                },
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172131907",
+                                                    "ruleType": "<=",
+                                                    "value": 4
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "Kodex Case Count",
+                    "fieldDescr": "red flag when over 4, orange flag when 1 to 4 ",
+                    "showFieldDescr": true
+                },
+                "id": "1859647",
+                "index": 12,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1859647",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231122172131907
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1867357,
+                "format": {
+                    "contentType": "link",
+                    "displayName": "Last Active Time",
+                    "fieldDescr": "be aware the 360 data is t+1",
+                    "showFieldDescr": true
+                },
+                "id": "1867357",
+                "index": 13,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1867357",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231215233532209
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 2139556,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "251030171017017",
+                                                    "ruleType": "strEqual",
+                                                    "value": "false"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ff5050",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "251030171017017",
+                                                    "ruleType": "strEqual",
+                                                    "value": "true"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Deleted Status",
+                    "showFieldDescr": false
+                },
+                "id": "2139556",
+                "index": 14,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "dimensions",
+                "originId": "2139556",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 251030171017017
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "left",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "default",
+                        "value": "auto"
+                    },
+                    {
+                        "key": "changeSource",
+                        "value": "setting"
+                    },
+                    {
+                        "key": "transpose",
+                        "value": 200
+                    }
+                ],
+                "compact": false,
+                "compactDirection": "vertical",
+                "customFields": {
+                    "enable": true
+                },
+                "display": "custom",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": false,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "render": "dom",
+                "rowPadding": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": true,
+                "version": 33
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [],
+        "parameters": [],
+        "periodCompare": [],
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1859604,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isDefaultPartitionField": true,
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1859604",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1859604",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231122172130624,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 260311080733021,
+                "id": "1859605",
+                "location": "whereList",
+                "dimMetId": 1859605,
+                "originId": "1859605",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19272,
+                "subFilterIds": [],
+                "index": 1,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": []
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "left",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "default",
+                    "value": "auto"
+                },
+                {
+                    "key": "changeSource",
+                    "value": "setting"
+                },
+                {
+                    "key": "transpose",
+                    "value": 200
+                }
+            ],
+            "compact": false,
+            "compactDirection": "vertical",
+            "customFields": {
+                "enable": true
+            },
+            "display": "custom",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": false,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "render": "dom",
+            "rowPadding": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": true,
+            "version": 33
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1859630": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131843",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131843",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Account Block Status",
+                "fieldDescr": "red flag when its true",
+                "showFieldDescr": true
+            },
+            "1859631": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131851",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131851",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Login Block Status",
+                "fieldDescr": "red flag when its true",
+                "showFieldDescr": true
+            },
+            "1859632": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131859",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131859",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Trade Block Status",
+                "fieldDescr": "orange flag when is true",
+                "showFieldDescr": true
+            },
+            "1859633": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131867",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131867",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Asset Freeze",
+                "fieldDescr": "red flag when its true",
+                "showFieldDescr": true
+            },
+            "1859634": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131875",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131875",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Withdraw Forbidden",
+                "fieldDescr": "orange flag when its true",
+                "showFieldDescr": true
+            },
+            "1859635": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131883",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131883",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Fiat Withdraw Forbidden",
+                "fieldDescr": "orange flag when its true",
+                "showFieldDescr": true
+            },
+            "1859636": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131891",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131891",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Offboard Status",
+                "fieldDescr": "red flag when its true",
+                "showFieldDescr": true
+            },
+            "1859640": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131748",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131748",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "FTM Open Case Count ",
+                "showFieldDescr": false
+            },
+            "1859641": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131756",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131756",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "FTM Total Alerts Count",
+                "showFieldDescr": false
+            },
+            "1859642": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131764",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131764",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "CTM Total Alerts Count",
+                "showFieldDescr": false
+            },
+            "1859643": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131815",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131815",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "SAR Total Case Count",
+                "showFieldDescr": false
+            },
+            "1859644": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131823",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131823",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "SAR Open Case Count",
+                "showFieldDescr": false
+            },
+            "1859647": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131907",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131907",
+                                                "ruleType": ">",
+                                                "value": 4
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131907",
+                                                "ruleType": ">",
+                                                "value": 0
+                                            },
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172131907",
+                                                "ruleType": "<=",
+                                                "value": 4
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "Kodex Case Count",
+                "fieldDescr": "red flag when over 4, orange flag when 1 to 4 ",
+                "showFieldDescr": true
+            },
+            "1867357": {
+                "contentType": "link",
+                "displayName": "Last Active Time",
+                "fieldDescr": "be aware the 360 data is t+1",
+                "showFieldDescr": true
+            },
+            "2139556": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "251030171017017",
+                                                "ruleType": "strEqual",
+                                                "value": "false"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ff5050",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "251030171017017",
+                                                "ruleType": "strEqual",
+                                                "value": "true"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Deleted Status",
+                "showFieldDescr": false
+            }
+        }
+    },
+    "dashboardId": 49098
+}

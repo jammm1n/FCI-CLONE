@@ -10,6 +10,7 @@ Endpoint overview:
   GET    /cases/{case_id}                    Full case document
   GET    /cases/{case_id}/status             Lightweight polling endpoint
   POST   /cases/{case_id}/c360              Upload + process C360 files
+  POST   /cases/{case_id}/c360/fetch       Fetch C360 sheets from DataWind API
   GET    /cases/{case_id}/c360              Get C360 section output
   GET    /cases/{case_id}/c360/csv          Download Elliptic batch CSV
   POST   /cases/{case_id}/elliptic/addresses  Add manual wallet addresses
@@ -46,12 +47,17 @@ from server.services.icr.address_manager import build_address_list
 from server.services.icr.uid_search import search_associated_uids
 from server.models.ingestion_schemas import (
     CreateIngestionCaseRequest,
+    C360FetchRequest,
     ManualAddressesRequest,
     EllipticSubmitRequest,
     NotesRequest,
     TextSectionRequest,
     SetSubjectUidRequest,
     NONEABLE_SECTION_KEYS,
+)
+from server.services.ingestion.c360_downloader import (
+    download_c360_sheets,
+    C360DownloadError,
 )
 
 logger = logging.getLogger(__name__)
@@ -156,9 +162,11 @@ async def upload_c360(
     """
     case = await _get_case_or_404(case_id)
 
-    # Guard: don't reprocess if already complete or processing
+    # Guard: don't reprocess if already complete, processing, or downloading
     c360 = _get_section(case, 'c360', subject_index)
     c360_status = c360.get('status', 'empty')
+    if c360_status == 'downloading':
+        raise HTTPException(status_code=409, detail='C360 sheets are currently being downloaded.')
     if c360_status == 'processing':
         raise HTTPException(status_code=409, detail='C360 section is currently processing.')
     if c360_status == 'complete':
@@ -451,6 +459,119 @@ async def _process_c360_background(
 
     except Exception as e:
         logger.exception('C360 processing failed for case %s', case_id)
+        await ingestion_service.update_section(
+            case_id, 'c360', 'error',
+            error=str(e),
+            subject_index=subject_index,
+        )
+
+
+# ── C360 Auto-Fetch ──────────────────────────────────────────────
+
+
+@router.post('/cases/{case_id}/c360/fetch', status_code=202)
+async def fetch_c360(
+    case_id: str,
+    body: C360FetchRequest,
+    background_tasks: BackgroundTasks,
+    subject_index: Optional[int] = Query(None),
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Fetch C360 spreadsheets from the DataWind API and process them.
+
+    Accepts a user ID and browser session cookie. Downloads all 26
+    C360 sheets in the background, then feeds them into the same
+    processing pipeline as manual file upload.
+    """
+    case = await _get_case_or_404(case_id)
+
+    # Same guards as upload_c360
+    c360 = _get_section(case, 'c360', subject_index)
+    c360_status = c360.get('status', 'empty')
+    if c360_status == 'downloading':
+        raise HTTPException(status_code=409, detail='C360 sheets are currently being downloaded.')
+    if c360_status == 'processing':
+        raise HTTPException(status_code=409, detail='C360 section is currently processing.')
+    if c360_status == 'complete':
+        raise HTTPException(
+            status_code=409,
+            detail='C360 section is already complete. Reprocessing not supported in Phase 1.',
+        )
+
+    uid = body.uid.strip()
+    cookie = body.cookie.strip()
+    if not uid:
+        raise HTTPException(status_code=400, detail='User ID is required.')
+    if not cookie:
+        raise HTTPException(status_code=400, detail='Session cookie is required.')
+
+    # Set initial downloading status
+    await ingestion_service.update_section(
+        case_id, 'c360', 'downloading',
+        extra_fields={
+            'download_progress': {
+                'current': 0,
+                'total': 26,
+                'current_sheet': '',
+                'succeeded': 0,
+                'failed': 0,
+                'failed_sheets': [],
+            },
+        },
+        subject_index=subject_index,
+    )
+
+    # Write the UID to the case document
+    from server.database import get_database
+    update_uid = {'subject_uid': uid}
+    if subject_index is not None:
+        update_uid[f'subjects.{subject_index}.user_id'] = uid
+    await get_database()['ingestion_cases'].update_one(
+        {'_id': case_id},
+        {'$set': update_uid},
+    )
+
+    background_tasks.add_task(
+        _fetch_and_process_c360_background,
+        case_id, uid, cookie, subject_index,
+    )
+
+    return {
+        'accepted': True,
+        'section_status': 'downloading',
+    }
+
+
+async def _fetch_and_process_c360_background(
+    case_id: str, uid: str, cookie: str,
+    subject_index: int | None = None,
+):
+    """Background task: download C360 sheets, then run existing processing pipeline."""
+    try:
+        # Phase 1: Download all sheets
+        files_bytes = await download_c360_sheets(
+            case_id, uid, cookie, subject_index,
+        )
+
+        # Phase 2: Transition to processing and run existing pipeline
+        logger.info(
+            'C360 fetch [%s]: download complete (%d files), starting processing',
+            case_id, len(files_bytes),
+        )
+
+        params = {'subject_uid': uid}
+        await _process_c360_background(case_id, files_bytes, params, subject_index)
+
+    except C360DownloadError as e:
+        logger.warning('C360 fetch [%s]: download failed — %s', case_id, e)
+        await ingestion_service.update_section(
+            case_id, 'c360', 'error',
+            error=str(e),
+            subject_index=subject_index,
+        )
+    except Exception as e:
+        logger.exception('C360 fetch+process failed for case %s', case_id)
         await ingestion_service.update_section(
             case_id, 'c360', 'error',
             error=str(e),

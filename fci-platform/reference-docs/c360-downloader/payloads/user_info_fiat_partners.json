@@ -1,0 +1,1210 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "user_info_fiat_partners-2026-03-11 09-18-13.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 513827,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19272,
+        "dataSetIdList": [
+            19272
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1859625",
+            "1873637",
+            "1861593",
+            "1859626",
+            "1859638",
+            "1859650",
+            "1859651",
+            "1859652"
+        ],
+        "selectIdList": [],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1859625",
+                "1873637",
+                "1861593",
+                "1859626",
+                "1859638",
+                "1859650",
+                "1859651",
+                "1859652"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1859604",
+                "preRelation": "and",
+                "uniqueId": 231122172130624,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1859605",
+                "preRelation": "and",
+                "uniqueId": 260311080733022,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1859625,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "or",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419476",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                },
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132193",
+                                                    "ruleType": "strEqual",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419476",
+                                                    "ruleType": ">",
+                                                    "value": 1
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "Fiat Partner",
+                    "fieldDescr": "orange flag when there is fiat partner",
+                    "showFieldDescr": true
+                },
+                "id": "1859625",
+                "index": 0,
+                "location": "dimensions",
+                "originId": "1859625",
+                "roleType": 0,
+                "uniqueId": 231122172132193
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1873637,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#eeb641",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "240107222533102",
+                                                    "ruleType": "strNotEqual",
+                                                    "value": "NULL"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "240107222533102",
+                                                    "ruleType": "strEqual",
+                                                    "value": "NULL"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "contentType": "link",
+                    "displayName": "Fiat Fail vs. Success",
+                    "fieldDescr": "Fiat fail count vs success count, e.g. (5:10 represent user have 5 failed fiat attempts and 10 success transaction",
+                    "showFieldDescr": true
+                },
+                "id": "1873637",
+                "index": 1,
+                "location": "dimensions",
+                "originId": "1873637",
+                "roleType": 0,
+                "uniqueId": 240107222533102
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1861593,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135425174",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "Unique Card Bind Count",
+                    "fieldDescr": "number of debit/credit cards ever linked to the user account, no colour flag yet (one off, disposable debit card such as revolute virtual card is not included)",
+                    "showFieldDescr": true
+                },
+                "id": "1861593",
+                "index": 2,
+                "location": "dimensions",
+                "originId": "1861593",
+                "roleType": 0,
+                "uniqueId": 231129135425174
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859626,
+                "format": {},
+                "id": "1859626",
+                "index": 3,
+                "location": "dimensions",
+                "notDisplay": true,
+                "originId": "1859626",
+                "roleType": 0,
+                "uniqueId": 231129135419476
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859638,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132655",
+                                                    "ruleType": "include",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231122172132655",
+                                                    "ruleType": "exclude",
+                                                    "value": "[]"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "Doc Integrity Rejects",
+                    "fieldDescr": "user historically been rejected due to fake or manipulated doc",
+                    "showFieldDescr": true
+                },
+                "id": "1859638",
+                "index": 4,
+                "location": "dimensions",
+                "originId": "1859638",
+                "roleType": 0,
+                "uniqueId": 231122172132655
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859650,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419457",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419457",
+                                                    "ruleType": ">=",
+                                                    "value": 10
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "IP location Used",
+                    "fieldDescr": "orange flag from 10",
+                    "showFieldDescr": true
+                },
+                "id": "1859650",
+                "index": 5,
+                "location": "dimensions",
+                "originId": "1859650",
+                "roleType": 0,
+                "uniqueId": 231129135419457
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859651,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419499",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419499",
+                                                    "ruleType": ">",
+                                                    "value": 9
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "No. of Device Used ",
+                    "fieldDescr": "flag red when over 4 ",
+                    "showFieldDescr": true
+                },
+                "id": "1859651",
+                "index": 6,
+                "location": "dimensions",
+                "originId": "1859651",
+                "roleType": 0,
+                "uniqueId": 231129135419499
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859652,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#cfcfcf",
+                                "color": "#cfcfcf",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419510",
+                                                    "ruleType": "=",
+                                                    "value": 0
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            },
+                            {
+                                "bgColor": "#Ffb266",
+                                "color": "#383838",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231129135419510",
+                                                    "ruleType": ">",
+                                                    "value": 2
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    },
+                    "displayName": "System Language used",
+                    "fieldDescr": "orange flag from 3 ",
+                    "showFieldDescr": true
+                },
+                "id": "1859652",
+                "index": 7,
+                "location": "dimensions",
+                "originId": "1859652",
+                "roleType": 0,
+                "uniqueId": 231129135419510
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "left",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": true,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "231122172132193",
+                        "value": 317
+                    },
+                    {
+                        "key": "transpose",
+                        "value": 200
+                    }
+                ],
+                "compact": false,
+                "display": "custom",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": false,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "rowPadding": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": true,
+                "version": 33,
+                "render": "dom",
+                "compactDirection": "vertical"
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [],
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1859604,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1859604",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1859604",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231122172130624,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 260311080733022,
+                "id": "1859605",
+                "location": "whereList",
+                "dimMetId": 1859605,
+                "originId": "1859605",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19272,
+                "subFilterIds": [],
+                "index": 1,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "left",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": true,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "231122172132193",
+                    "value": 317
+                },
+                {
+                    "key": "transpose",
+                    "value": 200
+                }
+            ],
+            "compact": false,
+            "display": "custom",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": false,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "rowPadding": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": true,
+            "version": 33,
+            "render": "dom",
+            "compactDirection": "vertical"
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1859625": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "or",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419476",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            },
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132193",
+                                                "ruleType": "strEqual",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419476",
+                                                "ruleType": ">",
+                                                "value": 1
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "Fiat Partner",
+                "fieldDescr": "orange flag when there is fiat partner",
+                "showFieldDescr": true
+            },
+            "1859626": {},
+            "1859638": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132655",
+                                                "ruleType": "include",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231122172132655",
+                                                "ruleType": "exclude",
+                                                "value": "[]"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "Doc Integrity Rejects",
+                "fieldDescr": "user historically been rejected due to fake or manipulated doc",
+                "showFieldDescr": true
+            },
+            "1859650": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419457",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419457",
+                                                "ruleType": ">=",
+                                                "value": 10
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "IP location Used",
+                "fieldDescr": "orange flag from 10",
+                "showFieldDescr": true
+            },
+            "1859651": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419499",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419499",
+                                                "ruleType": ">",
+                                                "value": 9
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "No. of Device Used ",
+                "fieldDescr": "flag red when over 4 ",
+                "showFieldDescr": true
+            },
+            "1859652": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419510",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#Ffb266",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135419510",
+                                                "ruleType": ">",
+                                                "value": 2
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "System Language used",
+                "fieldDescr": "orange flag from 3 ",
+                "showFieldDescr": true
+            },
+            "1861593": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231129135425174",
+                                                "ruleType": "=",
+                                                "value": 0
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "displayName": "Unique Card Bind Count",
+                "fieldDescr": "number of debit/credit cards ever linked to the user account, no colour flag yet (one off, disposable debit card such as revolute virtual card is not included)",
+                "showFieldDescr": true
+            },
+            "1873637": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#eeb641",
+                            "color": "#383838",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "240107222533102",
+                                                "ruleType": "strNotEqual",
+                                                "value": "NULL"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        },
+                        {
+                            "bgColor": "#cfcfcf",
+                            "color": "#cfcfcf",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "240107222533102",
+                                                "ruleType": "strEqual",
+                                                "value": "NULL"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                },
+                "contentType": "link",
+                "displayName": "Fiat Fail vs. Success",
+                "fieldDescr": "Fiat fail count vs success count, e.g. (5:10 represent user have 5 failed fiat attempts and 10 success transaction",
+                "showFieldDescr": true
+            }
+        }
+    },
+    "dashboardId": 49098
+}

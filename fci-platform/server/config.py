@@ -67,7 +67,7 @@ STEP_CONFIG = {
     3: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
     4: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
     5: {"model": settings.ANTHROPIC_MODEL, "docs": ["qc-full-checklist"]},  # TODO: revert to ONESHOT_MODEL for production
-    "summary": {"model": settings.ANTHROPIC_MODEL},  # TODO: revert to ONESHOT_MODEL for production
+    "summary": {"model": settings.ONESHOT_MODEL},
 }
 
 STEP_PHASES = {1: "setup", 2: "analysis", 3: "decision", 4: "post", 5: "qc_check"}

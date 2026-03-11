@@ -360,6 +360,8 @@ async def get_case_status(case_id: str) -> dict | None:
         if key == 'c360':
             entry['ai_status'] = section.get('ai_status', 'pending')
             entry['ai_progress'] = section.get('ai_progress', {})
+            if section.get('download_progress'):
+                entry['download_progress'] = section['download_progress']
         # Include AI status for text sections with AI processing
         if section.get('ai_status'):
             entry['ai_status'] = section['ai_status']

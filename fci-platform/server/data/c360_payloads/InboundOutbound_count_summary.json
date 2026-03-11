@@ -1,0 +1,810 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "InboundOutbound_count_summary-2026-03-11 09-22-59.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 513861,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19231,
+        "dataSetIdList": [
+            19231
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [],
+        "selectIdList": [
+            "1859791",
+            "1859792",
+            "1859765",
+            "1859766",
+            "1859759",
+            "1859761",
+            "1859793",
+            "1859794",
+            "1889879",
+            "1889880",
+            "1859796",
+            "1859795"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1858380",
+                "preRelation": "and",
+                "uniqueId": 231121003410531,
+                "op": "lastSync",
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "isDefaultPartitionField": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "major_user_id",
+                "id": "1858382",
+                "preRelation": "and",
+                "uniqueId": 260311080733024,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {},
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "details": [],
+        "dimensions": [],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "left",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "transpose",
+                        "value": 215
+                    }
+                ],
+                "compact": false,
+                "display": "custom",
+                "fixedIndex": -1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": false,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "rowPadding": null,
+                "rowSpaceMode": "tight",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "zero"
+                },
+                "tableStyle": "standard",
+                "transpose": true,
+                "version": 33,
+                "render": "dom",
+                "compactDirection": "vertical"
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1859791,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Crypto Deposit Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859791",
+                "index": 0,
+                "location": "measures",
+                "originId": "1859791",
+                "roleType": 1,
+                "uniqueId": 231122172135224
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859792,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Crypto Withdraw Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859792",
+                "index": 1,
+                "location": "measures",
+                "originId": "1859792",
+                "roleType": 1,
+                "uniqueId": 231122172135241
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859765,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Fiat Deposit Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859765",
+                "index": 2,
+                "location": "measures",
+                "originId": "1859765",
+                "roleType": 1,
+                "uniqueId": 231122172135258
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859766,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Fiat Withdraw Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859766",
+                "index": 3,
+                "location": "measures",
+                "originId": "1859766",
+                "roleType": 1,
+                "uniqueId": 231122172135283
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859759,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total P2P Inbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859759",
+                "index": 4,
+                "location": "measures",
+                "originId": "1859759",
+                "roleType": 1,
+                "uniqueId": 231122172135292
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859761,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total P2P Outbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859761",
+                "index": 5,
+                "location": "measures",
+                "originId": "1859761",
+                "roleType": 1,
+                "uniqueId": 231122172135309
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859793,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Bpay Inbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859793",
+                "index": 6,
+                "location": "measures",
+                "originId": "1859793",
+                "roleType": 1,
+                "uniqueId": 231122172135362
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859794,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Bpay Outbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859794",
+                "index": 7,
+                "location": "measures",
+                "originId": "1859794",
+                "roleType": 1,
+                "uniqueId": 231122172135371
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1889879,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Bcard Inbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1889879",
+                "index": 8,
+                "location": "measures",
+                "originId": "1889879",
+                "roleType": 1,
+                "uniqueId": 240221145609564
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1889880,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "Total Bcard Outbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1889880",
+                "index": 9,
+                "location": "measures",
+                "originId": "1889880",
+                "roleType": 1,
+                "uniqueId": 240221145609617
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859796,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "----Total Inbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859796",
+                "index": 10,
+                "location": "measures",
+                "originId": "1859796",
+                "roleType": 1,
+                "uniqueId": 231122172135424
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1859795,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "----Total Outbound Count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "1859795",
+                "index": 11,
+                "location": "measures",
+                "originId": "1859795",
+                "roleType": 1,
+                "uniqueId": 231122172135433
+            }
+        ],
+        "measuresGroups": [],
+        "pagination": {
+            "size": 50,
+            "frontOnlyOffset": 0
+        },
+        "parameters": [],
+        "periodCompare": [],
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "subMeasures": [],
+        "tableCalculations": [],
+        "tooltips": [],
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1858380,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "isDefaultPartitionField": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1858380",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1858380",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231121003410531,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 260311080733024,
+                "id": "1858382",
+                "location": "whereList",
+                "dimMetId": 1858382,
+                "originId": "1858382",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "major_user_id",
+                "dataSetId": 19231,
+                "subFilterIds": [],
+                "index": 1,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": [],
+        "tableCalculation": {
+            "rules": [],
+            "hideAllEmptyRowsOrCols": false
+        },
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        }
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "left",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "transpose",
+                    "value": 215
+                }
+            ],
+            "compact": false,
+            "display": "custom",
+            "fixedIndex": -1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": false,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "rowPadding": null,
+            "rowSpaceMode": "tight",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "zero"
+            },
+            "tableStyle": "standard",
+            "transpose": true,
+            "version": 33,
+            "render": "dom",
+            "compactDirection": "vertical"
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1859759": {
+                "dataTypeName": "int",
+                "displayName": "Total P2P Inbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859761": {
+                "dataTypeName": "int",
+                "displayName": "Total P2P Outbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859765": {
+                "dataTypeName": "int",
+                "displayName": "Total Fiat Deposit Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859766": {
+                "dataTypeName": "int",
+                "displayName": "Total Fiat Withdraw Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859791": {
+                "dataTypeName": "int",
+                "displayName": "Total Crypto Deposit Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859792": {
+                "dataTypeName": "int",
+                "displayName": "Total Crypto Withdraw Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859793": {
+                "dataTypeName": "int",
+                "displayName": "Total Bpay Inbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859794": {
+                "dataTypeName": "int",
+                "displayName": "Total Bpay Outbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859795": {
+                "dataTypeName": "int",
+                "displayName": "----Total Outbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1859796": {
+                "dataTypeName": "int",
+                "displayName": "----Total Inbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1889879": {
+                "dataTypeName": "int",
+                "displayName": "Total Bcard Inbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "1889880": {
+                "dataTypeName": "int",
+                "displayName": "Total Bcard Outbound Count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            }
+        }
+    },
+    "dashboardId": 49098
+}

@@ -1,0 +1,978 @@
+{
+    "downloadConfig": {
+        "limit": 1000,
+        "type": "all",
+        "fileFormat": "xlsx",
+        "encoding": "UTF-8",
+        "disableScientificNotation": true,
+        "reportName": "Lifetime SAR Alerted User Device Analysis-2026-03-11 09-33-03.xlsx",
+        "downloadOrderList": [],
+        "downloadType": "default",
+        "enableHiddenFields": true
+    },
+    "version": 4,
+    "metaData": {
+        "appId": 1
+    },
+    "reportId": 511266,
+    "dataSourceId": 73,
+    "query": {
+        "dataSetId": 19152,
+        "dataSetIdList": [
+            19152
+        ],
+        "transform": {
+            "type": "table"
+        },
+        "groupByIdList": [
+            "1856368",
+            "1856369",
+            "1856370",
+            "1856371",
+            "1856372"
+        ],
+        "selectIdList": [
+            "sum_1856373",
+            "46aa0f7b1c3104ee003f232de6a0bc10",
+            "sum_1856374",
+            "sum_1951989",
+            "sum_1951990"
+        ],
+        "fillDateTimeList": [],
+        "locations": {
+            "dimensions": [
+                "1856368",
+                "1856369",
+                "1856370",
+                "1856371",
+                "1856372"
+            ],
+            "rows": [],
+            "columns": [],
+            "tooltips": []
+        },
+        "dimMetList": [
+            {
+                "id": "sum_1856373",
+                "originId": "1856373",
+                "dimMetId": 1856373,
+                "uniqueId": 231114220753010,
+                "name": "operation_count",
+                "expr": "`login_count`",
+                "fullExpr": "`login_count`",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19152
+            },
+            {
+                "id": "46aa0f7b1c3104ee003f232de6a0bc10",
+                "originId": "sum_1856373",
+                "dimMetId": 1856373,
+                "uniqueId": 231114220753053,
+                "name": "operation_count%",
+                "expr": "`login_count`",
+                "fullExpr": "`login_count`",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "float",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {},
+                "sourceType": "percent",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19152
+            },
+            {
+                "id": "sum_1856374",
+                "originId": "1856374",
+                "dimMetId": 1856374,
+                "uniqueId": 231114220753016,
+                "name": "vpn_used_count",
+                "expr": "`vpn_used_count`",
+                "fullExpr": "`vpn_used_count`",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19152
+            },
+            {
+                "id": "sum_1951989",
+                "originId": "1951989",
+                "dimMetId": 1951989,
+                "uniqueId": 240806114236025,
+                "name": "successful_login_count",
+                "expr": "`successful_login_count`",
+                "fullExpr": "`successful_login_count`",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19152
+            },
+            {
+                "id": "sum_1951990",
+                "originId": "1951990",
+                "dimMetId": 1951990,
+                "uniqueId": 240806114236029,
+                "name": "failed_login_count",
+                "expr": "`failed_login_count`",
+                "fullExpr": "`failed_login_count`",
+                "roleType": 1,
+                "scope": 0,
+                "dataType": "int",
+                "isRaw": false,
+                "mapKey": null,
+                "aggregation": {
+                    "exprAggr": "sum("
+                },
+                "sourceType": "aggr",
+                "persisted": false,
+                "ownerEmailPrefix": "jason.xiao@binance.com",
+                "dataSetId": 19152
+            }
+        ],
+        "whereList": [
+            {
+                "name": "p_date",
+                "id": "1856366",
+                "preRelation": "and",
+                "uniqueId": 231114220753005,
+                "op": "lastSync",
+                "option": {
+                    "isDefaultPartitionField": true,
+                    "isReportFilter": false,
+                    "isWhereInAggr": true
+                },
+                "val": [
+                    1
+                ],
+                "valOption": {
+                    "anchorOffset": 0,
+                    "datetimeUnit": "day"
+                }
+            },
+            {
+                "name": "user_id",
+                "id": "1856367",
+                "preRelation": "and",
+                "uniqueId": 260311080733061,
+                "op": "in",
+                "val": [
+                    "466492707"
+                ],
+                "valOption": {
+                    "labelValueMap": {}
+                },
+                "option": {
+                    "isReportFilter": false,
+                    "isWhereInAggr": true,
+                    "desensitizationList": [],
+                    "customList": [],
+                    "displayType": "singleDropDownList",
+                    "filterPattern": "Accurate"
+                }
+            }
+        ],
+        "periodCompare": [],
+        "calculation": {
+            "percent": {
+                "calcConfList": [
+                    {
+                        "calcType": "percent",
+                        "idList": [
+                            "sum_1856373"
+                        ]
+                    }
+                ],
+                "scope": "now"
+            },
+            "trendTable": {}
+        },
+        "limit": 1000,
+        "sort": {
+            "type": "sort",
+            "orderByList": [
+                {
+                    "id": "sum_1856373",
+                    "order": "desc",
+                    "uniqueId": 231114220753010
+                }
+            ]
+        },
+        "topN": null,
+        "paramList": [],
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "enableNullJoin": false,
+        "hasDynamicField": false,
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "extendQuery": []
+    },
+    "schema": {
+        "annotation": {
+            "hash": "d751713988987e9331980363e24189ce"
+        },
+        "cache": {
+            "enable": true,
+            "expire": null
+        },
+        "colors": [],
+        "columns": [],
+        "customConfig": {
+            "fields": {
+                "details": []
+            }
+        },
+        "dimensions": [
+            {
+                "aggrConf": {},
+                "dimMetId": 1856368,
+                "format": {
+                    "contentType": "link",
+                    "displayName": "fvideo_id/bnc_uuid",
+                    "showFieldDescr": false
+                },
+                "id": "1856368",
+                "index": 0,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1856368",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753009
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856369,
+                "format": {
+                    "contentType": "link",
+                    "displayName": "last_operation_datetime",
+                    "showFieldDescr": false
+                },
+                "id": "1856369",
+                "index": 1,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1856369",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753014
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856370,
+                "format": {},
+                "id": "1856370",
+                "index": 2,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1856370",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753021
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856371,
+                "format": {
+                    "conditionalFormat": {
+                        "data": [
+                            {
+                                "bgColor": "#f5222d",
+                                "color": "#ffffff",
+                                "ruleGroup": {
+                                    "groups": [
+                                        {
+                                            "groups": [],
+                                            "operator": "and",
+                                            "rules": [
+                                                {
+                                                    "operandType": "fixed",
+                                                    "pillId": "231114220753024",
+                                                    "ruleType": "include",
+                                                    "value": "GMT+3.5"
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "operator": "or",
+                                    "rules": []
+                                }
+                            }
+                        ],
+                        "excludeTotal": false,
+                        "type": "singleColor"
+                    }
+                },
+                "id": "1856371",
+                "index": 3,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1856371",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753024
+            },
+            {
+                "aggrConf": {},
+                "dimMetId": 1856372,
+                "format": {},
+                "id": "1856372",
+                "index": 4,
+                "isGeoField": false,
+                "location": "dimensions",
+                "originId": "1856372",
+                "roleType": 0,
+                "type": "string",
+                "uniqueId": 231114220753027
+            }
+        ],
+        "display": {
+            "conf": {
+                "alignDimension": "left",
+                "alignMeasure": "right",
+                "alternateRow": true,
+                "alternateRowColor": "#FBFBFC",
+                "autoWrap": false,
+                "bodyFontBold": false,
+                "bodyFontColor": "#141414",
+                "bodyFontItalic": false,
+                "bodyFontSize": 12,
+                "bodyFontUnderline": false,
+                "colPadding": null,
+                "colSpaceMode": "tight",
+                "columnWidth": [
+                    {
+                        "key": "0#LINE_NUMBER_DIM_ID_STR",
+                        "value": 47
+                    },
+                    {
+                        "key": "231114220753009",
+                        "value": 263
+                    },
+                    {
+                        "key": "231114220753014",
+                        "value": 141
+                    },
+                    {
+                        "key": "231114220753021",
+                        "value": 197
+                    },
+                    {
+                        "key": "231114220753024",
+                        "value": 204
+                    },
+                    {
+                        "key": "231114220753027",
+                        "value": 195
+                    },
+                    {
+                        "key": "231114220753010",
+                        "value": 148
+                    },
+                    {
+                        "key": "231114220753053",
+                        "value": 150
+                    },
+                    {
+                        "key": "231114220753016",
+                        "value": 121
+                    },
+                    {
+                        "key": "240806114236025",
+                        "value": 162
+                    },
+                    {
+                        "key": "240806114236029",
+                        "value": 132
+                    }
+                ],
+                "compact": false,
+                "compactDirection": "horizontal",
+                "customFields": {
+                    "enable": true
+                },
+                "display": "custom",
+                "fixedIndex": 1,
+                "gridLineColor": "#E1E4E8",
+                "gridLineFrame": true,
+                "gridLineFrameColor": null,
+                "gridLineFrameStyle": "solid",
+                "gridLineFrameWidth": 1,
+                "gridLineHorizontal": true,
+                "gridLineHorizontalColor": null,
+                "gridLineHorizontalStyle": "solid",
+                "gridLineHorizontalWidth": 1,
+                "gridLineVertical": true,
+                "gridLineVerticalColor": null,
+                "gridLineVerticalStyle": "solid",
+                "gridLineVerticalWidth": 1,
+                "headerBackground": true,
+                "headerColor": "#000000",
+                "headerFontBold": true,
+                "headerFontColor": "#F4B835",
+                "headerFontItalic": false,
+                "headerFontSize": 12,
+                "headerFontUnderline": false,
+                "headerMenu": true,
+                "headerSubTitleFontBold": false,
+                "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+                "headerSubTitleFontItalic": false,
+                "headerSubTitleFontSize": 12,
+                "headerSubTitleFontUnderline": false,
+                "hideHeader": false,
+                "hoverHighlight": "row",
+                "lineNumber": true,
+                "loadPartialData": true,
+                "measureFirst": false,
+                "pageSize": 20,
+                "pagination": false,
+                "render": "dom",
+                "rowPadding": null,
+                "rowSpaceMode": "loose",
+                "sortable": false,
+                "specialValue": {
+                    "dimensions": "null",
+                    "measures": "bracketTxt"
+                },
+                "tableStyle": "standard",
+                "transpose": false,
+                "version": 33
+            },
+            "enableAdvisor": true,
+            "queryType": "table",
+            "type": "table"
+        },
+        "drill": [],
+        "enableNullJoin": false,
+        "extensions": {
+            "data": {},
+            "list": [],
+            "protocolVersion": 1
+        },
+        "measures": [
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1856373,
+                "format": {
+                    "dataTypeName": "int",
+                    "displayName": "operation_count",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "sum_1856373",
+                "index": 0,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856373",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753010
+            },
+            {
+                "aggrConf": {},
+                "compactName": [
+                    "Percentage",
+                    "login_count%"
+                ],
+                "dimMetId": 1856373,
+                "enableUseDefaultStyle": false,
+                "error": "",
+                "format": {
+                    "displayName": "operation_count%",
+                    "numFormat": {
+                        "precision": 2,
+                        "precisionType": "decimalDigits",
+                        "type": "percent"
+                    },
+                    "showFieldDescr": false
+                },
+                "id": "46aa0f7b1c3104ee003f232de6a0bc10",
+                "index": 0,
+                "isGeoField": false,
+                "isMetric": false,
+                "location": "measures",
+                "name": "Sum(login_count)%",
+                "originId": "sum_1856373",
+                "roleType": 1,
+                "sourceType": "percent",
+                "type": "string",
+                "uniqueId": 231114220753053,
+                "unremovable": true
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1856374,
+                "format": {
+                    "dataTypeName": "int",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    }
+                },
+                "id": "sum_1856374",
+                "index": 2,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1856374",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 231114220753016
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1951989,
+                "format": {
+                    "dataTypeName": "int",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    }
+                },
+                "id": "sum_1951989",
+                "index": 3,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1951989",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 240806114236025
+            },
+            {
+                "aggrConf": {
+                    "exprAggr": "sum("
+                },
+                "dimMetId": 1951990,
+                "format": {
+                    "dataTypeName": "int",
+                    "numFormat": {
+                        "auto": true,
+                        "kSep": true,
+                        "precision": 4,
+                        "precisionType": "significantDecimal",
+                        "type": "digit",
+                        "unit": null
+                    }
+                },
+                "id": "sum_1951990",
+                "index": 4,
+                "isGeoField": false,
+                "location": "measures",
+                "originId": "1951990",
+                "roleType": 1,
+                "type": "string",
+                "uniqueId": 240806114236029
+            }
+        ],
+        "parameters": [],
+        "percent": {
+            "calcConfList": [
+                {
+                    "calcType": "percent",
+                    "idList": [
+                        "sum_1856373"
+                    ]
+                }
+            ],
+            "scope": "now"
+        },
+        "periodCompare": [],
+        "realMetricTableRouteConfig": {
+            "isRealMetricQuery": false
+        },
+        "referenceLine": [],
+        "reportFilterConfig": {
+            "layoutSize": "Normal",
+            "structType": "LeftRight"
+        },
+        "rows": [],
+        "sizes": [],
+        "sort": {
+            "orderByList": [
+                {
+                    "id": "sum_1856373",
+                    "order": "desc",
+                    "uniqueId": 231114220753010
+                }
+            ],
+            "orderByListState": [
+                {
+                    "id": "sum_1856373",
+                    "order": "desc",
+                    "uniqueId": 231114220753010
+                }
+            ],
+            "type": "sort"
+        },
+        "subMeasures": [],
+        "tableCalculation": {
+            "rules": []
+        },
+        "whereList": [
+            {
+                "aggrConf": {},
+                "dataTypeName": "date",
+                "dimMetId": 1856366,
+                "filter": {
+                    "op": "lastSync",
+                    "option": {
+                        "isDefaultPartitionField": true,
+                        "isReportFilter": false,
+                        "isWhereInAggr": true
+                    },
+                    "val": [
+                        1
+                    ],
+                    "valOption": {
+                        "anchorOffset": 0,
+                        "datetimeUnit": "day"
+                    }
+                },
+                "format": {},
+                "highlight": false,
+                "id": "1856366",
+                "index": 0,
+                "location": "whereList",
+                "name": "p_date",
+                "originId": "1856366",
+                "preRelation": "and",
+                "roleType": 0,
+                "showEditComponent": false,
+                "undraggable": false,
+                "uniqueId": 231114220753005,
+                "unremovable": true
+            },
+            {
+                "uniqueId": 251105013151048,
+                "id": "2141493",
+                "location": "whereList",
+                "dimMetId": 2141493,
+                "originId": "2141493",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "displayName": "last_operation_date"
+                },
+                "isMetric": false,
+                "name": "last_operation_date",
+                "preRelation": "and",
+                "filter": {
+                    "op": "between",
+                    "val": [],
+                    "valOption": {},
+                    "option": {
+                        "isReportFilter": true,
+                        "isWhereInAggr": true,
+                        "dateMode": "absolute"
+                    }
+                },
+                "dataSetId": 19152,
+                "index": 1,
+                "showEditComponent": false
+            },
+            {
+                "uniqueId": 260311080733061,
+                "id": "1856367",
+                "location": "whereList",
+                "dimMetId": 1856367,
+                "originId": "1856367",
+                "roleType": 0,
+                "aggrConf": {},
+                "format": {
+                    "contentType": "link"
+                },
+                "isMetric": false,
+                "preRelation": "and",
+                "filter": {
+                    "op": "in",
+                    "val": [
+                        "466492707"
+                    ],
+                    "valOption": {
+                        "labelValueMap": {}
+                    },
+                    "option": {
+                        "isReportFilter": false,
+                        "isWhereInAggr": true,
+                        "desensitizationList": [],
+                        "customList": [],
+                        "displayType": "singleDropDownList",
+                        "filterPattern": "Accurate"
+                    }
+                },
+                "name": "user_id",
+                "dataSetId": 19152,
+                "subFilterIds": [],
+                "index": 2,
+                "showEditComponent": false
+            }
+        ],
+        "whiteList": []
+    },
+    "display": {
+        "conf": {
+            "alignDimension": "left",
+            "alignMeasure": "right",
+            "alternateRow": true,
+            "alternateRowColor": "#FBFBFC",
+            "autoWrap": false,
+            "bodyFontBold": false,
+            "bodyFontColor": "#141414",
+            "bodyFontItalic": false,
+            "bodyFontSize": 12,
+            "bodyFontUnderline": false,
+            "colPadding": null,
+            "colSpaceMode": "tight",
+            "columnWidth": [
+                {
+                    "key": "0#LINE_NUMBER_DIM_ID_STR",
+                    "value": 47
+                },
+                {
+                    "key": "231114220753009",
+                    "value": 263
+                },
+                {
+                    "key": "231114220753014",
+                    "value": 141
+                },
+                {
+                    "key": "231114220753021",
+                    "value": 197
+                },
+                {
+                    "key": "231114220753024",
+                    "value": 204
+                },
+                {
+                    "key": "231114220753027",
+                    "value": 195
+                },
+                {
+                    "key": "231114220753010",
+                    "value": 148
+                },
+                {
+                    "key": "231114220753053",
+                    "value": 150
+                },
+                {
+                    "key": "231114220753016",
+                    "value": 121
+                },
+                {
+                    "key": "240806114236025",
+                    "value": 162
+                },
+                {
+                    "key": "240806114236029",
+                    "value": 132
+                }
+            ],
+            "compact": false,
+            "compactDirection": "horizontal",
+            "customFields": {
+                "enable": true
+            },
+            "display": "custom",
+            "fixedIndex": 1,
+            "gridLineColor": "#E1E4E8",
+            "gridLineFrame": true,
+            "gridLineFrameColor": null,
+            "gridLineFrameStyle": "solid",
+            "gridLineFrameWidth": 1,
+            "gridLineHorizontal": true,
+            "gridLineHorizontalColor": null,
+            "gridLineHorizontalStyle": "solid",
+            "gridLineHorizontalWidth": 1,
+            "gridLineVertical": true,
+            "gridLineVerticalColor": null,
+            "gridLineVerticalStyle": "solid",
+            "gridLineVerticalWidth": 1,
+            "headerBackground": true,
+            "headerColor": "#000000",
+            "headerFontBold": true,
+            "headerFontColor": "#F4B835",
+            "headerFontItalic": false,
+            "headerFontSize": 12,
+            "headerFontUnderline": false,
+            "headerMenu": true,
+            "headerSubTitleFontBold": false,
+            "headerSubTitleFontColor": "rgba(20, 20, 20, 0.45)",
+            "headerSubTitleFontItalic": false,
+            "headerSubTitleFontSize": 12,
+            "headerSubTitleFontUnderline": false,
+            "hideHeader": false,
+            "hoverHighlight": "row",
+            "lineNumber": true,
+            "loadPartialData": true,
+            "measureFirst": false,
+            "pageSize": 20,
+            "pagination": false,
+            "render": "dom",
+            "rowPadding": null,
+            "rowSpaceMode": "loose",
+            "sortable": false,
+            "specialValue": {
+                "dimensions": "null",
+                "measures": "bracketTxt"
+            },
+            "tableStyle": "standard",
+            "transpose": false,
+            "version": 33
+        },
+        "enableAdvisor": true,
+        "queryType": "table",
+        "type": "table",
+        "fieldsFormat": {
+            "1856368": {
+                "contentType": "link",
+                "displayName": "fvideo_id/bnc_uuid",
+                "showFieldDescr": false
+            },
+            "1856369": {
+                "contentType": "link",
+                "displayName": "last_operation_datetime",
+                "showFieldDescr": false
+            },
+            "1856370": {},
+            "1856371": {
+                "conditionalFormat": {
+                    "data": [
+                        {
+                            "bgColor": "#f5222d",
+                            "color": "#ffffff",
+                            "ruleGroup": {
+                                "groups": [
+                                    {
+                                        "groups": [],
+                                        "operator": "and",
+                                        "rules": [
+                                            {
+                                                "operandType": "fixed",
+                                                "pillId": "231114220753024",
+                                                "ruleType": "include",
+                                                "value": "GMT+3.5"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "operator": "or",
+                                "rules": []
+                            }
+                        }
+                    ],
+                    "excludeTotal": false,
+                    "type": "singleColor"
+                }
+            },
+            "1856372": {},
+            "sum_1856373": {
+                "dataTypeName": "int",
+                "displayName": "operation_count",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                },
+                "showFieldDescr": false
+            },
+            "46aa0f7b1c3104ee003f232de6a0bc10": {
+                "displayName": "operation_count%",
+                "numFormat": {
+                    "precision": 2,
+                    "precisionType": "decimalDigits",
+                    "type": "percent"
+                },
+                "showFieldDescr": false
+            },
+            "sum_1856374": {
+                "dataTypeName": "int",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                }
+            },
+            "sum_1951989": {
+                "dataTypeName": "int",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                }
+            },
+            "sum_1951990": {
+                "dataTypeName": "int",
+                "numFormat": {
+                    "auto": true,
+                    "kSep": true,
+                    "precision": 4,
+                    "precisionType": "significantDecimal",
+                    "type": "digit",
+                    "unit": null
+                }
+            }
+        }
+    },
+    "dashboardId": 49098
+}

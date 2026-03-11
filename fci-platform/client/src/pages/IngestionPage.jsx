@@ -28,6 +28,7 @@ const SECTION_LABELS = {
 function StatusDot({ status }) {
   const config = {
     empty: { color: 'bg-surface-500', label: 'Empty' },
+    downloading: { color: 'bg-blue-400 animate-pulse', label: 'Downloading' },
     processing: { color: 'bg-gold-400 animate-pulse', label: 'Processing' },
     complete: { color: 'bg-emerald-500', label: 'Complete' },
     extracted: { color: 'bg-blue-500', label: 'Extracted' },
@@ -510,6 +511,42 @@ function CaseCreationForm({ onCreated }) {
   );
 }
 
+// ── C360 Download Progress ───────────────────────────────────────
+
+function C360DownloadProgress({ c360 }) {
+  const dp = c360.download_progress || {};
+  const current = dp.current || 0;
+  const total = dp.total || 26;
+  const currentSheet = dp.current_sheet || '';
+  const succeeded = dp.succeeded || 0;
+  const failed = dp.failed || 0;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm text-blue-500 dark:text-blue-400">
+        <LoadingSpinner size="sm" />
+        Downloading C360 sheets ({succeeded}/{total})
+      </div>
+      {currentSheet && (
+        <p className="text-xs text-surface-500 dark:text-surface-400 truncate">
+          Downloading: {currentSheet}...
+        </p>
+      )}
+      <div className="w-full h-1.5 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-blue-500 rounded-full transition-all duration-500"
+          style={{ width: `${(current / total) * 100}%` }}
+        />
+      </div>
+      {failed > 0 && (
+        <p className="text-xs text-amber-500">
+          {failed} sheet{failed !== 1 ? 's' : ''} failed (will continue with remaining)
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── C360 Processing Status ───────────────────────────────────────
 
 function C360ProcessingStatus({ c360 }) {
@@ -575,6 +612,14 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
   // Quick info returned synchronously from upload
   const [quickInfo, setQuickInfo] = useState(null);
 
+  // Toggle between 'upload' and 'fetch' input modes
+  const [inputMode, setInputMode] = useState('upload');
+
+  // C360 auto-fetch fields
+  const [fetchUid, setFetchUid] = useState(caseData.subject_uid || '');
+  const [fetchCookie, setFetchCookie] = useState('');
+  const [fetching, setFetching] = useState(false);
+
   const c360 = caseData.sections?.c360 || {};
   const status = c360.status || 'empty';
 
@@ -611,6 +656,21 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
     }
   }
 
+  async function handleFetch() {
+    if (!fetchUid.trim() || !fetchCookie.trim()) return;
+    setFetching(true);
+    setError('');
+    try {
+      await ingestionApi.fetchC360(token, caseData.case_id, fetchUid.trim(), fetchCookie.trim(), subjectIndex);
+      setFetchCookie('');
+      onProcessingStarted();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFetching(false);
+    }
+  }
+
   function handleFileChange(e) {
     setFiles(filterValidFiles(e.target.files || []));
   }
@@ -632,6 +692,122 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
     setDragging(false);
   }
 
+  // Shared input UI for empty and error states
+  function renderInputUI() {
+    return (
+      <>
+        {/* Mode toggle */}
+        <div className="flex gap-1 mb-3 p-0.5 rounded-lg bg-surface-200 dark:bg-surface-700 w-fit">
+          <button
+            onClick={() => setInputMode('upload')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              inputMode === 'upload'
+                ? 'bg-white dark:bg-surface-600 text-surface-900 dark:text-surface-100 shadow-sm'
+                : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+            }`}
+          >
+            Upload Files
+          </button>
+          <button
+            onClick={() => setInputMode('fetch')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              inputMode === 'fetch'
+                ? 'bg-white dark:bg-surface-600 text-surface-900 dark:text-surface-100 shadow-sm'
+                : 'text-surface-500 hover:text-surface-700 dark:hover:text-surface-300'
+            }`}
+          >
+            Fetch from C360
+          </button>
+        </div>
+
+        {inputMode === 'upload' && (
+          <>
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={`
+                flex flex-col items-center justify-center gap-2 p-6 mb-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors
+                ${dragging
+                  ? 'border-gold-500 bg-gold-500/10'
+                  : 'border-surface-300 dark:border-surface-600 hover:border-gold-500/50 hover:bg-surface-200/50 dark:hover:bg-surface-700/50'
+                }
+              `}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-8 h-8 text-surface-400">
+                <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
+                <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+              </svg>
+              <p className="text-sm text-surface-500">
+                {dragging ? 'Drop files here' : 'Drag & drop C360 spreadsheets here, or click to browse'}
+              </p>
+              <p className="text-xs text-surface-400">.xlsx, .xls, .csv</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".xlsx,.xls,.csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </div>
+            {files.length > 0 && (
+              <p className="text-sm text-surface-400 mb-3">
+                {files.length} file{files.length !== 1 ? 's' : ''} selected: {files.map((f) => f.name).join(', ')}
+              </p>
+            )}
+            <button
+              onClick={handleUpload}
+              disabled={uploading || !files.length}
+              className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? 'Uploading...' : 'Upload & Process'}
+            </button>
+          </>
+        )}
+
+        {inputMode === 'fetch' && (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+                User ID
+              </label>
+              <input
+                type="text"
+                value={fetchUid}
+                onChange={(e) => setFetchUid(e.target.value)}
+                placeholder="e.g. 466492707"
+                className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 text-sm text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-surface-500 dark:text-surface-400 mb-1">
+                Session Cookie
+              </label>
+              <textarea
+                value={fetchCookie}
+                onChange={(e) => setFetchCookie(e.target.value)}
+                placeholder="Paste the full Cookie header from your browser (Network tab)"
+                rows={3}
+                className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 text-xs font-mono text-surface-900 dark:text-surface-100 placeholder-surface-400 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 resize-none"
+              />
+            </div>
+            <button
+              onClick={handleFetch}
+              disabled={fetching || !fetchUid.trim() || !fetchCookie.trim()}
+              className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {fetching ? 'Starting...' : 'Fetch & Process'}
+            </button>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-500 dark:text-red-400 mt-3">{error}</p>}
+      </>
+    );
+  }
+
   return (
     <div className="bg-surface-100 dark:bg-surface-800 rounded-xl p-5 border border-surface-200 dark:border-surface-700">
       <div className="flex items-center justify-between mb-3">
@@ -651,52 +827,12 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
         </div>
       </div>
 
-      {status === 'empty' && (
-        <>
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={() => fileInputRef.current?.click()}
-            className={`
-              flex flex-col items-center justify-center gap-2 p-6 mb-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors
-              ${dragging
-                ? 'border-gold-500 bg-gold-500/10'
-                : 'border-surface-300 dark:border-surface-600 hover:border-gold-500/50 hover:bg-surface-200/50 dark:hover:bg-surface-700/50'
-              }
-            `}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-8 h-8 text-surface-400">
-              <path d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
-              <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-            </svg>
-            <p className="text-sm text-surface-500">
-              {dragging ? 'Drop files here' : 'Drag & drop C360 spreadsheets here, or click to browse'}
-            </p>
-            <p className="text-xs text-surface-400">.xlsx, .xls, .csv</p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".xlsx,.xls,.csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-          {files.length > 0 && (
-            <p className="text-sm text-surface-400 mb-3">
-              {files.length} file{files.length !== 1 ? 's' : ''} selected: {files.map((f) => f.name).join(', ')}
-            </p>
-          )}
-          {error && <p className="text-sm text-red-500 dark:text-red-400 mb-3">{error}</p>}
-          <button
-            onClick={handleUpload}
-            disabled={uploading || !files.length}
-            className="px-4 py-1.5 rounded-lg bg-gold-500 hover:bg-gold-600 text-surface-900 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading ? 'Uploading...' : 'Upload & Process'}
-          </button>
-        </>
+      {status === 'empty' && renderInputUI()}
+
+      {status === 'downloading' && (
+        <div className="space-y-3">
+          <C360DownloadProgress c360={c360} />
+        </div>
       )}
 
       {status === 'processing' && (
@@ -734,9 +870,12 @@ function C360Section({ caseData, onProcessingStarted, subjectIndex }) {
       )}
 
       {status === 'error' && (
-        <p className="text-sm text-red-500 dark:text-red-400">
-          {c360.error_message || 'Processing failed.'}
-        </p>
+        <div className="space-y-3">
+          <p className="text-sm text-red-500 dark:text-red-400">
+            {c360.error_message || 'Processing failed.'}
+          </p>
+          {renderInputUI()}
+        </div>
       )}
     </div>
   );
