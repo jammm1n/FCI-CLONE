@@ -61,6 +61,7 @@ export default function InvestigationPage() {
     loadHistory,
     sendMessage,
     triggerInitialAssessment,
+    stopStreaming,
   } = useStreamingChat(token);
 
   // Load case data and conversation
@@ -720,7 +721,7 @@ export default function InvestigationPage() {
           </div>
           <ChatMessageList messages={messages} aiLoading={aiLoading} conversationId={conversationId} />
           {(sending || autoExecuting || oneshotExecuting) && (
-            <StreamingIndicator onStop={(autoExecuting || oneshotExecuting) ? () => autoAbortRef.current?.abort() : undefined} />
+            <StreamingIndicator onStop={(autoExecuting || oneshotExecuting) ? () => autoAbortRef.current?.abort() : stopStreaming} />
           )}
           {stepError && (
             <div className="mx-4 mb-2 px-4 py-2 text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center justify-between">

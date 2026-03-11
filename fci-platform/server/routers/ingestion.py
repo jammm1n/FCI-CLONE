@@ -870,10 +870,11 @@ async def upload_uol(
             detail='File does not contain UOL data. Expected a UOL workbook with Customer Information tab.',
         )
 
-    # Build uol_raw_data (same structure as c360_processor.py lines 570-577)
+    # Build uol_raw_data (same structure as c360_processor.py)
     uol_raw_data = {
         'crypto_withdrawals': uol_data.get('crypto_withdrawals', []),
         'crypto_deposits': uol_data.get('crypto_deposits', []),
+        'attempted_withdrawals': uol_data.get('attempted_withdrawals', []),
         'binance_pay': uol_data.get('binance_pay', []),
         'p2p_transactions': uol_data.get('p2p_transactions', []),
         'fiat_withdrawals': uol_data.get('fiat_withdrawals', []),

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as api from '../services/api';
@@ -29,7 +29,11 @@ export default function FreeChatPage() {
     setTokenUsage,
     loadHistory,
     sendMessage: hookSendMessage,
+    stopStreaming: hookStopStreaming,
   } = useStreamingChat(token);
+
+  // Abort controller for first-message inline streaming (before hook takes over)
+  const firstMsgAbortRef = useRef(null);
 
   // Load sidebar conversations
   const refreshSidebar = useCallback(async () => {
@@ -71,6 +75,8 @@ export default function FreeChatPage() {
 
     if (!conversationId) {
       // Create new free_chat conversation, then send first message
+      const controller = new AbortController();
+      firstMsgAbortRef.current = controller;
       try {
         const result = await api.createConversation(token, null, 'free_chat');
         const newConvId = result.conversation_id;
@@ -107,7 +113,9 @@ export default function FreeChatPage() {
           newConvId,
           content,
           images.map((img) => ({ base64: img.base64, media_type: img.media_type })),
-          true
+          true,
+          false,
+          controller.signal
         );
 
         // Read SSE stream
@@ -174,17 +182,35 @@ export default function FreeChatPage() {
         // Refresh sidebar to show new conversation with auto-generated title
         refreshSidebar();
       } catch (err) {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last && last.isStreaming) {
-            return prev.map((msg) =>
-              msg.message_id === last.message_id
-                ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
-                : msg
-            );
-          }
-          return prev;
-        });
+        if (err.name === 'AbortError') {
+          // User stopped — keep content received so far
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.isStreaming) {
+              return prev.map((msg) =>
+                msg.message_id === last.message_id
+                  ? { ...msg, isStreaming: false }
+                  : msg
+              );
+            }
+            return prev;
+          });
+          refreshSidebar();
+        } else {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.isStreaming) {
+              return prev.map((msg) =>
+                msg.message_id === last.message_id
+                  ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
+                  : msg
+              );
+            }
+            return prev;
+          });
+        }
+      } finally {
+        firstMsgAbortRef.current = null;
       }
     } else {
       // Existing conversation — use hook
@@ -235,7 +261,7 @@ export default function FreeChatPage() {
             maxWidth="w-[85%]"
             conversationId={conversationId}
           />
-          {sending && <StreamingIndicator />}
+          {sending && <StreamingIndicator onStop={() => { firstMsgAbortRef.current?.abort(); hookStopStreaming(); }} />}
           <ChatInput onSend={handleSend} disabled={sending} maxWidth="w-[85%]" draftKey={`fci-draft-chat-${conversationId || 'new'}`} />
         </div>
       </div>

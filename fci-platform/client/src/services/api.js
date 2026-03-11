@@ -85,7 +85,7 @@ export async function createConversation(token, caseId = null, mode = 'case') {
   return handleResponse(res);
 }
 
-export async function sendMessage(token, conversationId, content, images = [], stream = false, initialAssessment = false) {
+export async function sendMessage(token, conversationId, content, images = [], stream = false, initialAssessment = false, signal) {
   const body = { content, stream };
   if (images.length > 0) {
     body.images = images;
@@ -98,6 +98,7 @@ export async function sendMessage(token, conversationId, content, images = [], s
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify(body),
+    signal,
   });
 
   // For streaming, return the raw Response so the caller can read the SSE stream
