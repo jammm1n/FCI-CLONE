@@ -610,6 +610,8 @@ async def get_c360_output(
         'ai_outputs': c360.get('ai_outputs', {}),
         'ai_status': c360.get('ai_status', 'pending'),
         'ai_progress': c360.get('ai_progress', {}),
+        'address_xref': c360.get('address_xref'),
+        'uid_search': c360.get('uid_search'),
     }
 
 

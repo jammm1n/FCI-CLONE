@@ -253,14 +253,42 @@ function C360PreviewModal({ title, data, onClose }) {
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {hasPerProcessor ? (
-            PROCESSOR_ORDER.map((pid) => (
-              <ProcessorSection
-                key={pid}
-                processorId={pid}
-                processorOutputs={processorOutputs}
-                aiOutputs={aiOutputs}
-              />
-            ))
+            <>
+              {PROCESSOR_ORDER.map((pid) => (
+                <ProcessorSection
+                  key={pid}
+                  processorId={pid}
+                  processorOutputs={processorOutputs}
+                  aiOutputs={aiOutputs}
+                />
+              ))}
+              {/* Address Cross-Reference */}
+              {data.address_xref && (
+                <div className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-surface-100 dark:bg-surface-750">
+                    <span className="text-sm font-medium text-surface-800 dark:text-surface-200">Address Cross-Reference</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
+                      {data.address_xref}
+                    </pre>
+                  </div>
+                </div>
+              )}
+              {/* UID Search */}
+              {data.uid_search && (
+                <div className="border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                  <div className="px-4 py-2.5 bg-surface-100 dark:bg-surface-750">
+                    <span className="text-sm font-medium text-surface-800 dark:text-surface-200">UID Search Results</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
+                      {data.uid_search}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <pre className="whitespace-pre-wrap text-sm text-surface-800 dark:text-surface-200 font-mono leading-relaxed">
               {fullOutput || 'No output available.'}
@@ -1050,6 +1078,7 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
   const [extraWallets, setExtraWallets] = useState(existingWallets.join('\n'));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [xrefStats, setXrefStats] = useState(null);
 
   const c360Complete = caseData.sections?.c360?.status === 'complete';
   if (!c360Complete) return null;
@@ -1060,6 +1089,7 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
   async function handleSave() {
     setSaving(true);
     setError('');
+    setXrefStats(null);
     try {
       // Save extra UIDs (single-user only — multi-user uses subjects array)
       const uids = isMulti ? [] : extraUids.split('\n').map((u) => u.trim()).filter(Boolean);
@@ -1076,7 +1106,8 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
       await ingestionApi.addManualAddresses(token, caseData.case_id, wallets, subjectIndex);
 
       // Run address cross-reference (includes manual wallets vs UOL)
-      await ingestionApi.runAddressXref(token, caseData.case_id, subjectIndex);
+      const xrefResult = await ingestionApi.runAddressXref(token, caseData.case_id, subjectIndex);
+      setXrefStats(xrefResult.stats || null);
 
       // Run UID search if UIDs were provided
       if (uids.length > 0) {
@@ -1120,6 +1151,11 @@ function AdditionalInputsSection({ caseData, onSaved, subjectIndex }) {
           <p>
             Extra wallets: {existingWallets.length > 0 ? `${existingWallets.length} address${existingWallets.length !== 1 ? 'es' : ''}` : 'None'}
           </p>
+          {xrefStats && (
+            <p className="text-emerald-500">
+              Address xref: {xrefStats.uol_matched ?? 0} matched / {xrefStats.total_addresses ?? 0} total
+            </p>
+          )}
         </div>
       )}
 
