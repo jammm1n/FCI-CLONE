@@ -597,6 +597,13 @@ async def send_message_streaming(
     if tools_override is not None:
         streaming_kwargs["tools"] = tools_override
 
+    # Enable thinking for oneshot follow-up chat (post-execution)
+    if conv_mode == "oneshot" and conversation.get("oneshot_executed"):
+        streaming_kwargs["thinking"] = {
+            "type": "enabled",
+            "budget_tokens": settings.ONESHOT_FOLLOWUP_THINKING_BUDGET,
+        }
+
     async for event in get_ai_response_streaming(**streaming_kwargs):
         yield event
 
