@@ -26,7 +26,8 @@ function FitToScreenModal({ content, onClose }) {
 
     // Phase 1: measure natural single-column height
     raf(() => raf(() => {
-      const availH = container.clientHeight;
+      const cs = getComputedStyle(container);
+      const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       const naturalH = inner.scrollHeight;
 
       if (naturalH <= availH) {
