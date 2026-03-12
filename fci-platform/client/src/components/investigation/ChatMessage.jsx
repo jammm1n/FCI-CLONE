@@ -188,6 +188,18 @@ export default function ChatMessage({ message, conversationId }) {
           </div>
         )}
 
+        {/* Execution interrupted banner */}
+        {!isUser && message.executionInterrupted && (
+          <div className="mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-amber-500 shrink-0">
+              <path fillRule="evenodd" d="M6.701 2.25c.577-1 2.02-1 2.598 0l5.196 9a1.5 1.5 0 01-1.299 2.25H2.804a1.5 1.5 0 01-1.3-2.25l5.197-9zM8 4a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0v-2.5A.75.75 0 018 4zm0 6.5a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm text-amber-600 dark:text-amber-400">
+              Execution was interrupted. Use "Continue Execution" below to resume.
+            </span>
+          </div>
+        )}
+
         {/* Tools used footer */}
         {toolsUsed.length > 0 && (() => {
           const injected = toolsUsed.filter((t) => t.tool === 'system_injected');

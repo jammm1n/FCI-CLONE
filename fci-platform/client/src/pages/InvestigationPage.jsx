@@ -42,6 +42,7 @@ export default function InvestigationPage() {
   const [convMode, setConvMode] = useState('case'); // 'case' or 'oneshot'
   const [oneshotExecuted, setOneshotExecuted] = useState(false);
   const [oneshotExecuting, setOneshotExecuting] = useState(false);
+  const [oneshotPartial, setOneshotPartial] = useState(false);
   const autoAbortRef = useRef(null);
   const dragging = useRef(false);
 
@@ -105,6 +106,11 @@ export default function InvestigationPage() {
               setOneshotSignalled(true);
             }
             if (history.oneshot_state?.executed) setOneshotExecuted(true);
+            if (history.oneshot_state?.has_partial) {
+              setOneshotPartial(true);
+              setOneshotReady(true);
+              setOneshotSignalled(true);
+            }
           } else {
             setConvMode('case');
             if (history?.investigation_state) {
@@ -438,6 +444,9 @@ export default function InvestigationPage() {
 
     const streamMsgId = `stream_oneshot_${Date.now()}`;
     let toolsUsed = [];
+    let receivedDone = false;
+    let accumulatedContent = '';
+    let accumulatedThinking = '';
 
     // Add trigger message and streaming placeholder
     setMessages((prev) => [
@@ -457,6 +466,37 @@ export default function InvestigationPage() {
         isStreaming: true,
       },
     ]);
+
+    async function savePartialOnFailure() {
+      if (accumulatedContent.length > 0 || accumulatedThinking.length > 0) {
+        try {
+          await api.saveOneshotPartial(token, conversationId, {
+            content: accumulatedContent,
+            tools_used: toolsUsed,
+            thinking_content: accumulatedThinking,
+          });
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, isStreaming: false, executionInterrupted: true }
+                : msg
+            )
+          );
+          setOneshotPartial(true);
+        } catch (saveErr) {
+          // Content still in React state — show error but don't lose it
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, isStreaming: false, executionInterrupted: true }
+                : msg
+            )
+          );
+          setOneshotPartial(true);
+          setStepError(`Stream failed and partial save also failed: ${saveErr.message}`);
+        }
+      }
+    }
 
     try {
       const response = await api.oneshotExecute(token, conversationId, controller.signal);
@@ -481,6 +521,7 @@ export default function InvestigationPage() {
           try { event = JSON.parse(jsonStr); } catch { continue; }
 
           if (event.type === 'content_delta') {
+            accumulatedContent += event.text;
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.message_id === streamMsgId
@@ -489,6 +530,7 @@ export default function InvestigationPage() {
               )
             );
           } else if (event.type === 'thinking_delta') {
+            accumulatedThinking += event.text;
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.message_id === streamMsgId
@@ -503,6 +545,7 @@ export default function InvestigationPage() {
               document_title: event.document_title,
             });
           } else if (event.type === 'done') {
+            receivedDone = true;
             const finalTools = [...toolsUsed];
             const truncationNotice = event.truncated
               ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit before completing. You can continue the investigation in the chat below.'
@@ -517,27 +560,206 @@ export default function InvestigationPage() {
             if (event.token_usage) setTokenUsage(event.token_usage);
             setOneshotExecuted(true);
           } else if (event.type === 'error') {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.message_id === streamMsgId
-                  ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
-                  : msg
-              )
-            );
+            receivedDone = true; // prevent double handling
+            // If we have accumulated content, save it as partial before showing error
+            if (accumulatedContent.length > 0) {
+              await savePartialOnFailure();
+            } else {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
+                    : msg
+                )
+              );
+            }
             setStepError(event.message);
           }
         }
       }
+
+      // Stream ended — check if we got a done event
+      if (!receivedDone) {
+        await savePartialOnFailure();
+        if (accumulatedContent.length === 0 && accumulatedThinking.length === 0) {
+          // Nothing accumulated — clean up the placeholder
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, content: '**Error:** Connection lost before any output was received.', isStreaming: false }
+                : msg
+            )
+          );
+          setStepError('Connection lost. Try "Execute Full ICR" again.');
+        }
+      }
     } catch (err) {
-      if (err.name !== 'AbortError') {
+      if (err.name === 'AbortError') {
+        // User aborted — save partial if we have content
+        await savePartialOnFailure();
+      } else {
         setStepError(err.message);
+        await savePartialOnFailure();
+        if (accumulatedContent.length === 0) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.message_id === streamMsgId
+                ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
+                : msg
+            )
+          );
+        }
+      }
+    } finally {
+      autoAbortRef.current = null;
+      setOneshotExecuting(false);
+    }
+  }, [conversationId, token, oneshotExecuting, setMessages, setTokenUsage]);
+
+  // --- One-shot continuation (after partial failure) ---
+  const handleOneshotContinue = useCallback(async () => {
+    if (!conversationId || oneshotExecuting) return;
+    const controller = new AbortController();
+    autoAbortRef.current = controller;
+    setOneshotExecuting(true);
+    setStepError('');
+    setOneshotPartial(false);
+
+    // Find the existing partial message in state and reuse it
+    let existingMsgId = null;
+    let priorContent = '';
+    let priorThinking = '';
+    setMessages((prev) => {
+      const updated = prev.map((msg) => {
+        if (msg.executionInterrupted && msg.role === 'assistant') {
+          existingMsgId = msg.message_id;
+          priorContent = msg.content || '';
+          priorThinking = msg.thinking_content || '';
+          return { ...msg, isStreaming: true, executionInterrupted: false };
+        }
+        return msg;
+      });
+      return updated;
+    });
+
+    let toolsUsed = [];
+    let receivedDone = false;
+    let accumulatedContent = priorContent;
+    let accumulatedThinking = priorThinking;
+
+    async function savePartialOnFailure() {
+      if (accumulatedContent.length > 0 || accumulatedThinking.length > 0) {
+        try {
+          await api.saveOneshotPartial(token, conversationId, {
+            content: accumulatedContent,
+            tools_used: toolsUsed,
+            thinking_content: accumulatedThinking,
+          });
+        } catch {
+          // Best effort
+        }
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.message_id === streamMsgId
-              ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
+            msg.message_id === existingMsgId
+              ? { ...msg, isStreaming: false, executionInterrupted: true }
               : msg
           )
         );
+        setOneshotPartial(true);
+      }
+    }
+
+    try {
+      // Same endpoint — backend auto-detects continuation from oneshot_partial_msg_id
+      const response = await api.oneshotExecute(token, conversationId, controller.signal);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data:')) continue;
+          const jsonStr = line.slice(5).trim();
+          if (!jsonStr) continue;
+
+          let event;
+          try { event = JSON.parse(jsonStr); } catch { continue; }
+
+          if (event.type === 'content_delta') {
+            accumulatedContent += event.text;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === existingMsgId
+                  ? { ...msg, content: msg.content + event.text }
+                  : msg
+              )
+            );
+          } else if (event.type === 'thinking_delta') {
+            accumulatedThinking += event.text;
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === existingMsgId
+                  ? { ...msg, thinking_content: (msg.thinking_content || '') + event.text }
+                  : msg
+              )
+            );
+          } else if (event.type === 'tool_use') {
+            toolsUsed.push({
+              tool: event.tool,
+              document_id: event.document_id,
+              document_title: event.document_title,
+            });
+          } else if (event.type === 'done') {
+            receivedDone = true;
+            const finalTools = [...toolsUsed];
+            const truncationNotice = event.truncated
+              ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit before completing.'
+              : '';
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.message_id === existingMsgId
+                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false, content: msg.content + truncationNotice }
+                  : msg
+              )
+            );
+            if (event.token_usage) setTokenUsage(event.token_usage);
+            setOneshotExecuted(true);
+            setOneshotPartial(false);
+          } else if (event.type === 'error') {
+            receivedDone = true;
+            if (accumulatedContent.length > 0) {
+              await savePartialOnFailure();
+            } else {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === existingMsgId
+                    ? { ...msg, isStreaming: false, executionInterrupted: true }
+                    : msg
+                )
+              );
+              setOneshotPartial(true);
+            }
+            setStepError(event.message);
+          }
+        }
+      }
+
+      if (!receivedDone) {
+        await savePartialOnFailure();
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        await savePartialOnFailure();
+      } else {
+        setStepError(err.message);
+        await savePartialOnFailure();
       }
     } finally {
       autoAbortRef.current = null;
@@ -750,6 +972,8 @@ export default function InvestigationPage() {
             oneshotExecuted={oneshotExecuted}
             onOneshotExecute={handleOneshotExecute}
             oneshotExecuting={oneshotExecuting}
+            oneshotPartial={oneshotPartial}
+            onOneshotContinue={handleOneshotContinue}
             onContinueOneshotDiscussion={() => setOneshotReady(false)}
             onOneshotQCCheck={() => setShowQCModal(true)}
             totalSteps={totalSteps}

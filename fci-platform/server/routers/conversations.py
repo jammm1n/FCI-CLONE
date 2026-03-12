@@ -26,6 +26,7 @@ from server.services.knowledge_base import KnowledgeBase
 from server.services.pdf_export import generate_conversation_pdf, build_pdf_filename
 from server.database import get_database
 from server.config import settings
+from server.models.schemas import OneshotPartialRequest
 
 logger = logging.getLogger(__name__)
 
@@ -732,6 +733,32 @@ async def oneshot_execute(
                 }
 
     return EventSourceResponse(event_generator())
+
+
+@router.post("/{conversation_id}/oneshot-save-partial")
+async def oneshot_save_partial(
+    conversation_id: str,
+    body: OneshotPartialRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Save partial oneshot output after a stream failure.
+
+    Called by the frontend when the SSE stream dies without a done event.
+    Creates or updates a partial assistant message in MongoDB so the
+    output survives page reload and can be continued.
+    """
+    try:
+        result = await conversation_manager.store_oneshot_partial(
+            conversation_id=conversation_id,
+            partial_content=body.content,
+            tools_used=body.tools_used,
+            thinking_content=body.thinking_content,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
 
 
 @router.post("/{conversation_id}/reset")

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
 import { getMarkdownFromPaste } from '../../utils/pasteMarkdown';
 
-export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5, draftKey }) {
+export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, oneshotPartial, onOneshotContinue, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5, draftKey }) {
   const [text, setText] = useState(() => (draftKey ? localStorage.getItem(draftKey) || '' : ''));
   const [images, setImages] = useState([]);
   const [dragOver, setDragOver] = useState(false);
@@ -140,8 +140,27 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
       style={{ paddingLeft: '5%', paddingRight: '5%' }}
     >
       <div className={maxWidth ? `${maxWidth} mx-auto` : ''}>
+        {/* One-shot: Continue Execution after partial failure */}
+        {convMode === 'oneshot' && oneshotPartial && !oneshotExecuted && !oneshotExecuting && (
+          <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
+            <p className="text-sm text-amber-500 dark:text-amber-400">
+              Execution was interrupted. Partial output has been saved.
+            </p>
+            <button
+              onClick={onOneshotContinue}
+              disabled={disabled}
+              className="px-6 py-3 text-sm font-semibold rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 text-surface-950 active:scale-[0.98] disabled:from-surface-300 disabled:to-surface-400 dark:disabled:from-surface-700 dark:disabled:to-surface-600 disabled:text-surface-500 flex items-center gap-2 shadow-lg shadow-amber-500/20"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" />
+              </svg>
+              Continue Execution
+            </button>
+          </div>
+        )}
+
         {/* One-shot: Execute Full ICR button when ready */}
-        {convMode === 'oneshot' && oneshotReady && !oneshotExecuted && !oneshotExecuting && (
+        {convMode === 'oneshot' && oneshotReady && !oneshotExecuted && !oneshotExecuting && !oneshotPartial && (
           <div className="flex flex-col items-center gap-3 py-3 animate-fade-in">
             <p className="text-sm text-surface-500 dark:text-surface-400">
               The AI has reviewed the case data and is ready to produce the full ICR.
@@ -315,8 +334,8 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
           </div>
         )}
 
-        {/* Normal chat input — hidden when in approval mode or oneshot pre-execute */}
-        {(!stepComplete || !currentStep || currentStep > totalSteps - 1) && !(convMode === 'oneshot' && oneshotReady && !oneshotExecuted) && <>
+        {/* Normal chat input — hidden when in approval mode or oneshot pre-execute/partial */}
+        {(!stepComplete || !currentStep || currentStep > totalSteps - 1) && !(convMode === 'oneshot' && oneshotReady && !oneshotExecuted) && !(convMode === 'oneshot' && oneshotPartial && !oneshotExecuted) && <>
         {dragOver && (
           <div className="text-center text-sm text-gold-500 mb-2 animate-fade-in">
             Drop image here

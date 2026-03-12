@@ -219,6 +219,13 @@ class AdvanceStepResponse(BaseModel):
     summary: str
 
 
+class OneshotPartialRequest(BaseModel):
+    """POST /api/conversations/{id}/oneshot-save-partial request body."""
+    content: str
+    tools_used: list[dict] = []
+    thinking_content: str = ""
+
+
 # --- System / Utility ---
 
 class HealthResponse(BaseModel):

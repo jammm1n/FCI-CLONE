@@ -563,8 +563,12 @@ async def send_message_streaming(
         api_messages = _rebuild_step_api_messages(conversation, case)
     elif conv_mode == "oneshot":
         system_prompt = knowledge_base.get_system_prompt(mode="oneshot")
-        model = None
-        tools_override = TOOLS_ONESHOT_SETUP
+        if conversation.get("oneshot_executed"):
+            model = settings.ONESHOT_MODEL
+            tools_override = None  # standard tools for post-execution follow-up
+        else:
+            model = None
+            tools_override = TOOLS_ONESHOT_SETUP
         api_messages = _rebuild_api_messages(conversation["messages"])
     else:
         system_prompt = knowledge_base.get_system_prompt(mode=conv_mode)
@@ -818,6 +822,8 @@ async def get_history(conversation_id: str) -> dict:
             entry["step"] = msg["step"]
         if msg.get("thinking_content"):
             entry["thinking_content"] = msg["thinking_content"]
+        if msg.get("oneshot_partial"):
+            entry["executionInterrupted"] = True
 
         visible_messages.append(entry)
 
@@ -849,6 +855,7 @@ async def get_history(conversation_id: str) -> dict:
         result["oneshot_state"] = {
             "ready": conversation.get("oneshot_ready", False),
             "executed": conversation.get("oneshot_executed", False),
+            "has_partial": bool(conversation.get("oneshot_partial_msg_id")),
         }
 
     return result
@@ -988,17 +995,55 @@ async def oneshot_execute(
     # Build the execution system prompt (all step docs + rules)
     system_prompt = knowledge_base.get_oneshot_execution_prompt()
 
-    # Build API messages: setup transcript + execution instruction
-    api_messages = _rebuild_api_messages(conversation["messages"])
-    api_messages.append({
-        "role": "user",
-        "content": (
-            "Execute the full ICR now. Work through all four blocks in order "
-            "(Setup, Analysis, Decision, Post-Decision). Produce copy-paste-ready "
-            "ICR text for every section. Validate against QC checks after each block. "
-            "End with a QC summary."
-        ),
-    })
+    execution_instruction = (
+        "Execute the full ICR now. Work through all four blocks in order "
+        "(Setup, Analysis, Decision, Post-Decision). Produce copy-paste-ready "
+        "ICR text for every section. Validate against QC checks after each block. "
+        "End with a QC summary."
+    )
+
+    # Check for continuation mode (partial exists from a prior failed attempt)
+    partial_msg_id = conversation.get("oneshot_partial_msg_id")
+
+    if partial_msg_id:
+        # Continuation mode: filter out trigger + partial from stored messages,
+        # then append the full execution instruction + partial as assistant + continue prompt
+        partial_msg = None
+        filtered_messages = []
+        for msg in conversation.get("messages", []):
+            if msg["message_id"] == partial_msg_id:
+                partial_msg = msg
+                continue
+            # Also skip the trigger "Execute Full ICR" user message that precedes the partial
+            if msg.get("role") == "user" and msg.get("content") == "Execute Full ICR" and msg.get("visible", True):
+                # Only skip the last one (the trigger for this execution)
+                # Check if this is the trigger immediately before the partial
+                continue
+            filtered_messages.append(msg)
+
+        api_messages = _rebuild_api_messages(filtered_messages)
+        api_messages.append({"role": "user", "content": execution_instruction})
+
+        if partial_msg and partial_msg.get("content"):
+            api_messages.append({"role": "assistant", "content": partial_msg["content"]})
+            api_messages.append({
+                "role": "user",
+                "content": (
+                    "Your previous response was interrupted by a connection failure. "
+                    "Continue exactly where you left off. Do not repeat any content "
+                    "already produced. Pick up mid-sentence if needed."
+                ),
+            })
+
+        logger.info(
+            "One-shot continuation for %s from partial %s (%d chars)",
+            conversation_id, partial_msg_id,
+            len(partial_msg["content"]) if partial_msg else 0,
+        )
+    else:
+        # First execution — standard flow
+        api_messages = _rebuild_api_messages(conversation["messages"])
+        api_messages.append({"role": "user", "content": execution_instruction})
 
     # Configure model and thinking
     model = settings.ONESHOT_MODEL
@@ -1022,6 +1067,109 @@ async def oneshot_execute(
         yield event
 
 
+def _oneshot_injected_docs() -> list[dict]:
+    """Return the list of system-injected execution documents for oneshot tools_used."""
+    return [
+        {"tool": "system_injected", "document_id": "system-prompt-oneshot-execution", "document_title": "One-Shot Execution Prompt"},
+        {"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"},
+        {"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"},
+        {"tool": "system_injected", "document_id": "icr-steps-setup", "document_title": "ICR Steps: Setup"},
+        {"tool": "system_injected", "document_id": "icr-steps-analysis", "document_title": "ICR Steps: Analysis"},
+        {"tool": "system_injected", "document_id": "icr-steps-decision", "document_title": "ICR Steps: Decision"},
+        {"tool": "system_injected", "document_id": "icr-steps-post", "document_title": "ICR Steps: Post-Decision"},
+        {"tool": "system_injected", "document_id": "decision-matrix", "document_title": "Decision Matrix"},
+        {"tool": "system_injected", "document_id": "mlro-escalation-matrix", "document_title": "MLRO Escalation Matrix"},
+        {"tool": "system_injected", "document_id": "qc-full-checklist", "document_title": "QC Submission Checklist"},
+    ]
+
+
+async def store_oneshot_partial(
+    conversation_id: str,
+    partial_content: str,
+    tools_used: list[dict],
+    thinking_content: str = "",
+) -> dict:
+    """
+    Save partial oneshot output after a stream failure.
+
+    On first call: creates the trigger user message + partial assistant message.
+    On subsequent calls: updates the existing partial message in-place.
+    """
+    db = get_database()
+    now = _now()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+    if conversation.get("mode") != "oneshot":
+        raise ValueError("store_oneshot_partial requires a oneshot conversation")
+    if conversation.get("oneshot_executed"):
+        raise ValueError("One-shot execution already completed")
+
+    all_tools_used = _oneshot_injected_docs() + list(tools_used)
+    existing_partial_id = conversation.get("oneshot_partial_msg_id")
+
+    if existing_partial_id:
+        # Subsequent save — update existing partial in-place
+        update_fields = {
+            "messages.$.content": partial_content,
+            "messages.$.tools_used": all_tools_used,
+            "messages.$.thinking_content": thinking_content,
+            "updated_at": now,
+        }
+        await db.conversations.update_one(
+            {"_id": conversation_id, "messages.message_id": existing_partial_id},
+            {"$set": update_fields},
+        )
+        logger.info(
+            "One-shot partial updated for %s (msg %s). Content: %d chars",
+            conversation_id, existing_partial_id, len(partial_content),
+        )
+        return {"message_id": existing_partial_id, "status": "partial_saved"}
+    else:
+        # First save — create trigger + partial messages
+        trigger_msg_id = _generate_id("msg")
+        partial_msg_id = _generate_id("msg")
+
+        trigger_msg = {
+            "message_id": trigger_msg_id,
+            "role": "user",
+            "content": "Execute Full ICR",
+            "timestamp": now,
+            "visible": True,
+        }
+
+        partial_msg = {
+            "message_id": partial_msg_id,
+            "role": "assistant",
+            "content": partial_content,
+            "tools_used": all_tools_used,
+            "token_usage": {},
+            "timestamp": now,
+            "visible": True,
+            "oneshot_partial": True,
+            "oneshot_execution": True,
+        }
+        if thinking_content:
+            partial_msg["thinking_content"] = thinking_content
+
+        await db.conversations.update_one(
+            {"_id": conversation_id},
+            {
+                "$push": {"messages": {"$each": [trigger_msg, partial_msg]}},
+                "$set": {
+                    "oneshot_partial_msg_id": partial_msg_id,
+                    "updated_at": now,
+                },
+            },
+        )
+        logger.info(
+            "One-shot partial saved for %s (msg %s). Content: %d chars",
+            conversation_id, partial_msg_id, len(partial_content),
+        )
+        return {"message_id": partial_msg_id, "status": "partial_saved"}
+
+
 async def store_oneshot_execution(
     conversation_id: str,
     user_id: str,
@@ -1035,83 +1183,140 @@ async def store_oneshot_execution(
     db = get_database()
     now = _now()
 
-    all_new_messages = []
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    existing_partial_msg_id = conversation.get("oneshot_partial_msg_id") if conversation else None
+    all_tools_used = _oneshot_injected_docs() + list(tools_used)
 
-    # Execution trigger message (visible)
-    trigger_msg = {
-        "message_id": _generate_id("msg"),
-        "role": "user",
-        "content": "Execute Full ICR",
-        "timestamp": now,
-        "visible": True,
-    }
-    all_new_messages.append(trigger_msg)
+    if existing_partial_msg_id:
+        # Merge mode: continuation completed successfully
+        # Find the partial message to merge content
+        partial_msg = None
+        for msg in conversation.get("messages", []):
+            if msg["message_id"] == existing_partial_msg_id:
+                partial_msg = msg
+                break
 
-    # Tool exchanges (hidden)
-    for tc_msg in tool_call_messages:
-        msg = {
-            "message_id": _generate_id("msg"),
-            "role": "tool_exchange",
-            "content": tc_msg["content"],
-            "original_role": tc_msg["role"],
-            "timestamp": now,
-            "visible": False,
+        merged_content = (partial_msg["content"] if partial_msg else "") + ai_content
+
+        # Merge thinking
+        prior_thinking = partial_msg.get("thinking_content", "") if partial_msg else ""
+        if prior_thinking and thinking_content:
+            merged_thinking = prior_thinking + "\n---\n" + thinking_content
+        elif thinking_content:
+            merged_thinking = thinking_content
+        else:
+            merged_thinking = prior_thinking
+
+        # Update the partial message in-place → final message
+        update_fields = {
+            "messages.$.content": merged_content,
+            "messages.$.tools_used": all_tools_used,
+            "messages.$.token_usage": token_usage,
+            "messages.$.oneshot_partial": False,
+            "messages.$.oneshot_execution": True,
         }
-        all_new_messages.append(msg)
+        if merged_thinking:
+            update_fields["messages.$.thinking_content"] = merged_thinking
 
-    # Build full tools_used: injected execution docs + AI-fetched references
-    injected = [
-        {"tool": "system_injected", "document_id": "system-prompt-oneshot-execution", "document_title": "One-Shot Execution Prompt"},
-        {"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"},
-        {"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"},
-        {"tool": "system_injected", "document_id": "icr-steps-setup", "document_title": "ICR Steps: Setup"},
-        {"tool": "system_injected", "document_id": "icr-steps-analysis", "document_title": "ICR Steps: Analysis"},
-        {"tool": "system_injected", "document_id": "icr-steps-decision", "document_title": "ICR Steps: Decision"},
-        {"tool": "system_injected", "document_id": "icr-steps-post", "document_title": "ICR Steps: Post-Decision"},
-        {"tool": "system_injected", "document_id": "decision-matrix", "document_title": "Decision Matrix"},
-        {"tool": "system_injected", "document_id": "mlro-escalation-matrix", "document_title": "MLRO Escalation Matrix"},
-        {"tool": "system_injected", "document_id": "qc-full-checklist", "document_title": "QC Submission Checklist"},
-    ]
-    all_tools_used = injected + list(tools_used)
+        await db.conversations.update_one(
+            {"_id": conversation_id, "messages.message_id": existing_partial_msg_id},
+            {"$set": update_fields},
+        )
 
-    # Execution result
-    assistant_msg_id = _generate_id("msg")
-    assistant_message = {
-        "message_id": assistant_msg_id,
-        "role": "assistant",
-        "content": ai_content,
-        "tools_used": all_tools_used,
-        "token_usage": token_usage,
-        "timestamp": now,
-        "visible": True,
-        "oneshot_execution": True,
-    }
-    if thinking_content:
-        assistant_message["thinking_content"] = thinking_content
-    all_new_messages.append(assistant_message)
+        # Push any tool_exchange messages from continuation
+        tool_exchange_msgs = []
+        for tc_msg in tool_call_messages:
+            tool_exchange_msgs.append({
+                "message_id": _generate_id("msg"),
+                "role": "tool_exchange",
+                "content": tc_msg["content"],
+                "original_role": tc_msg["role"],
+                "timestamp": now,
+                "visible": False,
+            })
 
-    await db.conversations.update_one(
-        {"_id": conversation_id},
-        {
-            "$push": {"messages": {"$each": all_new_messages}},
+        update_ops = {
             "$set": {
                 "oneshot_executed": True,
                 "updated_at": now,
             },
+            "$unset": {"oneshot_partial_msg_id": ""},
         }
-    )
+        if tool_exchange_msgs:
+            update_ops["$push"] = {"messages": {"$each": tool_exchange_msgs}}
 
-    logger.info(
-        "One-shot execution stored for %s. Output: %d chars, tools: %s",
-        conversation_id,
-        len(ai_content),
-        [t.get("document_id") for t in tools_used],
-    )
+        await db.conversations.update_one({"_id": conversation_id}, update_ops)
 
-    return {
-        "message_id": assistant_msg_id,
-        "timestamp": now.isoformat(),
-    }
+        logger.info(
+            "One-shot execution merged for %s (msg %s). Total: %d chars",
+            conversation_id, existing_partial_msg_id, len(merged_content),
+        )
+
+        return {
+            "message_id": existing_partial_msg_id,
+            "timestamp": now.isoformat(),
+        }
+    else:
+        # First success — no prior partial
+        all_new_messages = []
+
+        trigger_msg = {
+            "message_id": _generate_id("msg"),
+            "role": "user",
+            "content": "Execute Full ICR",
+            "timestamp": now,
+            "visible": True,
+        }
+        all_new_messages.append(trigger_msg)
+
+        for tc_msg in tool_call_messages:
+            msg = {
+                "message_id": _generate_id("msg"),
+                "role": "tool_exchange",
+                "content": tc_msg["content"],
+                "original_role": tc_msg["role"],
+                "timestamp": now,
+                "visible": False,
+            }
+            all_new_messages.append(msg)
+
+        assistant_msg_id = _generate_id("msg")
+        assistant_message = {
+            "message_id": assistant_msg_id,
+            "role": "assistant",
+            "content": ai_content,
+            "tools_used": all_tools_used,
+            "token_usage": token_usage,
+            "timestamp": now,
+            "visible": True,
+            "oneshot_execution": True,
+        }
+        if thinking_content:
+            assistant_message["thinking_content"] = thinking_content
+        all_new_messages.append(assistant_message)
+
+        await db.conversations.update_one(
+            {"_id": conversation_id},
+            {
+                "$push": {"messages": {"$each": all_new_messages}},
+                "$set": {
+                    "oneshot_executed": True,
+                    "updated_at": now,
+                },
+            }
+        )
+
+        logger.info(
+            "One-shot execution stored for %s. Output: %d chars, tools: %s",
+            conversation_id,
+            len(ai_content),
+            [t.get("document_id") for t in tools_used],
+        )
+
+        return {
+            "message_id": assistant_msg_id,
+            "timestamp": now.isoformat(),
+        }
 
 
 # ---------------------------------------------------------------------------

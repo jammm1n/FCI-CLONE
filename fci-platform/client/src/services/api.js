@@ -198,6 +198,15 @@ export async function oneshotExecute(token, conversationId, signal) {
   return res;
 }
 
+export async function saveOneshotPartial(token, conversationId, data) {
+  const res = await fetch(`${BASE_URL}/conversations/${conversationId}/oneshot-save-partial`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 // ---------------------------------------------------------------------------
 // PDF Export
 // ---------------------------------------------------------------------------
