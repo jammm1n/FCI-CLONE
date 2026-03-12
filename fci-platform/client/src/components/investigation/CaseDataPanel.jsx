@@ -22,7 +22,7 @@ function FitToScreenModal({ content, onClose }) {
 
     // Reset for measurement
     inner.style.columnCount = '1';
-    inner.style.zoom = '1';
+    inner.style.transform = 'none';
 
     // Phase 1: measure natural single-column height
     raf(() => raf(() => {
@@ -39,12 +39,12 @@ function FitToScreenModal({ content, onClose }) {
       const cols = Math.min(Math.ceil(naturalH / availH), 3);
       inner.style.columnCount = String(cols);
 
-      // Phase 2: measure after columns, apply zoom fallback if still overflowing
+      // Phase 2: measure after columns, apply transform scale if still overflowing
       raf(() => raf(() => {
         const columnedH = inner.scrollHeight;
         let s = 1;
         if (columnedH > availH) {
-          s = Math.floor((availH / columnedH) * 100) / 100;
+          s = (availH / columnedH) * 0.97;
           s = Math.max(s, 0.5);
         }
         setLayout({ columns: cols, scale: s, fitting: false });
@@ -100,7 +100,8 @@ function FitToScreenModal({ content, onClose }) {
             style={{
               columnCount: layout.columns,
               columnGap: '2rem',
-              zoom: layout.scale,
+              transform: layout.scale < 1 ? `scale(${layout.scale})` : 'none',
+              transformOrigin: 'top left',
               opacity: layout.fitting ? 0 : 1,
             }}
           >
