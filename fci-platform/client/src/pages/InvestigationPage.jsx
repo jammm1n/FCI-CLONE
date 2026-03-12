@@ -256,8 +256,7 @@ export default function InvestigationPage() {
       setStepSignalled(false);
       setStepLoading(false);
       // Auto-trigger the AI to begin the new step
-      const proceedSuffix = isMulti ? 'Proceed.' : 'Proceed in express mode.';
-      await sendMessage(`Begin ${unit} ${result.step}: ${nextLabel}. Your step document is loaded. ${proceedSuffix}`);
+      await sendMessage(`Begin ${unit} ${result.step}: ${nextLabel}. Your block document is loaded. Produce all sections for this block.`);
     } catch (err) {
       setStepError(err.message);
       setStepLoading(false);

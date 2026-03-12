@@ -261,11 +261,10 @@ class KnowledgeBase:
 
         first_step_doc = True
         for doc_id in step_docs:
-            if multi_user and doc_id in step_doc_ids and steps_covered:
+            if doc_id in step_doc_ids and steps_covered:
                 filtered = self.get_filtered_step_doc(doc_id, steps_covered)
                 # Include preamble only from the first step doc
                 if not first_step_doc:
-                    # Strip preamble from subsequent docs
                     match = re.search(r'## STEP \d+', filtered)
                     if match:
                         filtered = filtered[match.start():]
@@ -274,6 +273,34 @@ class KnowledgeBase:
             else:
                 # Non-step docs (decision-matrix, mlro, qc-checklist) loaded as-is
                 parts.append(self.get_document(doc_id))
+
+        # Inject dynamic block identifier so the AI knows exactly what to produce
+        label = step_cfg.get("label", "")
+        if steps_covered:
+            step_range = (
+                f"Steps {steps_covered[0]}-{steps_covered[-1]}"
+                if len(steps_covered) > 1
+                else f"Step {steps_covered[0]}"
+            )
+            block_header = (
+                f"[CURRENT BLOCK: Block {step} — {label}]\n"
+                f"You are producing Block {step}. This block covers {step_range}.\n"
+                f"Complete ALL sections listed in your step document for this block, "
+                f"then call signal_step_complete().\n"
+                f"Do NOT produce content for any other block. Do NOT produce summaries, "
+                f"decisions, or recommendations that belong to later blocks."
+            )
+        elif step == 5 or (multi_user and step == 9):
+            block_header = (
+                f"[CURRENT BLOCK: Block {step} — {label}]\n"
+                f"You are producing the QC Check block. Review the complete ICR output "
+                f"from previous blocks against the QC checklist."
+            )
+        else:
+            block_header = ""
+
+        if block_header:
+            parts.insert(1, block_header)  # After base prompt, before general rules
 
         return "\n\n---\n\n".join(p for p in parts if p)
 

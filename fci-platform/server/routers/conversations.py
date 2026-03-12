@@ -550,7 +550,7 @@ async def auto_execute(
 
                 # Determine message content
                 is_initial = False
-                content = f"Begin Step {step_num}: {phase_label}. Your step document is loaded. Proceed in express mode."
+                content = f"Begin Block {step_num}: {phase_label}. Your block document is loaded. Produce all sections for this block."
 
                 if step_num == 1:
                     has_any_visible = any(

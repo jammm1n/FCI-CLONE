@@ -72,11 +72,36 @@ settings = Settings()
 # ---------------------------------------------------------------------------
 
 STEP_CONFIG = {
-    1: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-setup"]},
-    2: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-analysis"]},  # TODO: revert to ONESHOT_MODEL for production
-    3: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"]},
-    4: {"model": settings.ANTHROPIC_MODEL, "docs": ["icr-steps-post", "mlro-escalation-matrix"]},
-    5: {"model": settings.ANTHROPIC_MODEL, "docs": ["qc-full-checklist"]},  # TODO: revert to ONESHOT_MODEL for production
+    1: {
+        "model": settings.ANTHROPIC_MODEL,
+        "label": "Setup & Context",
+        "docs": ["icr-steps-setup"],
+        "steps_covered": [1, 2, 3, 4, 5, 6],
+    },
+    2: {
+        "model": settings.ANTHROPIC_MODEL,  # TODO: revert to ONESHOT_MODEL for production
+        "label": "Core Analysis",
+        "docs": ["icr-steps-analysis"],
+        "steps_covered": [7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    },
+    3: {
+        "model": settings.ANTHROPIC_MODEL,
+        "label": "Decision & Recommendation",
+        "docs": ["icr-steps-decision", "decision-matrix", "mlro-escalation-matrix"],
+        "steps_covered": [17, 18, 19, 20, 21],
+    },
+    4: {
+        "model": settings.ANTHROPIC_MODEL,
+        "label": "Post-Decision",
+        "docs": ["icr-steps-post", "mlro-escalation-matrix"],
+        "steps_covered": [22],
+    },
+    5: {
+        "model": settings.ANTHROPIC_MODEL,  # TODO: revert to ONESHOT_MODEL for production
+        "label": "QC Check",
+        "docs": ["qc-full-checklist"],
+        "steps_covered": [],
+    },
     "summary": {"model": settings.ONESHOT_MODEL},
 }
 

@@ -190,39 +190,6 @@ Do not use the standard "Shall we begin?" phrasing when hard blockers are presen
 **System Constraint:** "Related Parent ICR" typically refers to the current case reference in HaoDesk/CICM. Do not treat it as a missing document unless context explicitly suggests otherwise.
 
 ---
-## PACING MODE
-After Phase 0 confirmation, the investigation proceeds in one of two modes. Express mode is the default.
-### EXPRESS MODE (Default)
-Triggered by default, or when investigator says "express mode," "block mode," "grouped output," or "let's go fast."
-Output is grouped into four blocks. Each block covers multiple ICR steps in a single response. The investigator reviews each block, flags corrections, and says "next block" to proceed.
-**EXPRESS MODE BLOCKS:**
-BLOCK 1 — SETUP & CONTEXT (Phase 0 + Steps 1-6):
-Phase 0 narrative theory and case classification, Step 1 investigation header guidance, Step 2 KYC paragraph, Step 3 account summary and blocks, Step 4 L1 summary, Step 5 prior ICR analysis, Step 6 LE enquiry review.
-BLOCK 2 — CORE ANALYSIS (Steps 7-14):
-Step 7 transaction overview, Step 8 CTM alerts, Steps 9+10 Elliptic analysis (combined), Step 11 privacy coins, Step 12 counterparty analysis, Step 13 fiat transactions, Step 14 device/IP.
-BLOCK 3 — COMMUNICATIONS & SUMMARY (Steps 15-20):
-Step 15 OSINT, Step 16 user communication, Step 17 other unusual activity, Step 18 RFI decision, Step 19 RFI analysis summary, Step 20 summary of unusual transactions (Parts A and B).
-BLOCK 4 — DECISION (Step 21):
-Pre-decision gate (decision matrix scan, MLRO escalation check, auto-fail check), conclusion and recommendation, escalation routing, offboarding guidance if applicable.
-Each block output must be clearly labelled with step numbers and ICR section names for copy-paste into HaoDesk fields.
-**EXPRESS MODE QC OBLIGATION:**
-At the end of each block, append a "BLOCK QC" section. For every step in the block, list QC checks from the step guide documents and confirm each is satisfied or flag what needs attention. Format as a markdown table:
-"BLOCK [X] QC:"
-| Step | Check | Status |
-One row per QC check. Status: ✅ PASS or ⚠️ FLAG. If flagged, add short reason (max 10 words). No separate commentary — table is the complete QC output.
-**EXPRESS MODE CONSTRAINTS:**
-- Phase 0 is ALWAYS presented first and confirmed before Block 1 begins. Hard Stop still applies.
-- If case is unusually complex (5+ prior ICRs, 10+ LE cases, multi-jurisdiction, corporate with extensive KYB), recommend Standard Mode.
-- All step-specific rules still apply — Express Mode changes grouping, not analytical requirements.
-- Investigator may switch to Standard Mode by saying "slow down" or "step by step from here."
-### STANDARD MODE
-Triggered when investigator says "step by step," "standard mode," or "one at a time."
-Rules:
-1. One step at a time. Do not generate multiple ICR steps in a single response.
-2. The Loop: Execute current step per the relevant step document, applying all rules from icr-general-rules.md. Perform QC check. STOP. Present output and ask: "Ready for the next step?"
-3. If user provides bulk data covering multiple steps: acknowledge receipt but still process one step at a time.
-Investigator may switch to Express Mode at any point by saying "express mode."
----
 ## STEP 1: INVESTIGATE HEADER
 **ICR Section:** Investigate > Summary tab
 **Action:**
