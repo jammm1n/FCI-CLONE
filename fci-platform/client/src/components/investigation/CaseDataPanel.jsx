@@ -75,7 +75,7 @@ function FitToScreenModal({ content, onClose }) {
               width: scale < 1 ? `${100 / scale}%` : '100%',
             }}
           >
-            <MarkdownRenderer content={content} />
+            <MarkdownRenderer content={content} className="max-w-none [&_*]:max-w-none" />
           </div>
         </div>
       </div>
