@@ -1,0 +1,36 @@
+
+================================================================================
+=== ONESHOT TRACE START === 2026-03-12 22:28:24 UTC
+=== trace_id: exec_conv_35eded7db310
+================================================================================
+Model: anthropic/claude-opus-4.6 | max_tokens: 64000 | auto_continue: True | thinking: 16000
+System prompt: 296,571 chars (~74,142 tokens est.)
+Messages: 9 messages, 117,669 chars (~29,417 tokens est.)
+  msg  1 [user      ]   22,959 chars (~5,739 tok) "[CASE DATA]
+
+**Case ID:** ICR208298933
+**Case Type:** invest..."
+  msg  2 [assistant ]    4,538 chars (~1,134 tok) "
+
+I've reviewed all the case data thoroughly. Let me run thr..."
+  msg  3 [user      ]    2,378 chars (~594 tok) [image, text]
+  msg  4 [assistant ]    2,241 chars (~560 tok) [text, tool_use, tool_use]
+  msg  5 [user      ]   81,488 chars (~20,372 tok) [tool_result, tool_result]
+  msg  6 [assistant ]    3,513 chars (~878 tok) [text, tool_use]
+  msg  7 [user      ]      173 chars (~43 tok) [tool_result]
+  msg  8 [assistant ]      151 chars (~37 tok) "I'm fully ready. All data reviewed, corrections applied, SOP..."
+  msg  9 [user      ]      228 chars (~57 tok) "Execute the full ICR now. Work through all four blocks in or..."
+--------------------------------------------------------------------------------
+--- API CALL 1 ---
+  Messages: 9 | Payload: ~117,669 chars (~29,417 tok) + system ~74,142 tok
+  Result: stop=end_turn | input=39,457 | output=19,388 | cache_create=77,439 | cache_read=0
+  Context window: ~116,896 tokens (input + cache)
+  Output this call: 26,861 chars | Cumulative output: 26,861 chars
+  Running totals: input=39,457 | output=19,388 | cache_create=77,439 | cache_read=0
+================================================================================
+=== ONESHOT TRACE END === status=end_turn (success)
+  API calls: 1 | Continuations: 0 | Tool calls: 0
+  Final output: 26,861 chars (~6,715 tokens est.)
+  Thinking: 20,199 chars
+  TOTALS: input=39,457 | output=19,388 | cache_create=77,439 | cache_read=0
+================================================================================
