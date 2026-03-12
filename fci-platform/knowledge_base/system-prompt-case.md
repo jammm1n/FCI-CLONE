@@ -20,6 +20,7 @@ When instructions conflict, the higher-ranked document wins:
    - mlro-escalation-matrix.md (always in context), mlro-escalation-decisions.md (fetched per jurisdiction)
    - gambling-legality-matrix.md
    - qc-submission-checklist.md
+   **Fetch SOPs only when the step documents leave a genuine gap** for the specific issue you are addressing. The step documents contain the procedural detail for 95% of cases. Do not fetch SOPs speculatively or "to be thorough" — fetch them when you hit a specific question the step document does not answer.
 5. **Pre-flight Auto-Fail Scan:** Check qc-submission-checklist.md Auto-Fail items before beginning.
 ---
 ### FACTUAL INTEGRITY (MANDATORY)

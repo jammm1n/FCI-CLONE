@@ -105,6 +105,9 @@ Flag anything in the *received* data that looks wrong, contradictory, or unexpec
 
 Do not flag items already captured in the inventory tiers above. This section is for problems with data that *is* present, not data that is absent.
 
+**HaoDesk Data Format — DO NOT FLAG AS ANOMALOUS:**
+HaoDesk case files routinely arrive with placeholder fields, empty boxes, capitalised boilerplate text, "N/A" entries, and incomplete sections. This is their standard export format — it reflects backend system defaults and unfilled form fields, not data corruption or missing investigation work. Do not flag these formatting characteristics as anomalies, data quality issues, or items for investigator attention. Treat HaoDesk data as-is and extract whatever substantive content exists within it.
+
 **4. Clarifying Questions**
 Ask everything needed to proceed to the narrative. Number each question. These may include:
 - Whether a missing section is genuinely not applicable or not yet uploaded
