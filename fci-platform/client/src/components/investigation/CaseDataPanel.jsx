@@ -34,41 +34,58 @@ function FitToScreenModal({ content, onClose }) {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
 
-      // scrollHeight on a multi-column element = TOTAL content height at that
-      // column width, NOT the balanced column height. The actual column height
-      // = scrollHeight / columnCount. So zoom needed = availH / (scrollH / cols)
-      // = cols * availH / scrollH.
+      // KEY INSIGHT: scrollHeight on a multi-column element = TOTAL content
+      // height at that column width, NOT the balanced column height.
+      // Zoom needed = cols * availH / scrollHeight(cols).
+      // Height must be set to availH / zoom so the visual fills the container.
 
-      // Find fewest columns where zoom >= 0.85 (prefer bigger text)
-      let bestCols = 5;
-      let bestZoom = 1;
+      // Find fewest columns where zoom is barely noticeable (>= 0.95)
+      let bestCols = 0;
+      let bestZoom = 0;
 
       for (let c = 2; c <= 6; c++) {
         inner.style.columnCount = String(c);
         const totalH = inner.scrollHeight;
-        const zoom = (c * availH) / totalH;
+        const z = (c * availH) / totalH;
 
-        if (zoom >= 1) {
+        if (z >= 1) {
           bestCols = c;
           bestZoom = 1;
           break;
         }
-        if (zoom >= 0.85) {
+        if (z >= 0.95) {
           bestCols = c;
-          bestZoom = zoom * 0.99; // 1% buffer for sub-pixel rounding
+          bestZoom = z * 0.99; // 1% buffer
           break;
         }
       }
 
-      // If even 6 columns isn't enough, use 6 with whatever zoom is needed
-      if (bestZoom === 1 && bestCols === 5) {
+      // Fallback: if nothing hit 0.95, accept >= 0.80
+      if (!bestCols) {
+        for (let c = 2; c <= 6; c++) {
+          inner.style.columnCount = String(c);
+          const totalH = inner.scrollHeight;
+          const z = (c * availH) / totalH;
+          if (z >= 0.80) {
+            bestCols = c;
+            bestZoom = z * 0.99;
+            break;
+          }
+        }
+      }
+
+      // Last resort: 6 columns with whatever zoom
+      if (!bestCols) {
         inner.style.columnCount = '6';
         const totalH = inner.scrollHeight;
         bestCols = 6;
-        bestZoom = Math.max((6 * availH) / totalH * 0.99, 0.5);
+        bestZoom = Math.max(((6 * availH) / totalH) * 0.99, 0.4);
       }
 
-      setLayout({ columns: bestCols, height: availH, zoom: bestZoom, fitting: false });
+      // Height in the zoomed coordinate system must fill the visual container
+      const cssHeight = bestZoom < 1 ? Math.ceil(availH / bestZoom) : availH;
+
+      setLayout({ columns: bestCols, height: cssHeight, zoom: bestZoom, fitting: false });
     }));
 
     return () => { cancelled = true; };
