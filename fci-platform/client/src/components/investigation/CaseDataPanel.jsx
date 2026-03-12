@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import MarkdownRenderer from '../shared/MarkdownRenderer';
 
 const POPOUT_TABS = new Set(['elliptic_raw']);
 
-// Binary search for the largest font size (in px) where content fits without scrolling.
-// Uses actual font-size changes so the browser reflows text naturally.
+// Full-screen modal rendered via portal. Uses CSS zoom to fit all content
+// in one viewport without scrolling — for single-screenshot capture.
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [fontSize, setFontSize] = useState(16);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [fitting, setFitting] = useState(true);
 
   useEffect(() => {
@@ -16,39 +17,26 @@ function FitToScreenModal({ content, onClose }) {
     const inner = contentRef.current;
     if (!container || !inner) return;
 
-    // Wait one frame for initial render
-    let raf = requestAnimationFrame(() => {
-      const availableHeight = container.clientHeight;
+    // Wait for react-markdown to fully render before measuring
+    let raf1 = requestAnimationFrame(() => {
+      let raf2 = requestAnimationFrame(() => {
+        const availableHeight = container.clientHeight;
+        const naturalHeight = inner.scrollHeight;
 
-      // Binary search: find the largest font size that fits
-      let lo = 4;
-      let hi = 16;
-
-      // Quick check: does 16px already fit?
-      inner.style.fontSize = '16px';
-      if (inner.scrollHeight <= availableHeight) {
-        setFontSize(16);
-        setFitting(false);
-        return;
-      }
-
-      // Binary search (8 iterations gives <0.1px precision over 4-16 range)
-      for (let i = 0; i < 8; i++) {
-        const mid = (lo + hi) / 2;
-        inner.style.fontSize = `${mid}px`;
-        if (inner.scrollHeight <= availableHeight) {
-          lo = mid;
+        if (naturalHeight <= availableHeight) {
+          // Content already fits at zoom 1
+          setZoomLevel(1);
         } else {
-          hi = mid;
+          // Shrink to fit: zoom = available / natural, floor to avoid sub-pixel overflow
+          const computed = Math.floor((availableHeight / naturalHeight) * 1000) / 1000;
+          setZoomLevel(Math.max(computed, 0.1));
         }
-      }
-
-      // Use `lo` — the largest size that fits
-      setFontSize(lo);
-      setFitting(false);
+        setFitting(false);
+      });
+      return () => cancelAnimationFrame(raf2);
     });
 
-    return () => cancelAnimationFrame(raf);
+    return () => cancelAnimationFrame(raf1);
   }, [content]);
 
   // Close on Escape
@@ -58,9 +46,9 @@ function FitToScreenModal({ content, onClose }) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative w-[96vw] h-[96vh] bg-surface-50 dark:bg-surface-900 rounded-lg shadow-2xl border border-surface-200 dark:border-surface-700 flex flex-col">
@@ -71,7 +59,7 @@ function FitToScreenModal({ content, onClose }) {
           </h3>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-surface-400">
-              {Math.round(fontSize)}px
+              {Math.round(zoomLevel * 100)}%
             </span>
             <button
               onClick={onClose}
@@ -83,22 +71,21 @@ function FitToScreenModal({ content, onClose }) {
             </button>
           </div>
         </div>
-        {/* Content — font size drives reflow, overflow hidden so no scroll */}
+        {/* Content — CSS zoom causes full reflow, overflow hidden prevents scroll */}
         <div ref={containerRef} className="flex-1 overflow-hidden px-6 py-4">
           <div
             ref={contentRef}
-            className="max-w-none [&_*]:max-w-none"
             style={{
-              fontSize: `${fontSize}px`,
-              lineHeight: 1.4,
+              zoom: zoomLevel,
               opacity: fitting ? 0 : 1,
             }}
           >
-            <MarkdownRenderer content={content} className="max-w-none [&_*]:max-w-none" />
+            <MarkdownRenderer content={content} className="max-w-none" />
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
