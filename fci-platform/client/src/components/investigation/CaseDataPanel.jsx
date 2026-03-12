@@ -5,12 +5,16 @@ import MarkdownRenderer from '../shared/MarkdownRenderer';
 const POPOUT_TABS = new Set(['elliptic_raw']);
 
 // Full-screen modal rendered via portal. Uses CSS multi-column layout
-// with column-fill: auto to fill each column to full height sequentially.
-// No zoom — columns alone handle the fit. For single-screenshot capture.
+// to fit all content in one viewport for single-screenshot capture.
+//
+// Algorithm:
+// 1. Measure balanced height at each column count (2-5), at actual column width
+// 2. Pick fewest columns where balanced height fits (or needs only modest zoom)
+// 3. Render with column-fill: auto + explicit height for flush column bottoms
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [layout, setLayout] = useState({ columns: 1, height: null, fitting: true });
+  const [layout, setLayout] = useState({ columns: 1, height: null, zoom: 1, fitting: true });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -20,29 +24,55 @@ function FitToScreenModal({ content, onClose }) {
     let cancelled = false;
     const raf = (fn) => requestAnimationFrame(() => { if (!cancelled) fn(); });
 
-    // Reset for measurement
+    // Reset — measure with balanced fill so scrollHeight = actual balanced height
     inner.style.columnCount = '1';
     inner.style.height = 'auto';
     inner.style.columnFill = 'balance';
+    inner.style.zoom = '1';
 
-    // Wait for react-markdown to render, then compute columns
     raf(() => raf(() => {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      const availW = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const naturalH = inner.scrollHeight;
 
-      if (naturalH <= availH) {
-        setLayout({ columns: 1, height: null, fitting: false });
+      // Check if content fits without columns
+      if (inner.scrollHeight <= availH) {
+        setLayout({ columns: 1, height: null, zoom: 1, fitting: false });
         return;
       }
 
-      // +1 safety for break-after:avoid gaps; cap by min column width (~250px)
-      const needed = Math.ceil(naturalH / availH) + 1;
-      const maxCols = Math.max(Math.floor(availW / 250), 1);
-      const cols = Math.min(needed, maxCols);
+      // Try 2-5 columns with balanced fill — find fewest where content fits.
+      // Reading scrollHeight after setting columnCount forces synchronous reflow,
+      // so this measures the ACTUAL balanced height at each column width.
+      let cols = 5;
+      let zoom = 1;
 
-      setLayout({ columns: cols, height: availH, fitting: false });
+      for (let c = 2; c <= 5; c++) {
+        inner.style.columnCount = String(c);
+        const balancedH = inner.scrollHeight;
+
+        if (balancedH <= availH) {
+          cols = c;
+          zoom = 1;
+          break;
+        }
+
+        // Accept this column count if zoom >= 0.85 (prefer fewer, bigger columns)
+        const needed = availH / balancedH;
+        if (needed >= 0.85) {
+          cols = c;
+          zoom = needed;
+          break;
+        }
+      }
+
+      // If even 5 columns overflows, compute zoom for 5
+      if (cols === 5 && zoom === 1) {
+        inner.style.columnCount = '5';
+        const h = inner.scrollHeight;
+        zoom = h > availH ? availH / h : 1;
+      }
+
+      setLayout({ columns: cols, height: availH, zoom, fitting: false });
     }));
 
     return () => { cancelled = true; };
@@ -55,7 +85,10 @@ function FitToScreenModal({ content, onClose }) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const statusText = layout.columns > 1 ? `${layout.columns} columns` : '';
+  const statusParts = [];
+  if (layout.columns > 1) statusParts.push(`${layout.columns} columns`);
+  if (layout.zoom < 1) statusParts.push(`${Math.round(layout.zoom * 100)}%`);
+  const statusText = statusParts.join(' · ');
 
   return createPortal(
     <div
@@ -94,6 +127,8 @@ function FitToScreenModal({ content, onClose }) {
               columnGap: '1.5rem',
               columnFill: 'auto',
               height: layout.height ? `${layout.height}px` : 'auto',
+              zoom: layout.zoom,
+              overflowWrap: 'break-word',
               opacity: layout.fitting ? 0 : 1,
             }}
           >
