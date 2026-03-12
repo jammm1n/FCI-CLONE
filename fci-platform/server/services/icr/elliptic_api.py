@@ -1194,10 +1194,18 @@ class EllipticScreener:
     """
 
     def __init__(self):
-        self.api_key = os.environ.get('ELLIPTIC_API_KEY', '')
-        self.api_secret = os.environ.get('ELLIPTIC_API_SECRET', '')
+        # Read from Settings (pydantic-settings loads .env automatically).
+        # Fall back to os.environ for standalone toolkit usage.
+        try:
+            from server.config import settings
+            self.api_key = settings.ELLIPTIC_API_KEY
+            self.api_secret = settings.ELLIPTIC_API_SECRET
+            self.demo_mode = settings.ELLIPTIC_DEMO_MODE
+        except Exception:
+            self.api_key = os.environ.get('ELLIPTIC_API_KEY', '')
+            self.api_secret = os.environ.get('ELLIPTIC_API_SECRET', '')
+            self.demo_mode = os.environ.get('ELLIPTIC_DEMO_MODE', '').lower() in ('true', '1', 'yes')
         self.base_url = 'https://aml-api.elliptic.co'
-        self.demo_mode = os.environ.get('ELLIPTIC_DEMO_MODE', '').lower() in ('true', '1', 'yes')
 
     def is_configured(self):
         """Check if API credentials are available or demo mode is on."""

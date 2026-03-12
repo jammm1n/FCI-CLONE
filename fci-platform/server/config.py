@@ -17,6 +17,8 @@ class Settings(BaseSettings):
 
     # Elliptic API
     ELLIPTIC_API_KEY: str = ""
+    ELLIPTIC_API_SECRET: str = ""
+    ELLIPTIC_DEMO_MODE: bool = False
 
     # Anthropic API
     ANTHROPIC_API_KEY: str = ""
