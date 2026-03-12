@@ -1324,6 +1324,7 @@ def _store_kodex_entry_files(
 
 async def add_kodex_entry(
     case_id: str, label: str, file_refs: list[dict],
+    text: str | None = None,
     entry_id: str | None = None,
     subject_index: int | None = None,
 ) -> dict:
@@ -1347,6 +1348,8 @@ async def add_kodex_entry(
         'ai_output': None,
         'ai_status': None,
     }
+    if text:
+        entry['text'] = text
 
     await col.update_one(
         {'_id': case_id},
@@ -1451,6 +1454,11 @@ async def _process_kodex_entries(
         """Extract text/images from all files in one entry and run AI."""
         text_parts = []
         images_b64 = []
+
+        # Prepend investigator-supplied text
+        entry_text = entry.get('text', '')
+        if entry_text:
+            text_parts.append(f'[Investigator Notes]\n{entry_text}')
 
         for file_ref in entry.get('files', []):
             stored_path = file_ref.get('stored_path', '')

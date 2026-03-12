@@ -1527,15 +1527,16 @@ _KODEX_ALLOWED_TYPES = {
 async def add_kodex_entry(
     case_id: str,
     label: str = Form(...),
-    files: List[UploadFile] = File(...),
+    text: Optional[str] = Form(None),
+    files: Optional[List[UploadFile]] = File(None),
     subject_index: Optional[int] = Query(None),
     current_user: dict = Depends(get_current_user),
 ):
     """
-    Add a Kodex entry (one LE case) with associated files (PDFs, images, Word docs).
+    Add a Kodex entry (one LE case) with associated files and/or text.
 
     Each entry represents one LE investigation/request. The investigator provides
-    a label (e.g., case reference) and one or more files.
+    a label (e.g., case reference) and one or more files and/or text content.
     """
     case = await _get_case_or_404(case_id)
 
@@ -1551,8 +1552,10 @@ async def add_kodex_entry(
                    'Upload C360 data first to identify the subject.',
         )
 
-    if not files:
-        raise HTTPException(status_code=400, detail='At least one file is required.')
+    has_text = bool(text and text.strip())
+    has_files = bool(files)
+    if not has_text and not has_files:
+        raise HTTPException(status_code=400, detail='At least one file or text content is required.')
 
     if not label.strip():
         raise HTTPException(status_code=400, detail='Entry label cannot be empty.')
@@ -1560,33 +1563,37 @@ async def add_kodex_entry(
     # Read and validate all files (MUST read bytes before any async work)
     import uuid
     entry_id = f'entry_{uuid.uuid4().hex[:8]}'
-    file_data = []
-    for f in files:
-        content_type = f.content_type or ''
-        filename = f.filename or 'document'
-        # Infer type from extension if content_type is generic
-        if content_type == 'application/octet-stream' or not content_type:
-            lower = filename.lower()
-            if lower.endswith('.pdf'):
-                content_type = 'application/pdf'
-            elif lower.endswith('.docx'):
-                content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        if content_type not in _KODEX_ALLOWED_TYPES:
-            raise HTTPException(
-                status_code=400,
-                detail=f'File type not accepted: {content_type} for {filename}. '
-                       f'Accepted: PDF, DOCX, JPEG, PNG, GIF, WebP.',
-            )
-        content = await f.read()
-        file_data.append((filename, content, content_type))
+    file_refs = []
 
-    # Store files to disk
-    from server.services.ingestion.ingestion_service import _store_kodex_entry_files
-    file_refs = _store_kodex_entry_files(case_id, entry_id, file_data)
+    if has_files:
+        file_data = []
+        for f in files:
+            content_type = f.content_type or ''
+            filename = f.filename or 'document'
+            # Infer type from extension if content_type is generic
+            if content_type == 'application/octet-stream' or not content_type:
+                lower = filename.lower()
+                if lower.endswith('.pdf'):
+                    content_type = 'application/pdf'
+                elif lower.endswith('.docx'):
+                    content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            if content_type not in _KODEX_ALLOWED_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f'File type not accepted: {content_type} for {filename}. '
+                           f'Accepted: PDF, DOCX, JPEG, PNG, GIF, WebP.',
+                )
+            content = await f.read()
+            file_data.append((filename, content, content_type))
+
+        # Store files to disk
+        from server.services.ingestion.ingestion_service import _store_kodex_entry_files
+        file_refs = _store_kodex_entry_files(case_id, entry_id, file_data)
 
     # Create entry in MongoDB
     entry = await ingestion_service.add_kodex_entry(
         case_id, label, file_refs,
+        text=text.strip() if has_text else None,
         entry_id=entry_id,
         subject_index=subject_index,
     )

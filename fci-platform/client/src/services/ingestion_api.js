@@ -374,9 +374,10 @@ export async function resetKYC(token, caseId, subjectIndex) {
 
 // ── Kodex / LE Entry Pipeline ────────────────────────────────────
 
-export async function addKodexEntry(token, caseId, label, files, subjectIndex) {
+export async function addKodexEntry(token, caseId, label, files, subjectIndex, text = '') {
   const formData = new FormData();
   formData.append('label', label);
+  if (text.trim()) formData.append('text', text);
   for (const file of files) {
     formData.append('files', file);
   }

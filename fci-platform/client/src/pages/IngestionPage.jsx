@@ -3401,6 +3401,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   const { token } = useAuth();
   const section = caseData.sections?.[sectionKey] || {};
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [text, setText] = useState('');
   const [adding, setAdding] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [processingCount, setProcessingCount] = useState(0);
@@ -3428,8 +3429,8 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
     (section.per_case?.length > 0) || status === 'extracted'
   );
 
-  // Effective count includes pending staged files (not yet saved to MongoDB)
-  const hasPending = selectedFiles.length > 0;
+  // Effective count includes pending staged files/text (not yet saved to MongoDB)
+  const hasPending = selectedFiles.length > 0 || text.trim().length > 0;
   const effectiveEntryCount = entries.length + (hasPending ? 1 : 0);
 
   const fileInputRef = useRef(null);
@@ -3453,6 +3454,22 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
     }
   }
 
+  function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    }
+  }
+
   function fileTypeIcon(file) {
     const name = (file.name || '').toLowerCase();
     if (name.endsWith('.pdf')) return 'PDF';
@@ -3462,14 +3479,15 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   }
 
   async function handleAddEntry() {
-    if (selectedFiles.length === 0) return;
+    if (!text.trim() && selectedFiles.length === 0) return;
     setAdding(true);
     try {
       const autoLabel = `LE Case ${entries.length + 1}`;
       await ingestionApi.addKodexEntry(
-        token, caseData.case_id, autoLabel, selectedFiles, subjectIndex,
+        token, caseData.case_id, autoLabel, selectedFiles, subjectIndex, text,
       );
       setSelectedFiles([]);
+      setText('');
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to add Kodex entry:', err);
@@ -3492,13 +3510,14 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
     setProcessingCount(count);
     setProcessing(true);
     try {
-      // Auto-add pending files as a new entry before processing
-      if (selectedFiles.length > 0) {
+      // Auto-add pending files/text as a new entry before processing
+      if (text.trim() || selectedFiles.length > 0) {
         const autoLabel = `LE Case ${entries.length + 1}`;
         await ingestionApi.addKodexEntry(
-          token, caseData.case_id, autoLabel, selectedFiles, subjectIndex,
+          token, caseData.case_id, autoLabel, selectedFiles, subjectIndex, text,
         );
         setSelectedFiles([]);
+        setText('');
       }
       await ingestionApi.processEntries(token, caseData.case_id, sectionKey, subjectIndex);
       if (onSaved) onSaved();
@@ -3514,6 +3533,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
     try {
       await ingestionApi.resetKodex(token, caseData.case_id, subjectIndex);
       setSelectedFiles([]);
+      setText('');
       if (onSaved) onSaved();
     } catch (err) {
       console.error('Failed to reset Kodex:', err);
@@ -3676,10 +3696,20 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
                 <p className="text-sm font-medium text-surface-700 dark:text-surface-300">
                   {entry.label}
                 </p>
+                {entry.text && (
+                  <p className="text-xs text-surface-500 dark:text-surface-400 line-clamp-2 mt-0.5">
+                    {entry.text}
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[10px] text-surface-400">
-                    {(entry.files || []).length} file{(entry.files || []).length !== 1 ? 's' : ''}
-                  </span>
+                  {(entry.files || []).length > 0 && (
+                    <span className="text-[10px] text-surface-400">
+                      {(entry.files || []).length} file{(entry.files || []).length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {entry.text && !(entry.files || []).length && (
+                    <span className="text-[10px] text-surface-400 italic">text only</span>
+                  )}
                   <div className="flex gap-1">
                     {(entry.files || []).map((f) => {
                       const ext = (f.filename || '').split('.').pop()?.toUpperCase() || 'FILE';
@@ -3723,6 +3753,18 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
               {section.error_message}
             </div>
           )}
+
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onPaste={handlePaste}
+            placeholder="Paste or type LE case details — screenshots can be pasted directly..."
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg bg-white dark:bg-surface-900 border border-surface-300
+              dark:border-surface-600 text-surface-900 dark:text-surface-100 placeholder-surface-400
+              text-sm font-mono focus:outline-none focus:ring-2 focus:ring-gold-500/50
+              focus:border-gold-500 mb-2"
+          />
 
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -3780,7 +3822,7 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleAddEntry}
-              disabled={adding || selectedFiles.length === 0}
+              disabled={adding || (!text.trim() && selectedFiles.length === 0)}
               className="px-4 py-1.5 rounded-lg border border-gold-500 text-gold-500 hover:bg-gold-500/10 font-semibold text-sm transition-colors disabled:opacity-50"
             >
               {adding ? 'Adding...' : 'Add Entry'}
