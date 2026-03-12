@@ -9,7 +9,7 @@ const STRIP_WIDTH = 400;  // px width per column strip in the output image
 const STRIP_GAP = 16;     // px gap between strips
 const PAD = 24;            // px padding around the whole image
 const BG_COLOR = '#1a1a1f';
-const TARGET_COLS = 10;    // number of columns in the output image
+const TARGET_COLS = 9;     // number of columns in the output image
 
 // Find a "safe" cut row near targetY — a row where all pixels match background.
 // Scans up to `range` pixels above and below targetY.
