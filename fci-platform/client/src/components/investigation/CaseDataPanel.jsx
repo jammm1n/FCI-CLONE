@@ -9,7 +9,7 @@ const STRIP_WIDTH = 400;  // px width per column strip in the output image
 const STRIP_GAP = 16;     // px gap between strips
 const PAD = 24;            // px padding around the whole image
 const BG_COLOR = '#1a1a1f';
-const TARGET_STRIP_HEIGHT = 1200; // aim for ~1200px tall strips
+const TARGET_COLS = 5;     // number of columns in the output image
 
 // Find a "safe" cut row near targetY — a row where all pixels match background.
 // Scans up to `range` pixels above and below targetY.
@@ -81,9 +81,8 @@ async function downloadAsImage(content, hiddenRef) {
   const srcH = tallCanvas.height;
   const srcCtx = tallCanvas.getContext('2d');
 
-  // Step 3: find safe cut points
-  const scaledTarget = TARGET_STRIP_HEIGHT * 2; // canvas is 2x scale
-  const numStrips = Math.max(2, Math.ceil(srcH / scaledTarget));
+  // Step 3: find safe cut points — divide into TARGET_COLS strips
+  const numStrips = TARGET_COLS;
   const idealStripH = Math.ceil(srcH / numStrips);
 
   const cuts = [0];
