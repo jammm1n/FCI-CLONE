@@ -8,13 +8,14 @@ const POPOUT_TABS = new Set(['elliptic_raw']);
 // to fit all content in one viewport for single-screenshot capture.
 //
 // Algorithm:
-// 1. Measure balanced height at each column count (2-5), at actual column width
-// 2. Pick fewest columns where balanced height fits (or needs only modest zoom)
-// 3. Render with column-fill: auto + explicit height for flush column bottoms
+// 1. column-fill: balance + height: auto — let browser balance naturally
+// 2. Iterate column counts, measure offsetHeight (actual balanced height)
+// 3. Pick fewest columns where content fits, use transform: scale() for fine-tuning
+// Key: transform: scale() is purely visual — no layout coordinate change — no overflow
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [layout, setLayout] = useState({ columns: 1, height: null, zoom: 1, fitting: true });
+  const [layout, setLayout] = useState({ columns: 1, scale: 1, fitting: true });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -24,68 +25,51 @@ function FitToScreenModal({ content, onClose }) {
     let cancelled = false;
     const raf = (fn) => requestAnimationFrame(() => { if (!cancelled) fn(); });
 
-    // Reset — measure with balanced fill so scrollHeight = actual balanced height
+    // Reset for measurement — balanced columns, no transform
     inner.style.columnCount = '1';
-    inner.style.height = 'auto';
     inner.style.columnFill = 'balance';
-    inner.style.zoom = '1';
+    inner.style.height = 'auto';
+    inner.style.transform = 'none';
 
     raf(() => raf(() => {
+      if (cancelled) return;
+
       const cs = getComputedStyle(container);
-      const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const availH = container.clientHeight
+        - parseFloat(cs.paddingTop)
+        - parseFloat(cs.paddingBottom);
 
-      // KEY INSIGHT: scrollHeight on a multi-column element = TOTAL content
-      // height at that column width, NOT the balanced column height.
-      // Zoom needed = cols * availH / scrollHeight(cols).
-      // Height must be set to availH / zoom so the visual fills the container.
-
-      // Find fewest columns where zoom is barely noticeable (>= 0.95)
       let bestCols = 0;
-      let bestZoom = 0;
+      let bestScale = 1;
 
+      // Find fewest columns where balanced height fits (or needs modest scaling)
       for (let c = 2; c <= 6; c++) {
         inner.style.columnCount = String(c);
-        const totalH = inner.scrollHeight;
-        const z = (c * availH) / totalH;
+        const h = inner.offsetHeight; // balanced column height (forces reflow)
 
-        if (z >= 1) {
+        if (h <= availH) {
           bestCols = c;
-          bestZoom = 1;
+          bestScale = 1;
           break;
         }
-        if (z >= 0.95) {
+
+        const s = availH / h;
+        if (s >= 0.80) {
           bestCols = c;
-          bestZoom = z * 0.99; // 1% buffer
+          bestScale = s * 0.98; // 2% buffer for rounding / break-avoid
           break;
         }
       }
 
-      // Fallback: if nothing hit 0.95, accept >= 0.80
-      if (!bestCols) {
-        for (let c = 2; c <= 6; c++) {
-          inner.style.columnCount = String(c);
-          const totalH = inner.scrollHeight;
-          const z = (c * availH) / totalH;
-          if (z >= 0.80) {
-            bestCols = c;
-            bestZoom = z * 0.99;
-            break;
-          }
-        }
-      }
-
-      // Last resort: 6 columns with whatever zoom
+      // Last resort: 6 columns with whatever scale
       if (!bestCols) {
         inner.style.columnCount = '6';
-        const totalH = inner.scrollHeight;
+        const h = inner.offsetHeight;
         bestCols = 6;
-        bestZoom = Math.max(((6 * availH) / totalH) * 0.99, 0.4);
+        bestScale = Math.max((availH / h) * 0.98, 0.4);
       }
 
-      // Height in the zoomed coordinate system must fill the visual container
-      const cssHeight = bestZoom < 1 ? Math.ceil(availH / bestZoom) : availH;
-
-      setLayout({ columns: bestCols, height: cssHeight, zoom: bestZoom, fitting: false });
+      setLayout({ columns: bestCols, scale: bestScale, fitting: false });
     }));
 
     return () => { cancelled = true; };
@@ -100,7 +84,7 @@ function FitToScreenModal({ content, onClose }) {
 
   const statusParts = [];
   if (layout.columns > 1) statusParts.push(`${layout.columns} columns`);
-  if (layout.zoom < 1) statusParts.push(`${Math.round(layout.zoom * 100)}%`);
+  if (layout.scale < 1) statusParts.push(`${Math.round(layout.scale * 100)}%`);
   const statusText = statusParts.join(' · ');
 
   return createPortal(
@@ -130,7 +114,7 @@ function FitToScreenModal({ content, onClose }) {
             </button>
           </div>
         </div>
-        {/* Content — columns spread list items across width, zoom handles overflow */}
+        {/* Content — balanced columns, transform: scale() for fine-tuning */}
         <div ref={containerRef} className="flex-1 overflow-hidden px-6 py-4">
           <div
             ref={contentRef}
@@ -138,9 +122,10 @@ function FitToScreenModal({ content, onClose }) {
             style={{
               columnCount: layout.columns,
               columnGap: '1.5rem',
-              columnFill: 'auto',
-              height: layout.height ? `${layout.height}px` : 'auto',
-              zoom: layout.zoom,
+              columnFill: 'balance',
+              height: 'auto',
+              transform: layout.scale < 1 ? `scale(${layout.scale})` : 'none',
+              transformOrigin: 'top left',
               overflowWrap: 'break-word',
               opacity: layout.fitting ? 0 : 1,
             }}
