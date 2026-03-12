@@ -35,8 +35,10 @@ function FitToScreenModal({ content, onClose }) {
         return;
       }
 
-      // Compute columns needed (cap at 3 for readability)
-      const cols = Math.min(Math.ceil(naturalH / availH), 3);
+      // Compute columns needed, capped by minimum readable column width (~280px)
+      const availW = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const maxCols = Math.max(Math.floor(availW / 280), 1);
+      const cols = Math.min(Math.ceil(naturalH / availH), maxCols);
       inner.style.columnCount = String(cols);
 
       // Phase 2: measure after columns, apply transform scale if still overflowing
