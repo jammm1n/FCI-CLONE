@@ -5,12 +5,12 @@ import MarkdownRenderer from '../shared/MarkdownRenderer';
 const POPOUT_TABS = new Set(['elliptic_raw']);
 
 // Full-screen modal rendered via portal. Uses CSS multi-column layout
-// to spread list-heavy content across 2-3 columns, then a modest zoom
-// fallback if columns alone aren't enough. For single-screenshot capture.
+// with column-fill: auto to fill each column to full height sequentially.
+// No zoom — columns alone handle the fit. For single-screenshot capture.
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [layout, setLayout] = useState({ columns: 1, scale: 1, fitting: true });
+  const [layout, setLayout] = useState({ columns: 1, height: null, fitting: true });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -22,34 +22,27 @@ function FitToScreenModal({ content, onClose }) {
 
     // Reset for measurement
     inner.style.columnCount = '1';
-    inner.style.zoom = '1';
+    inner.style.height = 'auto';
+    inner.style.columnFill = 'balance';
 
-    // Wait for react-markdown to render, then find optimal column count
+    // Wait for react-markdown to render, then compute columns
     raf(() => raf(() => {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const availW = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const naturalH = inner.scrollHeight;
 
-      // Try increasing columns until content fits with minimal zoom.
-      // Synchronous: setting columnCount then reading scrollHeight forces reflow.
-      let cols = 1;
-      let scale = 1;
-
-      for (let c = 1; c <= 5; c++) {
-        inner.style.columnCount = String(c);
-        const h = inner.scrollHeight;
-        cols = c;
-
-        if (h <= availH) {
-          scale = 1;
-          break;
-        }
-
-        scale = availH / h;
-        if (scale >= 0.85) break; // Acceptable zoom, prefer fewer columns
+      if (naturalH <= availH) {
+        setLayout({ columns: 1, height: null, fitting: false });
+        return;
       }
 
-      scale = Math.max(scale, 0.5);
-      setLayout({ columns: cols, scale, fitting: false });
+      // +1 safety for break-after:avoid gaps; cap by min column width (~250px)
+      const needed = Math.ceil(naturalH / availH) + 1;
+      const maxCols = Math.max(Math.floor(availW / 250), 1);
+      const cols = Math.min(needed, maxCols);
+
+      setLayout({ columns: cols, height: availH, fitting: false });
     }));
 
     return () => { cancelled = true; };
@@ -62,9 +55,7 @@ function FitToScreenModal({ content, onClose }) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const statusParts = [];
-  if (layout.columns > 1) statusParts.push(`${layout.columns} columns`);
-  if (layout.scale < 1) statusParts.push(`${Math.round(layout.scale * 100)}%`);
+  const statusText = layout.columns > 1 ? `${layout.columns} columns` : '';
 
   return createPortal(
     <div
@@ -78,9 +69,9 @@ function FitToScreenModal({ content, onClose }) {
             Elliptic Screening Results — Fit to Screen
           </h3>
           <div className="flex items-center gap-3">
-            {statusParts.length > 0 && (
+            {statusText && (
               <span className="text-[10px] text-surface-400">
-                {statusParts.join(' · ')}
+                {statusText}
               </span>
             )}
             <button
@@ -100,8 +91,9 @@ function FitToScreenModal({ content, onClose }) {
             className="fit-to-screen-columns"
             style={{
               columnCount: layout.columns,
-              columnGap: '2rem',
-              zoom: layout.scale,
+              columnGap: '1.5rem',
+              columnFill: 'auto',
+              height: layout.height ? `${layout.height}px` : 'auto',
               opacity: layout.fitting ? 0 : 1,
             }}
           >
