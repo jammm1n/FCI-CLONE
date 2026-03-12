@@ -34,23 +34,41 @@ function FitToScreenModal({ content, onClose }) {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
 
-      const naturalH = inner.scrollHeight;
+      // scrollHeight on a multi-column element = TOTAL content height at that
+      // column width, NOT the balanced column height. The actual column height
+      // = scrollHeight / columnCount. So zoom needed = availH / (scrollH / cols)
+      // = cols * availH / scrollH.
 
-      // DEBUG — log actual measurements to console
-      const debug = { availH, naturalH, measurements: [] };
+      // Find fewest columns where zoom >= 0.85 (prefer bigger text)
+      let bestCols = 5;
+      let bestZoom = 1;
 
-      for (let c = 1; c <= 6; c++) {
+      for (let c = 2; c <= 6; c++) {
         inner.style.columnCount = String(c);
-        const h = inner.scrollHeight;
-        debug.measurements.push({ columns: c, scrollHeight: h, ratio: (availH / h).toFixed(3) });
+        const totalH = inner.scrollHeight;
+        const zoom = (c * availH) / totalH;
+
+        if (zoom >= 1) {
+          bestCols = c;
+          bestZoom = 1;
+          break;
+        }
+        if (zoom >= 0.85) {
+          bestCols = c;
+          bestZoom = zoom * 0.99; // 1% buffer for sub-pixel rounding
+          break;
+        }
       }
 
-      console.table(debug.measurements);
-      console.log('availH:', availH, 'naturalH:', naturalH);
+      // If even 6 columns isn't enough, use 6 with whatever zoom is needed
+      if (bestZoom === 1 && bestCols === 5) {
+        inner.style.columnCount = '6';
+        const totalH = inner.scrollHeight;
+        bestCols = 6;
+        bestZoom = Math.max((6 * availH) / totalH * 0.99, 0.5);
+      }
 
-      // Reset to 1 for now — just show the debug data
-      inner.style.columnCount = '1';
-      setLayout({ columns: 1, height: null, zoom: 1, fitting: false });
+      setLayout({ columns: bestCols, height: availH, zoom: bestZoom, fitting: false });
     }));
 
     return () => { cancelled = true; };
