@@ -14,7 +14,8 @@
       "Bash(ls -lh /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/core/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/prompts/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/reference/*.md /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/system-prompt-*.md)",
       "Read(//c/coding/python_new/fci-investigator/**)",
       "Bash(ls:*)",
-      "Bash(PYTHONPATH=. python -c \"\nfrom server.services.ingestion.ingestion_service import _store_kodex_entry_files, add_kodex_entry, remove_kodex_entry, KODEX_ALLOWED_TYPES\nprint\\('All kodex service functions imported OK'\\)\nprint\\('KODEX_ALLOWED_TYPES:', KODEX_ALLOWED_TYPES\\)\n\" 2>&1)"
+      "Bash(PYTHONPATH=. python -c \"\nfrom server.services.ingestion.ingestion_service import _store_kodex_entry_files, add_kodex_entry, remove_kodex_entry, KODEX_ALLOWED_TYPES\nprint\\('All kodex service functions imported OK'\\)\nprint\\('KODEX_ALLOWED_TYPES:', KODEX_ALLOWED_TYPES\\)\n\" 2>&1)",
+      "Bash(npm install:*)"
     ]
   }
 }

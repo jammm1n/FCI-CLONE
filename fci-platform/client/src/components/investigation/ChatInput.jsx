@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import ImageUpload from '../shared/ImageUpload';
+import { getMarkdownFromPaste } from '../../utils/pasteMarkdown';
 
 export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep, stepComplete, onAdvanceStep, onQCCheck, onContinueDiscussion, onManualStepComplete, stepLoading, onAutoExecute, autoExecuting, convMode, oneshotReady, oneshotExecuted, onOneshotExecute, oneshotExecuting, onContinueOneshotDiscussion, onOneshotQCCheck, totalSteps = 5, draftKey }) {
   const [text, setText] = useState(() => (draftKey ? localStorage.getItem(draftKey) || '' : ''));
@@ -17,13 +18,15 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
   }, [draftKey]);
 
   const setDraft = useCallback((value) => {
-    const v = typeof value === 'function' ? value(text) : value;
-    setText(v);
-    if (draftKey) {
-      if (v) localStorage.setItem(draftKey, v);
-      else localStorage.removeItem(draftKey);
-    }
-  }, [draftKey, text]);
+    setText((prev) => {
+      const v = typeof value === 'function' ? value(prev) : value;
+      if (draftKey) {
+        if (v) localStorage.setItem(draftKey, v);
+        else localStorage.removeItem(draftKey);
+      }
+      return v;
+    });
+  }, [draftKey]);
 
   // Close experimental popover on click outside
   useEffect(() => {
@@ -59,6 +62,20 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
     if (!textarea) return;
 
     function handlePaste(e) {
+      // HTML with tables/formatting → convert to Markdown
+      const markdown = getMarkdownFromPaste(e.clipboardData);
+      if (markdown) {
+        e.preventDefault();
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        setDraft((prev) => prev.substring(0, start) + markdown + prev.substring(end));
+        requestAnimationFrame(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+        });
+        return;
+      }
+
+      // Image paste
       const items = e.clipboardData?.items;
       if (!items) return;
 
@@ -80,7 +97,7 @@ export default function ChatInput({ onSend, disabled, maxWidth = '', currentStep
 
     textarea.addEventListener('paste', handlePaste);
     return () => textarea.removeEventListener('paste', handlePaste);
-  }, []);
+  }, [setDraft]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();

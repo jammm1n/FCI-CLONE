@@ -5,6 +5,7 @@ import AppLayout from '../components/AppLayout';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import useIngestionStatus from '../hooks/useIngestionStatus';
 import * as ingestionApi from '../services/ingestion_api';
+import { getMarkdownFromPaste } from '../utils/pasteMarkdown';
 
 // ── Section Key Labels ───────────────────────────────────────────
 
@@ -2088,6 +2089,20 @@ function RFIEntrySection({ caseData, onSaved, showTotalCount = false, subjectInd
   }
 
   function handlePaste(e) {
+    // HTML with tables/formatting → convert to Markdown and insert
+    const markdown = getMarkdownFromPaste(e.clipboardData);
+    if (markdown) {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      setText((prev) => prev.substring(0, start) + markdown + prev.substring(end));
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + markdown.length;
+      });
+      return;
+    }
+
     const items = e.clipboardData?.items;
     if (!items) return;
     const imageFiles = [];
@@ -2678,6 +2693,20 @@ function TextImageSection({ sectionKey, caseData, placeholder, onSaved, subjectI
   }
 
   function handlePaste(e) {
+    // HTML with tables/formatting → convert to Markdown and insert
+    const markdown = getMarkdownFromPaste(e.clipboardData);
+    if (markdown) {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      setText((prev) => prev.substring(0, start) + markdown + prev.substring(end));
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + markdown.length;
+      });
+      return;
+    }
+
     const html = e.clipboardData?.getData('text/html');
 
     // Extract images embedded in HTML (e.g., chat log pasted via Notes)
@@ -3455,6 +3484,20 @@ function KodexEntrySection({ caseData, onSaved, subjectIndex }) {
   }
 
   function handlePaste(e) {
+    // HTML with tables/formatting → convert to Markdown and insert
+    const markdown = getMarkdownFromPaste(e.clipboardData);
+    if (markdown) {
+      e.preventDefault();
+      const ta = e.target;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      setText((prev) => prev.substring(0, start) + markdown + prev.substring(end));
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = start + markdown.length;
+      });
+      return;
+    }
+
     const items = e.clipboardData?.items;
     if (!items) return;
     const imageFiles = [];
