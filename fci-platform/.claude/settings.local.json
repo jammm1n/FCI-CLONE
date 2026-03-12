@@ -19,7 +19,8 @@
       "Bash(npx -y acorn --ecma2022 --module --allow-import-export-everywhere src/services/api.js 2>&1 | tail -5)",
       "Bash(npx -y acorn --ecma2020 --module src/services/api.js > /dev/null 2>&1 && echo \"api.js: OK\" || npx -y acorn --ecma2020 --module src/services/api.js 2>&1 | tail -3)",
       "Bash(du -h /c/coding/python_new/fci-investigator/fci-platform/knowledge_base/core/*.md | sort -h)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(npx acorn:*)"
     ]
   }
 }

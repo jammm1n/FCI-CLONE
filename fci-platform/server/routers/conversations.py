@@ -11,6 +11,7 @@ Streaming flow:
     then after the "done" event, stores the full turn in MongoDB.
 """
 
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -26,7 +27,7 @@ from server.services.knowledge_base import KnowledgeBase
 from server.services.pdf_export import generate_conversation_pdf, build_pdf_filename
 from server.database import get_database
 from server.config import settings
-from server.models.schemas import OneshotPartialRequest
+from server.models.schemas import OneshotPartialRequest, StepPartialRequest
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,11 @@ async def send_message(
         step_complete_signalled = False
         oneshot_ready_signalled = False
 
+        # Accumulate content for partial save on failure
+        accum_content = ""
+        accum_tools = []
+        accum_thinking = ""
+
         try:
             async for event in conversation_manager.send_message_streaming(
                 conversation_id=conversation_id,
@@ -172,6 +178,17 @@ async def send_message(
                     oneshot_ready_signalled = True
                     yield {"data": json.dumps(event)}
                 else:
+                    # Track content for resilience
+                    if event["type"] == "content_delta":
+                        accum_content += event.get("text", "")
+                    elif event["type"] == "thinking_delta":
+                        accum_thinking += event.get("text", "")
+                    elif event["type"] == "tool_use":
+                        accum_tools.append({
+                            "tool": event.get("tool", ""),
+                            "document_id": event.get("document_id", ""),
+                            "document_title": event.get("document_title", ""),
+                        })
                     # Forward content_delta and tool_use events
                     yield {"data": json.dumps(event)}
 
@@ -180,10 +197,36 @@ async def send_message(
             return
         except RateLimitError as e:
             logger.warning("Anthropic rate limit hit during streaming: %s", e)
+            # Save partial if we have content
+            if accum_content:
+                try:
+                    await conversation_manager.store_step_partial(
+                        conversation_id=conversation_id,
+                        user_content=content,
+                        is_initial_assessment=initial_assessment,
+                        partial_content=accum_content,
+                        tools_used=accum_tools,
+                        thinking_content=accum_thinking,
+                    )
+                except Exception:
+                    logger.exception("Failed to save step partial on rate limit")
             yield {"data": json.dumps({"type": "error", "message": "AI service is rate-limited. Please wait a moment and try again."})}
             return
         except Exception as e:
             logger.exception("Streaming error in conversation %s", conversation_id)
+            # Save partial if we have content
+            if accum_content:
+                try:
+                    await conversation_manager.store_step_partial(
+                        conversation_id=conversation_id,
+                        user_content=content,
+                        is_initial_assessment=initial_assessment,
+                        partial_content=accum_content,
+                        tools_used=accum_tools,
+                        thinking_content=accum_thinking,
+                    )
+                except Exception:
+                    logger.exception("Failed to save step partial on stream error")
             yield {"data": json.dumps({"type": "error", "message": "Internal server error"})}
             return
 
@@ -231,6 +274,19 @@ async def send_message(
                     "Failed to store streamed response in conversation %s",
                     conversation_id,
                 )
+                # Fallback: save as partial from done_event content
+                if done_event.get("content"):
+                    try:
+                        await conversation_manager.store_step_partial(
+                            conversation_id=conversation_id,
+                            user_content=content,
+                            is_initial_assessment=initial_assessment,
+                            partial_content=done_event["content"],
+                            tools_used=done_event.get("tools_used", []),
+                            thinking_content=done_event.get("thinking_content", ""),
+                        )
+                    except Exception:
+                        logger.exception("Failed to save step partial as fallback")
                 yield {
                     "data": json.dumps({
                         "type": "error",
@@ -569,21 +625,58 @@ async def auto_execute(
                     "user_content": content if not is_initial else None,
                 })}
 
-                # Stream AI response
+                # Stream AI response with content accumulation for resilience
                 done_event = None
+                step_content = ""
+                step_tools = []
+                step_thinking = ""
 
-                async for event in conversation_manager.send_message_streaming(
-                    conversation_id=conversation_id,
-                    content=content,
-                    knowledge_base=kb,
-                    is_initial_assessment=is_initial,
-                ):
-                    if event["type"] == "done":
-                        done_event = event
-                    elif event["type"] == "tool_use" and event.get("tool") == "signal_step_complete":
-                        pass  # Silently consume in auto mode
-                    else:
-                        yield {"data": json.dumps(event)}
+                try:
+                    async for event in conversation_manager.send_message_streaming(
+                        conversation_id=conversation_id,
+                        content=content,
+                        knowledge_base=kb,
+                        is_initial_assessment=is_initial,
+                    ):
+                        if event["type"] == "done":
+                            done_event = event
+                        elif event["type"] == "tool_use" and event.get("tool") == "signal_step_complete":
+                            pass  # Silently consume in auto mode
+                        else:
+                            # Accumulate content for partial save on failure
+                            if event["type"] == "content_delta":
+                                step_content += event.get("text", "")
+                            elif event["type"] == "thinking_delta":
+                                step_thinking += event.get("text", "")
+                            elif event["type"] == "tool_use":
+                                step_tools.append({
+                                    "tool": event.get("tool", ""),
+                                    "document_id": event.get("document_id", ""),
+                                    "document_title": event.get("document_title", ""),
+                                })
+                            yield {"data": json.dumps(event)}
+                except (Exception, asyncio.CancelledError) as stream_err:
+                    # Stream died mid-response — save whatever we got
+                    if step_content:
+                        try:
+                            await conversation_manager.store_step_partial(
+                                conversation_id=conversation_id,
+                                user_content=content,
+                                is_initial_assessment=is_initial,
+                                partial_content=step_content,
+                                tools_used=step_tools,
+                                thinking_content=step_thinking,
+                            )
+                            yield {"data": json.dumps({
+                                "type": "auto_step_partial",
+                                "step": step_num,
+                                "chars_saved": len(step_content),
+                            })}
+                        except Exception:
+                            logger.exception("Failed to save step partial during auto-execute error")
+                    logger.exception("Auto-execute stream error at step %d in %s", step_num, conversation_id)
+                    yield {"data": json.dumps({"type": "error", "message": f"Stream failed at step {step_num}. Partial output saved ({len(step_content)} chars)."})}
+                    return
 
                 # Store response
                 if done_event:
@@ -747,6 +840,34 @@ async def oneshot_execute(
                 }
 
     return EventSourceResponse(event_generator())
+
+
+@router.post("/{conversation_id}/save-partial")
+async def save_partial(
+    conversation_id: str,
+    body: StepPartialRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Save partial step output after a stream failure.
+
+    Called by the frontend when the SSE stream dies without a done event.
+    Creates or updates a partial assistant message in MongoDB so the
+    output survives page reload and can be continued.
+    """
+    try:
+        result = await conversation_manager.store_step_partial(
+            conversation_id=conversation_id,
+            user_content=body.user_content,
+            is_initial_assessment=body.is_initial_assessment,
+            partial_content=body.content,
+            tools_used=body.tools_used,
+            thinking_content=body.thinking_content,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
 
 
 @router.post("/{conversation_id}/oneshot-save-partial")

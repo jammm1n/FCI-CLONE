@@ -32,13 +32,31 @@ export default function useStreamingChat(token) {
   // -----------------------------------------------------------------------
   // SSE stream reader (shared by sendMessage and triggerInitialAssessment)
   // -----------------------------------------------------------------------
-  const readStream = useCallback(async (response, streamMsgId) => {
+  const readStream = useCallback(async (response, streamMsgId, opts = {}) => {
+    const { conversationId: convId, userContent = '', isInitialAssessment = false } = opts;
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
     let toolsUsed = [];
     let thinkingAccum = '';
     let contentAccum = '';
+    let receivedDone = false;
+
+    // Helper: best-effort save partial via backend
+    const trySavePartial = async () => {
+      if (!contentAccum || !convId) return;
+      try {
+        await api.saveStepPartial(token, convId, {
+          content: contentAccum,
+          tools_used: toolsUsed,
+          thinking_content: thinkingAccum,
+          user_content: userContent,
+          is_initial_assessment: isInitialAssessment,
+        });
+      } catch {
+        // Best-effort — backend may have already saved
+      }
+    };
 
     try {
       while (true) {
@@ -84,6 +102,7 @@ export default function useStreamingChat(token) {
               )
             );
           } else if (event.type === 'done') {
+            receivedDone = true;
             if (event.token_usage) setTokenUsage(event.token_usage);
             const truncationNotice = event.truncated
               ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit. Try sending a follow-up message to continue.'
@@ -117,9 +136,24 @@ export default function useStreamingChat(token) {
           }
         }
       }
+
+      // Stream ended without done event — silent close
+      if (!receivedDone && contentAccum) {
+        await trySavePartial();
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === streamMsgId
+              ? { ...msg, isStreaming: false, stepPartial: true }
+              : msg
+          )
+        );
+      }
     } catch (err) {
       if (err.name === 'AbortError') {
-        // User stopped the stream — keep content received so far, just mark done
+        // User stopped the stream — save partial and keep content
+        if (contentAccum) {
+          await trySavePartial();
+        }
         setMessages((prev) =>
           prev.map((msg) =>
             msg.message_id === streamMsgId
@@ -129,9 +163,21 @@ export default function useStreamingChat(token) {
         );
         return;
       }
+      // Connection error — save partial before re-throwing
+      if (contentAccum) {
+        await trySavePartial();
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.message_id === streamMsgId
+              ? { ...msg, isStreaming: false, stepPartial: true }
+              : msg
+          )
+        );
+        return;
+      }
       throw err;
     }
-  }, []);
+  }, [token]);
 
   // -----------------------------------------------------------------------
   // Stop in-flight stream
@@ -172,7 +218,7 @@ export default function useStreamingChat(token) {
       const response = await api.sendMessage(token, convId, '', [], true, true, controller.signal);
       // Once first bytes arrive, switch from spinner to streaming content
       setAiLoading(false);
-      await readStream(response, streamMsgId);
+      await readStream(response, streamMsgId, { conversationId: convId, userContent: '', isInitialAssessment: true });
     } catch (err) {
       setAiLoading(false);
       if (err.name === 'AbortError') {
@@ -240,7 +286,7 @@ export default function useStreamingChat(token) {
         false,
         controller.signal
       );
-      await readStream(response, streamMsgId);
+      await readStream(response, streamMsgId, { conversationId: convId, userContent: content, isInitialAssessment: false });
     } catch (err) {
       if (err.name !== 'AbortError') {
         setMessages((prev) =>

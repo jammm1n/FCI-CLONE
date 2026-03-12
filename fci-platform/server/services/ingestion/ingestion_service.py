@@ -609,8 +609,8 @@ async def save_text_section_with_ai(
 
     raw_text = text.strip()
 
-    # HaoDesk: skip AI processing, pass raw text straight through
-    if section_key == 'raw_hex_dump':
+    # HaoDesk + L1 Referral: skip AI processing, pass raw text straight through
+    if section_key in ('raw_hex_dump', 'hexa_dump'):
         await _collection().update_one(
             {'_id': case_id},
             {'$set': {

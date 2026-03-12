@@ -226,6 +226,15 @@ class OneshotPartialRequest(BaseModel):
     thinking_content: str = ""
 
 
+class StepPartialRequest(BaseModel):
+    """POST /api/conversations/{id}/save-partial request body."""
+    content: str
+    tools_used: list[dict] = []
+    thinking_content: str = ""
+    user_content: str = ""
+    is_initial_assessment: bool = False
+
+
 # --- System / Utility ---
 
 class HealthResponse(BaseModel):

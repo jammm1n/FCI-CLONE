@@ -122,6 +122,11 @@ export default function InvestigationPage() {
                 setStepComplete(true);
                 setStepSignalled(true);
               }
+              // Step partial detected on reload — ensure chat input is available
+              if (history.investigation_state.has_step_partial) {
+                setStepComplete(false);
+                setStepSignalled(false);
+              }
             }
           }
         } else {
@@ -401,6 +406,19 @@ export default function InvestigationPage() {
           } else if (event.type === 'auto_complete') {
             // All steps finished
 
+          } else if (event.type === 'auto_step_partial') {
+            // Stream died mid-step, backend saved partial
+            if (currentStreamMsgId) {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === currentStreamMsgId
+                    ? { ...msg, isStreaming: false, stepPartial: true }
+                    : msg
+                )
+              );
+              currentStreamMsgId = null;
+            }
+
           } else if (event.type === 'error') {
             if (currentStreamMsgId) {
               setMessages((prev) =>
@@ -429,6 +447,16 @@ export default function InvestigationPage() {
               : msg
           )
         );
+      }
+      // Re-sync investigation state from backend after any failure
+      if (conversationId) {
+        try {
+          const history = await api.getConversationHistory(token, conversationId);
+          if (history?.investigation_state) {
+            setCurrentStep(history.investigation_state.current_step);
+            setStepPhase(history.investigation_state.phase);
+          }
+        } catch { /* best effort */ }
       }
     }
   }, [conversationId, token, autoExecuting, setMessages, setStepComplete, setTokenUsage]);

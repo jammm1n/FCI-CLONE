@@ -655,6 +655,11 @@ async def send_message_streaming(
         }
         streaming_kwargs["max_tokens"] = settings.ONESHOT_FOLLOWUP_MAX_TOKENS
 
+    # Enable auto-continuation for step mode to prevent truncation
+    if has_step_state:
+        streaming_kwargs["auto_continue"] = True
+        streaming_kwargs["max_continuations"] = 2
+
     async for event in get_ai_response_streaming(**streaming_kwargs):
         yield event
 
@@ -688,7 +693,7 @@ async def store_streamed_response(
     # Read conversation for step and mode info
     conv = await db.conversations.find_one(
         {"_id": conversation_id},
-        {"investigation_state.current_step": 1, "mode": 1, "title": 1, "case_mode": 1},
+        {"investigation_state.current_step": 1, "mode": 1, "title": 1, "case_mode": 1, "step_partial_msg_id": 1},
     )
     current_step = conv.get("investigation_state", {}).get("current_step") if conv else None
 
@@ -813,10 +818,153 @@ async def store_streamed_response(
                 {"$set": {"title": title}},
             )
 
+    # Clear any step partial flag — this successful store supersedes it
+    if conv and conv.get("step_partial_msg_id"):
+        await db.conversations.update_one(
+            {"_id": conversation_id},
+            {"$unset": {"step_partial_msg_id": ""}},
+        )
+
     return {
         "message_id": assistant_msg_id,
         "timestamp": now.isoformat(),
     }
+
+
+async def store_step_partial(
+    conversation_id: str,
+    user_content: str,
+    is_initial_assessment: bool,
+    partial_content: str,
+    tools_used: list[dict],
+    thinking_content: str = "",
+) -> dict:
+    """
+    Save partial step output after a stream failure.
+
+    On first call: creates the user message + partial assistant message.
+    On subsequent calls: updates the existing partial message in-place.
+
+    Modeled on store_oneshot_partial() but works for any step-based conversation.
+    """
+    db = get_database()
+    now = _now()
+
+    conversation = await db.conversations.find_one({"_id": conversation_id})
+    if conversation is None:
+        raise ValueError(f"Conversation not found: {conversation_id}")
+
+    state = conversation.get("investigation_state")
+    if not state:
+        raise ValueError("store_step_partial requires a step-based conversation")
+
+    current_step = state["current_step"]
+
+    # Build full tools_used: injected step docs + AI-fetched references
+    is_multi = conversation.get("case_mode") == "multi"
+    tu_config = MULTI_USER_STEP_CONFIG if is_multi else STEP_CONFIG
+    sp_doc_id = "system-prompt-multi-user" if is_multi else "system-prompt-case"
+    step_doc_titles = {
+        "icr-steps-setup": "ICR Steps: Setup & Context",
+        "icr-steps-analysis": "ICR Steps: Analysis",
+        "icr-steps-decision": "ICR Steps: Decision",
+        "icr-steps-post": "ICR Steps: Post-Decision",
+        "decision-matrix": "Decision Matrix",
+        "mlro-escalation-matrix": "MLRO Escalation Matrix",
+        "qc-quick-reference": "QC Quick Reference",
+        "qc-full-checklist": "QC Submission Checklist",
+        "icr-general-rules": "ICR General Rules",
+    }
+    injected = [
+        {"tool": "system_injected", "document_id": sp_doc_id, "document_title": "System Prompt"},
+        {"tool": "system_injected", "document_id": "icr-general-rules", "document_title": "ICR General Rules"},
+    ]
+    if is_multi or current_step <= 4:
+        injected.append({"tool": "system_injected", "document_id": "qc-quick-reference", "document_title": "QC Quick Reference"})
+    for doc_id in tu_config.get(current_step, {}).get("docs", []):
+        title = step_doc_titles.get(doc_id, doc_id)
+        injected.append({"tool": "system_injected", "document_id": doc_id, "document_title": title})
+    all_tools_used = injected + list(tools_used)
+
+    existing_partial_id = conversation.get("step_partial_msg_id")
+
+    if existing_partial_id:
+        # Subsequent save — update existing partial in-place
+        update_fields = {
+            "messages.$.content": partial_content,
+            "messages.$.tools_used": all_tools_used,
+            "updated_at": now,
+        }
+        if thinking_content:
+            update_fields["messages.$.thinking_content"] = thinking_content
+        await db.conversations.update_one(
+            {"_id": conversation_id, "messages.message_id": existing_partial_id},
+            {"$set": update_fields},
+        )
+        logger.info(
+            "Step partial updated for %s (msg %s). Content: %d chars",
+            conversation_id, existing_partial_id, len(partial_content),
+        )
+        return {"message_id": existing_partial_id, "status": "partial_saved"}
+    else:
+        # First save — create user message + partial assistant message
+        new_messages = []
+        partial_msg_id = _generate_id("msg")
+
+        if is_initial_assessment:
+            # Store hidden instruction as user message
+            if is_multi:
+                stored_instruction = MULTI_USER_INITIAL_ASSESSMENT
+            else:
+                stored_instruction = INITIAL_ASSESSMENT_INSTRUCTION
+            new_messages.append({
+                "message_id": _generate_id("msg"),
+                "role": "user",
+                "content": stored_instruction,
+                "step": current_step,
+                "timestamp": now,
+                "visible": False,
+            })
+        elif user_content:
+            new_messages.append({
+                "message_id": _generate_id("msg"),
+                "role": "user",
+                "content": user_content,
+                "step": current_step,
+                "timestamp": now,
+                "visible": True,
+            })
+
+        partial_msg = {
+            "message_id": partial_msg_id,
+            "role": "assistant",
+            "content": partial_content,
+            "tools_used": all_tools_used,
+            "token_usage": {},
+            "step": current_step,
+            "timestamp": now,
+            "visible": True,
+            "step_partial": True,
+        }
+        if thinking_content:
+            partial_msg["thinking_content"] = thinking_content
+        new_messages.append(partial_msg)
+
+        await db.conversations.update_one(
+            {"_id": conversation_id},
+            {
+                "$push": {"messages": {"$each": new_messages}},
+                "$set": {
+                    "step_partial_msg_id": partial_msg_id,
+                    "updated_at": now,
+                },
+            },
+        )
+        logger.info(
+            "Step partial saved for %s (msg %s). Content: %d chars",
+            conversation_id, partial_msg_id, len(partial_content),
+        )
+        return {"message_id": partial_msg_id, "status": "partial_saved"}
 
 
 def _generate_title(content: str) -> str:
@@ -872,6 +1020,8 @@ async def get_history(conversation_id: str) -> dict:
             entry["thinking_content"] = msg["thinking_content"]
         if msg.get("oneshot_partial"):
             entry["executionInterrupted"] = True
+        if msg.get("step_partial"):
+            entry["stepPartial"] = True
 
         visible_messages.append(entry)
 
@@ -896,6 +1046,7 @@ async def get_history(conversation_id: str) -> dict:
             "steps": state["steps"],
             "step_complete_signalled": state.get("step_complete_signalled", False),
             "case_mode": conversation.get("case_mode", "single"),
+            "has_step_partial": bool(conversation.get("step_partial_msg_id")),
         }
 
     # Include oneshot state if present
