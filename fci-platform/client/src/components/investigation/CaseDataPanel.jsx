@@ -1,36 +1,54 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import MarkdownRenderer from '../shared/MarkdownRenderer';
 
 const POPOUT_TABS = new Set(['elliptic_raw']);
 
+// Binary search for the largest font size (in px) where content fits without scrolling.
+// Uses actual font-size changes so the browser reflows text naturally.
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [scale, setScale] = useState(1);
+  const [fontSize, setFontSize] = useState(16);
+  const [fitting, setFitting] = useState(true);
 
-  // Measure content and compute scale to fit viewport
   useEffect(() => {
     const container = containerRef.current;
     const inner = contentRef.current;
     if (!container || !inner) return;
 
-    // Let content render at natural size first
-    setScale(1);
-
-    const frame = requestAnimationFrame(() => {
+    // Wait one frame for initial render
+    let raf = requestAnimationFrame(() => {
       const availableHeight = container.clientHeight;
-      const naturalHeight = inner.scrollHeight;
 
-      if (naturalHeight > availableHeight) {
-        const fitted = availableHeight / naturalHeight;
-        // Clamp to a minimum of 0.25 — below that it's unreadable
-        setScale(Math.max(0.25, fitted));
-      } else {
-        setScale(1);
+      // Binary search: find the largest font size that fits
+      let lo = 4;
+      let hi = 16;
+
+      // Quick check: does 16px already fit?
+      inner.style.fontSize = '16px';
+      if (inner.scrollHeight <= availableHeight) {
+        setFontSize(16);
+        setFitting(false);
+        return;
       }
+
+      // Binary search (8 iterations gives <0.1px precision over 4-16 range)
+      for (let i = 0; i < 8; i++) {
+        const mid = (lo + hi) / 2;
+        inner.style.fontSize = `${mid}px`;
+        if (inner.scrollHeight <= availableHeight) {
+          lo = mid;
+        } else {
+          hi = mid;
+        }
+      }
+
+      // Use `lo` — the largest size that fits
+      setFontSize(lo);
+      setFitting(false);
     });
 
-    return () => cancelAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
   }, [content]);
 
   // Close on Escape
@@ -53,7 +71,7 @@ function FitToScreenModal({ content, onClose }) {
           </h3>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-surface-400">
-              {scale < 1 ? `${Math.round(scale * 100)}%` : '100%'}
+              {Math.round(fontSize)}px
             </span>
             <button
               onClick={onClose}
@@ -65,14 +83,15 @@ function FitToScreenModal({ content, onClose }) {
             </button>
           </div>
         </div>
-        {/* Content area — no overflow scroll, content is scaled to fit */}
-        <div ref={containerRef} className="flex-1 overflow-hidden p-4">
+        {/* Content — font size drives reflow, overflow hidden so no scroll */}
+        <div ref={containerRef} className="flex-1 overflow-hidden px-6 py-4">
           <div
             ref={contentRef}
+            className="max-w-none [&_*]:max-w-none"
             style={{
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-              width: scale < 1 ? `${100 / scale}%` : '100%',
+              fontSize: `${fontSize}px`,
+              lineHeight: 1.4,
+              opacity: fitting ? 0 : 1,
             }}
           >
             <MarkdownRenderer content={content} className="max-w-none [&_*]:max-w-none" />
