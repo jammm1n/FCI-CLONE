@@ -985,9 +985,77 @@ def parse_response(raw, address_override=None):
 
 # ── Markdown Generator ─────────────────────────────────────────
 
+def _round_score(score):
+    """Round a risk score to 1 decimal place, or return 'N/A'."""
+    if score is None:
+        return 'N/A'
+    return round(score, 1)
+
+
+def _dedup_exposures(exposures):
+    """Deduplicate exposure entries by (entity, hops), keeping the larger value."""
+    seen = {}
+    for exp in exposures:
+        key = (exp['entity'], exp.get('hops'))
+        if key in seen:
+            # Keep the entry with the larger total
+            if (exp.get('total_usd') or 0) > (seen[key].get('total_usd') or 0):
+                seen[key] = exp
+        else:
+            seen[key] = exp
+    return list(seen.values())
+
+
+def _format_exposure_line(exp, prefix='  '):
+    """Format a single exposure line."""
+    sanctions_flag = ' **SANCTIONED**' if exp.get('is_sanctioned') else ''
+    return '{}- {} ({}) — {} hops — {} (direct: {} / indirect: {}){}'.format(
+        prefix,
+        exp['entity'],
+        exp['category'],
+        exp['hops'] if exp['hops'] is not None else '?',
+        _fmt_usd(exp['total_usd']),
+        _fmt_usd(exp['direct_usd']),
+        _fmt_usd(exp['indirect_usd']),
+        sanctions_flag,
+    )
+
+
+def _format_cluster_flows(r):
+    """Format cluster flows line, or return None if not available."""
+    if r['cluster_flows']['inflow_usd'] is not None:
+        return '- **Wallet Flows:** Inflow {} / Outflow {}'.format(
+            _fmt_usd(r['cluster_flows']['inflow_usd']),
+            _fmt_usd(r['cluster_flows']['outflow_usd']),
+        )
+    return None
+
+
+def _filter_exposures(exps):
+    """
+    Filter out self-referencing entries and deduplicate.
+
+    Removes entries where the wallet references itself (hops=0, entity=Unknown,
+    is_screened_address=True).
+    """
+    filtered = [
+        exp for exp in exps
+        if not exp.get('is_screened_address')
+    ]
+    return _dedup_exposures(filtered)
+
+
 def generate_markdown(results, customer_id):
     """
     Generate structured markdown for AI consumption.
+
+    Output is optimised for token efficiency:
+    - Scores rounded to 1 decimal place
+    - No Primary Entity field (unreliable — resolved entities are in exposures)
+    - No self-referencing wallet entries
+    - No per-address chain field (stated once at top)
+    - Cluster flows included for all risk levels
+    - Exposure lists deduplicated
 
     Args:
         results: List of standardised result dicts from parse_response.
@@ -1009,6 +1077,7 @@ def generate_markdown(results, customer_id):
     lines.append('**Customer ID:** {}'.format(customer_id))
     lines.append('**Date:** {}'.format(datetime.now().strftime('%Y-%m-%d %H:%M UTC')))
     lines.append('**Addresses Screened:** {}'.format(len(results)))
+    lines.append('**Coverage:** Holistic')
     lines.append('')
 
     # Summary
@@ -1030,24 +1099,16 @@ def generate_markdown(results, customer_id):
             lines.append('')
 
             # Score line
-            score_parts = ['**Risk Score:** {}'.format(r['risk_score'])]
-            if r['risk_score_source'] is not None or r['risk_score_destination'] is not None:
-                score_parts.append('(source: {} / destination: {})'.format(
-                    r['risk_score_source'] if r['risk_score_source'] is not None else 'N/A',
-                    r['risk_score_destination'] if r['risk_score_destination'] is not None else 'N/A',
-                ))
-            lines.append('- ' + ' '.join(score_parts))
+            lines.append('- **Risk Score:** {} (source: {} / destination: {})'.format(
+                _round_score(r['risk_score']),
+                _round_score(r['risk_score_source']),
+                _round_score(r['risk_score_destination']),
+            ))
 
-            # Chain
-            lines.append('- **Chain:** {}'.format(r['chain']))
-
-            # Entity
-            if r['primary_entity']:
-                pe = r['primary_entity']
-                entity_str = '{} ({})'.format(pe['name'], pe['category'])
-                if pe.get('is_vasp'):
-                    entity_str += ' — VASP'
-                lines.append('- **Primary Entity:** {}'.format(entity_str))
+            # Wallet flows
+            flow_line = _format_cluster_flows(r)
+            if flow_line:
+                lines.append(flow_line)
 
             # Typologies
             if r['typologies']:
@@ -1055,9 +1116,10 @@ def generate_markdown(results, customer_id):
                 for t in r['typologies']:
                     cat_str = ', '.join(t['categories']) if t['categories'] else 'N/A'
                     lines.append('  - {} (score: {}, direction: {}, categories: {})'.format(
-                        t['rule_name'], t['risk_score'], t['direction'], cat_str))
+                        t['rule_name'], _round_score(t['risk_score']),
+                        t['direction'], cat_str))
                     for e in t['entities']:
-                        sanctions_flag = ' **⚠ SANCTIONED**' if e.get('is_sanctioned') else ''
+                        sanctions_flag = ' **SANCTIONED**' if e.get('is_sanctioned') else ''
                         country_str = ''
                         if e.get('country'):
                             country_str = ' [{}]'.format(', '.join(e['country']))
@@ -1071,23 +1133,15 @@ def generate_markdown(results, customer_id):
                             sanctions_flag,
                         ))
 
-            # Exposures
+            # Exposures (filtered and deduped)
             for direction in ['source', 'destination']:
-                exps = r['exposures'].get(direction, [])
+                raw_exps = r['exposures'].get(direction, [])
+                exps = _filter_exposures(raw_exps)
                 dir_label = 'Source Exposures (funds FROM)' if direction == 'source' else 'Destination Exposures (funds TO)'
                 if exps:
                     lines.append('- **{}:**'.format(dir_label))
                     for exp in exps:
-                        screened_flag = ' [THIS WALLET]' if exp.get('is_screened_address') else ''
-                        lines.append('  - {} ({}) — {} hops — {} (direct: {} / indirect: {}){}'.format(
-                            exp['entity'],
-                            exp['category'],
-                            exp['hops'] if exp['hops'] is not None else '?',
-                            _fmt_usd(exp['total_usd']),
-                            _fmt_usd(exp['direct_usd']),
-                            _fmt_usd(exp['indirect_usd']),
-                            screened_flag,
-                        ))
+                        lines.append(_format_exposure_line(exp))
                 else:
                     lines.append('- **{}:** None'.format(dir_label))
 
@@ -1098,41 +1152,36 @@ def generate_markdown(results, customer_id):
                     lines.append('  - {} (length: {}, {})'.format(
                         b['type'], b['length'], _fmt_usd(b['usd'])))
 
-            # Cluster flows
-            if r['cluster_flows']['inflow_usd'] is not None:
-                lines.append('- **Cluster Flows:** Inflow {} / Outflow {}'.format(
-                    _fmt_usd(r['cluster_flows']['inflow_usd']),
-                    _fmt_usd(r['cluster_flows']['outflow_usd']),
-                ))
-
             lines.append('')
 
-    # Medium risk table
+    # Medium risk detail
     if medium:
         lines.append('## Medium Risk Addresses')
         lines.append('')
-        lines.append('| Address | Chain | Score | Primary Entity | Top Typology |')
-        lines.append('|---|---|---|---|---|')
         for r in sorted(medium, key=lambda x: (x['risk_score'] or 0), reverse=True):
-            entity_str = r['primary_entity']['name'] if r['primary_entity'] else 'Unknown'
-            top_typo = r['typologies'][0]['rule_name'] if r['typologies'] else 'N/A'
-            addr_short = r['address'][:8] + '...' + r['address'][-6:]
-            lines.append('| {} | {} | {} | {} | {} |'.format(
-                addr_short, r['chain'], r['risk_score'], entity_str, top_typo))
-        lines.append('')
+            lines.append('### {}'.format(r['address']))
+            lines.append('')
 
-        # Medium detail (condensed)
-        lines.append('### Medium Risk Details')
-        lines.append('')
-        for r in sorted(medium, key=lambda x: (x['risk_score'] or 0), reverse=True):
-            lines.append('**{}** (score: {}, chain: {})'.format(r['address'], r['risk_score'], r['chain']))
+            lines.append('- **Risk Score:** {} (source: {} / destination: {})'.format(
+                _round_score(r['risk_score']),
+                _round_score(r['risk_score_source']),
+                _round_score(r['risk_score_destination']),
+            ))
+
+            # Wallet flows
+            flow_line = _format_cluster_flows(r)
+            if flow_line:
+                lines.append(flow_line)
+
+            # Typologies with entities (condensed)
             for t in r['typologies']:
                 for e in t['entities']:
-                    sanctions_flag = ' SANCTIONED' if e.get('is_sanctioned') else ''
+                    sanctions_flag = ' **SANCTIONED**' if e.get('is_sanctioned') else ''
                     lines.append('- {} — {} ({}) — {} hops — {}{}'.format(
                         t['direction'].upper(), e['name'], ', '.join(t['categories']),
                         e['hops'] if e['hops'] is not None else '?',
                         _fmt_usd(e['usd']), sanctions_flag))
+
             lines.append('')
 
     # Low risk
@@ -1142,12 +1191,8 @@ def generate_markdown(results, customer_id):
         lines.append('{} addresses with scores below 2.0 — no significant exposures detected.'.format(len(low)))
         lines.append('')
         for r in low:
-            entity_str = ''
-            if r['primary_entity']:
-                entity_str = ' — {} ({})'.format(r['primary_entity']['name'], r['primary_entity']['category'])
-            score_str = str(r['risk_score']) if r['risk_score'] is not None else 'null'
-            lines.append('- `{}` ({}) score: {}{}'.format(
-                r['address'], r['chain'], score_str, entity_str))
+            score_str = str(_round_score(r['risk_score'])) if r['risk_score'] is not None else 'null'
+            lines.append('- `{}` score: {}'.format(r['address'], score_str))
         lines.append('')
 
     # Errors
