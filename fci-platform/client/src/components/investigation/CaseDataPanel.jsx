@@ -34,45 +34,23 @@ function FitToScreenModal({ content, onClose }) {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
 
-      // Check if content fits without columns
-      if (inner.scrollHeight <= availH) {
-        setLayout({ columns: 1, height: null, zoom: 1, fitting: false });
-        return;
-      }
+      const naturalH = inner.scrollHeight;
 
-      // Try 2-5 columns with balanced fill — find fewest where content fits.
-      // Reading scrollHeight after setting columnCount forces synchronous reflow,
-      // so this measures the ACTUAL balanced height at each column width.
-      let cols = 5;
-      let zoom = 1;
+      // DEBUG — log actual measurements to console
+      const debug = { availH, naturalH, measurements: [] };
 
-      for (let c = 2; c <= 5; c++) {
+      for (let c = 1; c <= 6; c++) {
         inner.style.columnCount = String(c);
-        const balancedH = inner.scrollHeight;
-
-        if (balancedH <= availH) {
-          cols = c;
-          zoom = 1;
-          break;
-        }
-
-        // Accept this column count if zoom >= 0.85 (prefer fewer, bigger columns)
-        const needed = availH / balancedH;
-        if (needed >= 0.85) {
-          cols = c;
-          zoom = needed;
-          break;
-        }
-      }
-
-      // If even 5 columns overflows, compute zoom for 5
-      if (cols === 5 && zoom === 1) {
-        inner.style.columnCount = '5';
         const h = inner.scrollHeight;
-        zoom = h > availH ? availH / h : 1;
+        debug.measurements.push({ columns: c, scrollHeight: h, ratio: (availH / h).toFixed(3) });
       }
 
-      setLayout({ columns: cols, height: availH, zoom, fitting: false });
+      console.table(debug.measurements);
+      console.log('availH:', availH, 'naturalH:', naturalH);
+
+      // Reset to 1 for now — just show the debug data
+      inner.style.columnCount = '1';
+      setLayout({ columns: 1, height: null, zoom: 1, fitting: false });
     }));
 
     return () => { cancelled = true; };
