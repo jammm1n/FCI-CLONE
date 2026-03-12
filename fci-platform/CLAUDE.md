@@ -152,7 +152,8 @@ uid_search       → "UID Search Results"
 
 # Standalone sections
 elliptic_addresses → "Elliptic Screening Addresses"
-elliptic         → "Elliptic Wallet Screening"
+elliptic_raw     → "Elliptic Screening Results" (tab-display only, NOT injected into chat)
+elliptic         → "Elliptic Wallet Screening"  (AI analysis, injected into chat)
 l1_referral      → "L1 Referral Narrative"
 haoDesk          → "HaoDesk Case Data"
 kyc              → "KYC Document Summary"

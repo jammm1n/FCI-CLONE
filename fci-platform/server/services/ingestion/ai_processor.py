@@ -54,6 +54,7 @@ SECTION_PROMPT_MAP = {
     'kodex_assessment': 'prompt-15e-kodex-assessment.md',
     'kodex_per_case': 'prompt-15e-kodex-per-case.md',
     'kodex_synthesis': 'prompt-15e-kodex-summary.md',
+    'elliptic_assessment': 'prompt-14e-elliptic-assessment.md',
 }
 
 # ── Prompt Loading ───────────────────────────────────────────────

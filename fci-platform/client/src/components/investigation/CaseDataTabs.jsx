@@ -17,7 +17,14 @@ const TAB_GROUPS = [
       { key: 'elliptic_addresses', label: 'Addresses' },
     ],
   },
-  { id: 'elliptic', label: 'Elliptic', tabs: [{ key: 'elliptic', label: 'Elliptic' }] },
+  {
+    id: 'elliptic',
+    label: 'Elliptic',
+    tabs: [
+      { key: 'elliptic_raw', label: 'Screening Results' },
+      { key: 'elliptic', label: 'AI Analysis' },
+    ],
+  },
   { id: 'l1_referral', label: 'L1 Referral', tabs: [{ key: 'l1_referral', label: 'L1 Referral' }] },
   { id: 'haoDesk', label: 'HaoDesk', tabs: [{ key: 'haoDesk', label: 'HaoDesk' }] },
   { id: 'kyc', label: 'KYC', tabs: [{ key: 'kyc', label: 'KYC' }] },

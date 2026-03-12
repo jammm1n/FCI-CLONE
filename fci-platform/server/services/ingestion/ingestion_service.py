@@ -12,6 +12,7 @@ All state lives in the MongoDB `ingestion_cases` collection.
 No in-memory session store.
 """
 
+import asyncio
 import base64
 import io
 import logging
@@ -151,6 +152,8 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
     for section_key, _heading, _none_stmt in ASSEMBLY_ORDER:
         if section_key == 'c360':
             continue
+        if section_key == 'elliptic':
+            continue  # Handled separately below (dual output)
         section = sections.get(section_key, {})
         output = section.get('output')
 
@@ -171,6 +174,21 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
             sections_included.append(section_key)
         else:
             sections_none.append(section_key)
+
+    # Elliptic: dual output — raw results for tab display, AI analysis for chat
+    elliptic_sec = sections.get('elliptic', {})
+    if elliptic_sec.get('status') == 'complete':
+        raw_output = elliptic_sec.get('output')
+        ai_output = elliptic_sec.get('ai_output')
+        if raw_output:
+            preprocessed_data['elliptic_raw'] = raw_output
+        if ai_output:
+            preprocessed_data['elliptic'] = ai_output
+        elif raw_output:
+            preprocessed_data['elliptic'] = raw_output  # Fallback
+        sections_included.append('elliptic')
+    else:
+        sections_none.append('elliptic')
 
     # Elliptic address list (C360-extracted + manual, deduplicated)
     c360_addrs = c360.get('wallet_addresses', [])
@@ -1919,6 +1937,10 @@ def _build_assembled_markdown_single(doc: dict, sections: dict, preprocessed_dat
         section = sections.get(section_key, {})
         output = section.get('output')
 
+        # Elliptic: prefer AI analysis over raw output for assembled markdown
+        if section_key == 'elliptic' and section.get('ai_output'):
+            output = section['ai_output']
+
         section_heading = heading
         entries_count = len(section.get('entries', []))
         total_count = section.get('total_count')
@@ -2017,6 +2039,150 @@ async def _run_kodex_assessment(
     )
 
     return result.get('ai_output')
+
+
+# ── Elliptic Assembly-Time AI Assessment ─────────────────────────
+
+
+async def _run_elliptic_assessment(
+    elliptic_raw: str,
+    case_data_markdown: str,
+    subject_uid: str,
+    address_count: int,
+) -> str | None:
+    """
+    Run the context-aware Elliptic wallet screening assessment at assembly time.
+
+    Takes raw Elliptic screening output and compiled case data markdown
+    (all sections except Elliptic). Sends both to the AI with the
+    elliptic_assessment prompt.
+
+    Returns the AI assessment text, or None on failure.
+    """
+    from server.services.ingestion.ai_processor import process_with_ai
+
+    user_message = (
+        f'[CASE DATA]\n\n{case_data_markdown}\n\n'
+        f'---\n\n'
+        f'[ELLIPTIC RAW DATA]\n\n{elliptic_raw}'
+    )
+
+    variables = {
+        'subject_uid': subject_uid,
+        'address_count': str(address_count),
+    }
+
+    logger.info(
+        'Running Elliptic assessment for UID %s: %d addresses, '
+        '%d chars case data, %d chars Elliptic data',
+        subject_uid, address_count, len(case_data_markdown), len(elliptic_raw),
+    )
+
+    result = await process_with_ai(
+        'elliptic_assessment',
+        user_message,
+        variables=variables,
+    )
+
+    if result.get('error'):
+        logger.error('Elliptic assessment failed: %s', result['error'])
+        return None
+
+    logger.info(
+        'Elliptic assessment complete: %d input, %d output tokens',
+        result.get('usage', {}).get('input', 0),
+        result.get('usage', {}).get('output', 0),
+    )
+
+    return result.get('ai_output')
+
+
+async def _run_elliptic_assessment_for_case(case_id: str) -> None:
+    """
+    Run the context-aware Elliptic AI assessment at assembly time.
+
+    Reads the raw screening output from sections.elliptic.output,
+    cross-references it against the full case data, and stores the
+    AI analysis in sections.elliptic.ai_output (without overwriting
+    the raw output).
+
+    For multi-user cases, runs per-subject.
+    """
+    doc = await _collection().find_one({'_id': case_id})
+    if not doc:
+        return
+
+    is_multi = doc.get('case_mode') == 'multi'
+
+    if is_multi:
+        subjects = doc.get('subjects', [])
+        for i, subject in enumerate(subjects):
+            subj_sections = subject.get('sections', {})
+            elliptic = subj_sections.get('elliptic', {})
+
+            if elliptic.get('status') != 'complete' or not elliptic.get('output'):
+                continue
+
+            subject_uid = subject.get('user_id', '')
+            if not subject_uid:
+                continue
+
+            raw_output = elliptic['output']
+            address_count = len(elliptic.get('wallet_addresses', []))
+
+            # Build case data markdown from all sections for this subject
+            pp_data, _, _ = _build_preprocessed_from_sections(subj_sections)
+            parts = _build_assembled_markdown_single(doc, subj_sections, pp_data)
+            case_data_md = '\n'.join(parts)
+
+            assessment = await _run_elliptic_assessment(
+                raw_output, case_data_md, subject_uid, address_count,
+            )
+            if assessment:
+                await update_section(
+                    case_id, 'elliptic', 'complete',
+                    extra_fields={'ai_output': assessment},
+                    subject_index=i,
+                )
+                logger.info(
+                    'Elliptic assessment complete for %s subject %d (UID %s)',
+                    case_id, i, subject_uid,
+                )
+            else:
+                logger.warning(
+                    'Elliptic assessment returned no output for %s subject %d',
+                    case_id, i,
+                )
+    else:
+        sections = doc.get('sections', {})
+        elliptic = sections.get('elliptic', {})
+
+        if elliptic.get('status') != 'complete' or not elliptic.get('output'):
+            return
+
+        subject_uid = doc.get('subject_uid', '')
+        if not subject_uid:
+            return
+
+        raw_output = elliptic['output']
+        address_count = len(elliptic.get('wallet_addresses', []))
+
+        # Build case data markdown from all sections
+        pp_data, _, _ = _build_preprocessed_from_sections(sections)
+        parts = _build_assembled_markdown_single(doc, sections, pp_data)
+        case_data_md = '\n'.join(parts)
+
+        assessment = await _run_elliptic_assessment(
+            raw_output, case_data_md, subject_uid, address_count,
+        )
+        if assessment:
+            await update_section(
+                case_id, 'elliptic', 'complete',
+                extra_fields={'ai_output': assessment},
+            )
+            logger.info('Elliptic assessment complete for %s', case_id)
+        else:
+            logger.warning('Elliptic assessment returned no output for %s', case_id)
 
 
 async def preview_assembled_case_data(case_id: str) -> dict:
@@ -2284,9 +2450,11 @@ async def assemble_case_data(case_id: str) -> dict:
     """
     from server.services import case_service
 
-    # Step 0: Run Kodex AI assessment if text was extracted
-    # This updates the Kodex section from 'extracted' to 'complete' with AI output
-    await _run_kodex_assessment_for_case(case_id)
+    # Step 0: Run assembly-time AI assessments concurrently
+    await asyncio.gather(
+        _run_kodex_assessment_for_case(case_id),
+        _run_elliptic_assessment_for_case(case_id),
+    )
 
     # Step 1: Build the assembled markdown (reuse preview logic)
     preview = await preview_assembled_case_data(case_id)
