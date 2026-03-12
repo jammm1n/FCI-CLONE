@@ -5,149 +5,130 @@ import MarkdownRenderer from '../shared/MarkdownRenderer';
 
 const DOWNLOAD_TABS = new Set(['elliptic_raw']);
 
-// Column width in pixels for the rendered image.
-// Content is split into columns of this width to produce a readable, compact PNG.
-const COL_WIDTH = 380;
-const COL_GAP = 24;
-const IMG_PADDING = 32;
+const STRIP_WIDTH = 400;  // px width per column strip in the output image
+const STRIP_GAP = 16;     // px gap between strips
+const PAD = 24;            // px padding around the whole image
+const BG_COLOR = '#1a1a1f';
+const TARGET_STRIP_HEIGHT = 1200; // aim for ~1200px tall strips
 
-// Split markdown into N roughly equal groups, breaking at ## or ### headings.
-// Falls back to blank-line splits if no headings found.
-function splitMarkdownIntoColumns(markdown, numCols) {
-  const lines = markdown.split('\n');
+// Find a "safe" cut row near targetY — a row where all pixels match background.
+// Scans up to `range` pixels above and below targetY.
+function findSafeCut(ctx, targetY, width, height, range = 80) {
+  const bgSample = ctx.getImageData(0, 0, 1, 1).data; // top-left = background
+  const tolerance = 30;
 
-  // Find safe split points: ## or ### headings, or blank lines before content
-  const breakpoints = [0];
-  for (let i = 1; i < lines.length; i++) {
-    if (/^#{2,3}\s/.test(lines[i])) {
-      breakpoints.push(i);
-    }
-  }
+  const match = (r, g, b) =>
+    Math.abs(r - bgSample[0]) < tolerance &&
+    Math.abs(g - bgSample[1]) < tolerance &&
+    Math.abs(b - bgSample[2]) < tolerance;
 
-  // If not enough heading breakpoints, also use blank lines
-  if (breakpoints.length < numCols + 1) {
-    for (let i = 1; i < lines.length; i++) {
-      if (lines[i].trim() === '' && i + 1 < lines.length && lines[i + 1].trim() !== '') {
-        if (!breakpoints.includes(i + 1)) {
-          breakpoints.push(i + 1);
-        }
+  // Search outward from targetY: check targetY, targetY-1, targetY+1, targetY-2, ...
+  for (let offset = 0; offset <= range; offset++) {
+    for (const dir of [0, -1, 1]) {
+      const y = targetY + offset * (dir || 1);
+      if (y < 0 || y >= height) continue;
+
+      const row = ctx.getImageData(0, y, width, 1).data;
+      let safe = true;
+      // Sample every 4th pixel for speed
+      for (let x = 0; x < width * 4; x += 16) {
+        if (!match(row[x], row[x + 1], row[x + 2])) { safe = false; break; }
       }
+      if (safe) return y;
     }
-    breakpoints.sort((a, b) => a - b);
   }
-
-  // Target: roughly equal line counts per column
-  const linesPerCol = Math.ceil(lines.length / numCols);
-  const columns = [];
-
-  for (let col = 0; col < numCols; col++) {
-    const idealStart = col * linesPerCol;
-    const idealEnd = (col + 1) * linesPerCol;
-
-    // Find nearest breakpoint to idealStart
-    let start;
-    if (col === 0) {
-      start = 0;
-    } else {
-      start = breakpoints.reduce((best, bp) =>
-        Math.abs(bp - idealStart) < Math.abs(best - idealStart) ? bp : best
-      , breakpoints[0]);
-    }
-
-    // Find nearest breakpoint to idealEnd
-    let end;
-    if (col === numCols - 1) {
-      end = lines.length;
-    } else {
-      end = breakpoints.reduce((best, bp) =>
-        Math.abs(bp - idealEnd) < Math.abs(best - idealEnd) ? bp : best
-      , breakpoints[0]);
-      // Don't let end go backwards past start
-      if (end <= start) end = Math.min(idealEnd, lines.length);
-    }
-
-    columns.push(lines.slice(start, end).join('\n'));
-  }
-
-  // Remove any empty columns and merge any leftover lines
-  return columns.filter(c => c.trim());
+  return targetY; // fallback: cut at exact target
 }
 
 async function downloadAsImage(content, hiddenRef) {
   const container = hiddenRef.current;
   if (!container) return;
 
+  // Step 1: render full content as one tall column
   container.innerHTML = '';
-  container.style.width = `${COL_WIDTH}px`;
-  container.style.display = 'block';
-
-  // Step 1: render single-column to measure total content height
-  const measureDiv = document.createElement('div');
-  container.appendChild(measureDiv);
-  const root = createRoot(measureDiv);
-  await new Promise(resolve => {
-    root.render(createElement(MarkdownRenderer, { content, className: 'max-w-none' }));
-    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  Object.assign(container.style, {
+    display: 'block',
+    width: `${STRIP_WIDTH}px`,
+    padding: '16px',
+    background: BG_COLOR,
+    color: '#e5e5ea',
+    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontSize: '13px',
+    lineHeight: '1.6',
+    overflowWrap: 'break-word',
   });
 
-  const singleColHeight = measureDiv.scrollHeight;
-  root.unmount();
+  const renderDiv = document.createElement('div');
+  container.appendChild(renderDiv);
 
-  // Target column height ≈ 1200px — produces a readable, landscape-ish image
-  const targetHeight = 1200;
-  const numCols = Math.max(2, Math.ceil(singleColHeight / targetHeight));
+  const root = createRoot(renderDiv);
+  root.render(createElement(MarkdownRenderer, { content, className: 'max-w-none' }));
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-  // Step 2: split markdown into columns
-  const columns = splitMarkdownIntoColumns(content, numCols);
-  const actualCols = columns.length;
-
-  // Step 3: build a grid in the hidden div with one MarkdownRenderer per column
-  container.innerHTML = '';
-  const totalWidth = actualCols * COL_WIDTH + (actualCols - 1) * COL_GAP + IMG_PADDING * 2;
-  container.style.width = `${totalWidth}px`;
-  container.style.padding = `${IMG_PADDING}px`;
-  container.style.display = 'grid';
-  container.style.gridTemplateColumns = `repeat(${actualCols}, ${COL_WIDTH}px)`;
-  container.style.gap = `${COL_GAP}px`;
-  container.style.background = '#1a1a1f'; // surface-900 equivalent
-  container.style.color = '#e5e5ea'; // light text
-  container.style.fontFamily = "'Plus Jakarta Sans', sans-serif";
-  container.style.fontSize = '13px';
-  container.style.lineHeight = '1.6';
-
-  // Render each column
-  const colRoots = [];
-  for (const colContent of columns) {
-    const colDiv = document.createElement('div');
-    colDiv.style.overflowWrap = 'break-word';
-    colDiv.style.minWidth = '0';
-    container.appendChild(colDiv);
-
-    const colRoot = createRoot(colDiv);
-    colRoot.render(createElement(MarkdownRenderer, { content: colContent, className: 'max-w-none' }));
-    colRoots.push(colRoot);
-  }
-
-  // Wait for render
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-  // Step 4: capture to canvas
-  const canvas = await html2canvas(container, {
-    backgroundColor: '#1a1a1f',
-    scale: 2, // retina quality
+  // Step 2: capture the tall single column to a canvas
+  const tallCanvas = await html2canvas(container, {
+    backgroundColor: BG_COLOR,
+    scale: 2,
     useCORS: true,
     logging: false,
   });
 
-  // Cleanup
-  colRoots.forEach(r => r.unmount());
+  root.unmount();
   container.innerHTML = '';
   container.style.display = 'none';
 
-  // Step 5: download
+  const srcW = tallCanvas.width;
+  const srcH = tallCanvas.height;
+  const srcCtx = tallCanvas.getContext('2d');
+
+  // Step 3: find safe cut points
+  const scaledTarget = TARGET_STRIP_HEIGHT * 2; // canvas is 2x scale
+  const numStrips = Math.max(2, Math.ceil(srcH / scaledTarget));
+  const idealStripH = Math.ceil(srcH / numStrips);
+
+  const cuts = [0];
+  for (let i = 1; i < numStrips; i++) {
+    const idealY = i * idealStripH;
+    cuts.push(findSafeCut(srcCtx, idealY, srcW, srcH));
+  }
+  cuts.push(srcH);
+
+  // Step 4: calculate strip heights and find the tallest
+  const stripHeights = [];
+  for (let i = 0; i < cuts.length - 1; i++) {
+    stripHeights.push(cuts[i + 1] - cuts[i]);
+  }
+  const maxStripH = Math.max(...stripHeights);
+
+  // Step 5: stitch strips side by side into output canvas
+  const scaledPad = PAD * 2;
+  const scaledGap = STRIP_GAP * 2;
+  const outW = numStrips * srcW + (numStrips - 1) * scaledGap + scaledPad * 2;
+  const outH = maxStripH + scaledPad * 2;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = outW;
+  outCanvas.height = outH;
+  const outCtx = outCanvas.getContext('2d');
+
+  // Fill background
+  outCtx.fillStyle = BG_COLOR;
+  outCtx.fillRect(0, 0, outW, outH);
+
+  // Draw each strip
+  for (let i = 0; i < numStrips; i++) {
+    const sx = 0;
+    const sy = cuts[i];
+    const sh = stripHeights[i];
+    const dx = scaledPad + i * (srcW + scaledGap);
+    const dy = scaledPad;
+    outCtx.drawImage(tallCanvas, sx, sy, srcW, sh, dx, dy, srcW, sh);
+  }
+
+  // Step 6: download
   const link = document.createElement('a');
   link.download = `elliptic-screening-${new Date().toISOString().slice(0, 10)}.png`;
-  link.href = canvas.toDataURL('image/png');
+  link.href = outCanvas.toDataURL('image/png');
   link.click();
 }
 
