@@ -203,13 +203,14 @@ async def send_message(
                     thinking_content=done_event.get("thinking_content", ""),
                 )
                 # Now yield done — response is safely persisted
-                yield {
-                    "data": json.dumps({
-                        "type": "done",
-                        "message_id": store_result["message_id"],
-                        "token_usage": done_event.get("token_usage", {}),
-                    })
+                done_payload = {
+                    "type": "done",
+                    "message_id": store_result["message_id"],
+                    "token_usage": done_event.get("token_usage", {}),
                 }
+                if done_event.get("truncated"):
+                    done_payload["truncated"] = True
+                yield {"data": json.dumps(done_payload)}
             except Exception as e:
                 logger.exception(
                     "Failed to store streamed response in conversation %s",
@@ -710,13 +711,14 @@ async def oneshot_execute(
                     tool_call_messages=done_event.get("tool_call_messages", []),
                     thinking_content=done_event.get("thinking_content", ""),
                 )
-                yield {
-                    "data": json.dumps({
-                        "type": "done",
-                        "message_id": store_result["message_id"],
-                        "token_usage": done_event.get("token_usage", {}),
-                    })
+                done_payload = {
+                    "type": "done",
+                    "message_id": store_result["message_id"],
+                    "token_usage": done_event.get("token_usage", {}),
                 }
+                if done_event.get("truncated"):
+                    done_payload["truncated"] = True
+                yield {"data": json.dumps(done_payload)}
             except Exception as e:
                 logger.exception(
                     "Failed to store oneshot execution in conversation %s",

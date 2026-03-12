@@ -79,10 +79,13 @@ export default function useStreamingChat(token) {
             );
           } else if (event.type === 'done') {
             if (event.token_usage) setTokenUsage(event.token_usage);
+            const truncationNotice = event.truncated
+              ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit. Try sending a follow-up message to continue.'
+              : '';
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.message_id === streamMsgId
-                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: toolsUsed, isStreaming: false }
+                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: toolsUsed, isStreaming: false, content: msg.content + truncationNotice }
                   : msg
               )
             );

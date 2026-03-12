@@ -618,6 +618,30 @@ async def get_ai_response_streaming(
 
             continue
 
+        # --- max_tokens: output was truncated ---
+        if final_message.stop_reason == "max_tokens":
+            logger.warning(
+                "Response truncated: hit max_tokens (%d) during streaming.",
+                active_max_tokens,
+            )
+            done_event = {
+                "type": "done",
+                "content": full_text or "[No response generated]",
+                "tools_used": all_tools_used,
+                "token_usage": {
+                    "input_tokens": final_message.usage.input_tokens,
+                    "output_tokens": final_message.usage.output_tokens,
+                    "cache_creation_input_tokens": cache_created,
+                    "cache_read_input_tokens": cache_read,
+                },
+                "tool_call_messages": tool_call_messages,
+                "truncated": True,
+            }
+            if full_thinking:
+                done_event["thinking_content"] = full_thinking
+            yield done_event
+            return
+
         # --- Unexpected stop reason ---
         logger.warning(
             "Unexpected stop_reason during streaming: %s",

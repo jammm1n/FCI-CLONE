@@ -504,10 +504,13 @@ export default function InvestigationPage() {
             });
           } else if (event.type === 'done') {
             const finalTools = [...toolsUsed];
+            const truncationNotice = event.truncated
+              ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit before completing. You can continue the investigation in the chat below.'
+              : '';
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.message_id === streamMsgId
-                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false }
+                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false, content: msg.content + truncationNotice }
                   : msg
               )
             );
