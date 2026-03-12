@@ -665,6 +665,7 @@ export default function InvestigationPage() {
           <CaseDataPanel
             content={activeSubTab ? preprocessedData[activeSubTab] : null}
             activeTab={activeSubTab}
+            caseName={caseData?.case_id}
           />
         </div>
 

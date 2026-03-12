@@ -9,7 +9,7 @@ const STRIP_WIDTH = 400;  // px width per column strip in the output image
 const STRIP_GAP = 16;     // px gap between strips
 const PAD = 24;            // px padding around the whole image
 const BG_COLOR = '#1a1a1f';
-const TARGET_COLS = 5;     // number of columns in the output image
+const TARGET_COLS = 10;    // number of columns in the output image
 
 // Find a "safe" cut row near targetY — a row where all pixels match background.
 // Scans up to `range` pixels above and below targetY.
@@ -40,7 +40,7 @@ function findSafeCut(ctx, targetY, width, height, range = 80) {
   return targetY; // fallback: cut at exact target
 }
 
-async function downloadAsImage(content, hiddenRef) {
+async function downloadAsImage(content, hiddenRef, caseName) {
   const container = hiddenRef.current;
   if (!container) return;
 
@@ -126,12 +126,13 @@ async function downloadAsImage(content, hiddenRef) {
 
   // Step 6: download
   const link = document.createElement('a');
-  link.download = `elliptic-screening-${new Date().toISOString().slice(0, 10)}.png`;
+  const safeName = (caseName || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+  link.download = `Elliptic Screening - ${safeName}.png`;
   link.href = outCanvas.toDataURL('image/png');
   link.click();
 }
 
-export default function CaseDataPanel({ content, activeTab }) {
+export default function CaseDataPanel({ content, activeTab, caseName }) {
   const [downloading, setDownloading] = useState(false);
   const hiddenRef = useRef(null);
 
@@ -141,13 +142,13 @@ export default function CaseDataPanel({ content, activeTab }) {
     if (downloading || !content) return;
     setDownloading(true);
     try {
-      await downloadAsImage(content, hiddenRef);
+      await downloadAsImage(content, hiddenRef, caseName);
     } catch (err) {
       console.error('Screenshot download failed:', err);
     } finally {
       setDownloading(false);
     }
-  }, [content, downloading]);
+  }, [content, downloading, caseName]);
 
   if (!content) {
     return (
