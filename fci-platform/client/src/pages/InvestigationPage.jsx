@@ -547,18 +547,30 @@ export default function InvestigationPage() {
           } else if (event.type === 'done') {
             receivedDone = true;
             const finalTools = [...toolsUsed];
-            const truncationNotice = event.truncated
-              ? '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit before completing. You can continue the investigation in the chat below.'
-              : '';
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.message_id === streamMsgId
-                  ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false, content: msg.content + truncationNotice }
-                  : msg
-              )
-            );
-            if (event.token_usage) setTokenUsage(event.token_usage);
-            setOneshotExecuted(true);
+            if (event.truncated) {
+              // Truncated = partial, not complete — allow continuation
+              const truncationNotice = '\n\n---\n\n**⚠ Output was truncated** — the response hit the token limit before completing. You can continue the execution.';
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false, executionInterrupted: true, content: msg.content + truncationNotice }
+                    : msg
+                )
+              );
+              if (event.token_usage) setTokenUsage(event.token_usage);
+              await savePartialOnFailure();
+            } else {
+              // True completion
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.message_id === streamMsgId
+                    ? { ...msg, message_id: event.message_id || msg.message_id, tools_used: finalTools, isStreaming: false }
+                    : msg
+                )
+              );
+              if (event.token_usage) setTokenUsage(event.token_usage);
+              setOneshotExecuted(true);
+            }
           } else if (event.type === 'error') {
             receivedDone = true; // prevent double handling
             // If we have accumulated content, save it as partial before showing error
@@ -974,7 +986,10 @@ export default function InvestigationPage() {
             oneshotExecuting={oneshotExecuting}
             oneshotPartial={oneshotPartial}
             onOneshotContinue={handleOneshotContinue}
-            onContinueOneshotDiscussion={() => setOneshotReady(false)}
+            onContinueOneshotDiscussion={() => {
+              setOneshotReady(false);
+              setOneshotSignalled(false);
+            }}
             onOneshotQCCheck={() => setShowQCModal(true)}
             totalSteps={totalSteps}
             draftKey={`fci-draft-case-${caseId}`}

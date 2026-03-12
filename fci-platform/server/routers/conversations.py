@@ -189,6 +189,20 @@ async def send_message(
 
         # Store to MongoDB FIRST, then yield done event with message_id
         if done_event:
+            # Phrase-based fallback: if the AI wrote [READY TO EXECUTE]
+            # but forgot to call the tool, treat it as a readiness signal
+            if (
+                not oneshot_ready_signalled
+                and "[READY TO EXECUTE]" in (done_event.get("content") or "")
+            ):
+                oneshot_ready_signalled = True
+                yield {"data": json.dumps({
+                    "type": "tool_use",
+                    "tool": "signal_ready_to_execute",
+                    "document_id": None,
+                    "document_title": "(phrase-detected)",
+                })}
+
             try:
                 store_result = await conversation_manager.store_streamed_response(
                     conversation_id=conversation_id,

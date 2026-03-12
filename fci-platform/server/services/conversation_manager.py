@@ -570,6 +570,52 @@ async def send_message_streaming(
             model = None
             tools_override = TOOLS_ONESHOT_SETUP
         api_messages = _rebuild_api_messages(conversation["messages"])
+
+        # Detect "Continue Discussion" — user sending a message after the AI
+        # signalled ready (first message) OR ongoing discussion mode (subsequent).
+        in_discussion = conversation.get("oneshot_in_discussion", False)
+        entering_discussion = (
+            not is_initial_assessment
+            and not in_discussion
+            and conversation.get("oneshot_ready")
+            and not conversation.get("oneshot_executed")
+        )
+        if entering_discussion:
+            # First message after "Continue Discussion" — set persistent flag
+            await db.conversations.update_one(
+                {"_id": conversation_id},
+                {"$set": {"oneshot_ready": False, "oneshot_in_discussion": True}},
+            )
+            in_discussion = True
+
+        if in_discussion and not is_initial_assessment:
+            # Inject discussion-mode instruction on EVERY discussion message
+            # so the AI knows to converse, not produce ICR output.
+            api_messages.append({
+                "role": "user",
+                "content": (
+                    "[SYSTEM] The investigator has chosen to continue discussing before "
+                    "execution. You are now in DISCUSSION MODE. Rules:\n\n"
+                    "1. Respond conversationally to their message.\n"
+                    "2. Do NOT produce any ICR text, case assessments, block-by-block "
+                    "analysis, or investigation output — even if the user asks you to "
+                    "proceed, go ahead, or start. You physically cannot execute from here; "
+                    "execution is triggered by a separate UI button that only appears when "
+                    "you signal readiness.\n"
+                    "3. When the investigator indicates they are satisfied and want to "
+                    'proceed (e.g. "go ahead", "ready", "let\'s do it", "I\'m done", '
+                    '"that\'s all", "carry on", "come on then"), you MUST do BOTH:\n'
+                    "   a) Call the signal_ready_to_execute tool\n"
+                    "   b) Include the exact phrase [READY TO EXECUTE] in your response\n"
+                    "This is the ONLY way to restore the Execute button for the investigator.\n"
+                    "4. If you are unsure whether the user wants to continue discussing or "
+                    "proceed, ask them directly rather than guessing."
+                ),
+            })
+            api_messages.append({
+                "role": "assistant",
+                "content": "Understood. I'll respond to your questions conversationally and signal readiness again when appropriate.",
+            })
     else:
         system_prompt = knowledge_base.get_system_prompt(mode=conv_mode)
         model = None
@@ -747,6 +793,7 @@ async def store_streamed_response(
         set_fields["investigation_state.step_complete_signalled"] = True
     if oneshot_ready_signalled:
         set_fields["oneshot_ready"] = True
+        set_fields["oneshot_in_discussion"] = False
 
     await db.conversations.update_one(
         {"_id": conversation_id},

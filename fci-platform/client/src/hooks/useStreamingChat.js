@@ -38,6 +38,7 @@ export default function useStreamingChat(token) {
     let buffer = '';
     let toolsUsed = [];
     let thinkingAccum = '';
+    let contentAccum = '';
 
     try {
       while (true) {
@@ -61,6 +62,11 @@ export default function useStreamingChat(token) {
           }
 
           if (event.type === 'content_delta') {
+            contentAccum += event.text;
+            // Phrase-based fallback: detect [READY TO EXECUTE] in streamed text
+            if (contentAccum.includes('[READY TO EXECUTE]')) {
+              setOneshotReady(true);
+            }
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.message_id === streamMsgId

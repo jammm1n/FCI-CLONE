@@ -1320,9 +1320,19 @@ function EllipticSection({ caseData, onProcessingStarted, subjectIndex }) {
       )}
 
       {ellStatus === 'complete' && (
-        <p className="text-sm text-emerald-500 dark:text-emerald-400">
-          Elliptic screening complete.
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-emerald-500 dark:text-emerald-400">
+            Elliptic screening complete — {(elliptic.wallet_addresses || []).length} addresses screened.
+          </p>
+          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="px-3 py-1 rounded-lg text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 border border-surface-300 dark:border-surface-600 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors disabled:opacity-50"
+          >
+            {submitting ? 'Resubmitting...' : 'Rescreen Addresses'}
+          </button>
+        </div>
       )}
 
       {ellStatus === 'none' && (
