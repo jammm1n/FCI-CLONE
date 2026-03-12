@@ -544,6 +544,9 @@ export default function InvestigationPage() {
               document_id: event.document_id,
               document_title: event.document_title,
             });
+          } else if (event.type === 'continuation') {
+            // Auto-continuation in progress — no action needed, streaming continues
+            console.log(`Auto-continuation ${event.attempt}/${event.max_attempts} (${event.reason})`);
           } else if (event.type === 'done') {
             receivedDone = true;
             const finalTools = [...toolsUsed];
@@ -728,6 +731,9 @@ export default function InvestigationPage() {
               document_id: event.document_id,
               document_title: event.document_title,
             });
+          } else if (event.type === 'continuation') {
+            // Auto-continuation in progress — no action needed, streaming continues
+            console.log(`Auto-continuation ${event.attempt}/${event.max_attempts} (${event.reason})`);
           } else if (event.type === 'done') {
             receivedDone = true;
             const finalTools = [...toolsUsed];

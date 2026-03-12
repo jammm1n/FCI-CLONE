@@ -653,6 +653,7 @@ async def send_message_streaming(
             "type": "enabled",
             "budget_tokens": settings.ONESHOT_FOLLOWUP_THINKING_BUDGET,
         }
+        streaming_kwargs["max_tokens"] = settings.ONESHOT_FOLLOWUP_MAX_TOKENS
 
     async for event in get_ai_response_streaming(**streaming_kwargs):
         yield event
@@ -1110,6 +1111,7 @@ async def oneshot_execute(
         tools=TOOLS_ONESHOT_EXECUTE,
         max_tokens=max_tokens,
         thinking=thinking,
+        auto_continue=True,
     ):
         yield event
 

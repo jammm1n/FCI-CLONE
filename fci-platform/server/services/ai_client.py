@@ -442,6 +442,9 @@ async def get_ai_response_streaming(
     tools: list[dict] | None = None,
     max_tokens: int | None = None,
     thinking: dict | None = None,
+    auto_continue: bool = False,
+    continuation_thinking_budget: int | None = None,
+    max_continuations: int | None = None,
 ) -> AsyncGenerator[dict, None]:
     """
     Stream a response from the Anthropic API, handling tool calls.
@@ -466,6 +469,20 @@ async def get_ai_response_streaming(
     tool_call_count = 0
     full_text = ""
     full_thinking = ""
+
+    # Auto-continuation state
+    continuation_count = 0
+    max_cont = max_continuations or settings.ONESHOT_MAX_CONTINUATIONS
+    cont_thinking_budget = continuation_thinking_budget or settings.ONESHOT_CONTINUATION_THINKING_BUDGET
+
+    # Token usage accumulated across all API calls (tool loops + continuations)
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_cache_created = 0
+    total_cache_read = 0
+
+    # Text accumulated across continuations (separate from full_text which resets)
+    total_text = ""
 
     # Copy messages so we don't mutate the caller's list
     working_messages = list(messages)
@@ -505,27 +522,33 @@ async def get_ai_response_streaming(
 
         cache_created = getattr(final_message.usage, "cache_creation_input_tokens", 0) or 0
         cache_read = getattr(final_message.usage, "cache_read_input_tokens", 0) or 0
+        total_input_tokens += final_message.usage.input_tokens
+        total_output_tokens += final_message.usage.output_tokens
+        total_cache_created += cache_created
+        total_cache_read += cache_read
+
         logger.info(
-            "Streaming API call: model=%s, input=%d, output=%d, cache_created=%d, cache_read=%d, stop=%s",
+            "Streaming API call: model=%s, input=%d, output=%d, cache_created=%d, cache_read=%d, stop=%s, continuation=%d",
             final_message.model,
             final_message.usage.input_tokens,
             final_message.usage.output_tokens,
             cache_created,
             cache_read,
             final_message.stop_reason,
+            continuation_count,
         )
 
         # --- Final response (no more tool calls) ---
         if final_message.stop_reason == "end_turn":
             done_event = {
                 "type": "done",
-                "content": full_text,
+                "content": total_text + full_text,
                 "tools_used": all_tools_used,
                 "token_usage": {
-                    "input_tokens": final_message.usage.input_tokens,
-                    "output_tokens": final_message.usage.output_tokens,
-                    "cache_creation_input_tokens": cache_created,
-                    "cache_read_input_tokens": cache_read,
+                    "input_tokens": total_input_tokens,
+                    "output_tokens": total_output_tokens,
+                    "cache_creation_input_tokens": total_cache_created,
+                    "cache_read_input_tokens": total_cache_read,
                 },
                 "tool_call_messages": tool_call_messages,
             }
@@ -618,45 +641,80 @@ async def get_ai_response_streaming(
 
             continue
 
-        # --- max_tokens: output was truncated ---
-        if final_message.stop_reason == "max_tokens":
-            logger.warning(
-                "Response truncated: hit max_tokens (%d) during streaming.",
-                active_max_tokens,
-            )
-            done_event = {
-                "type": "done",
-                "content": full_text or "[No response generated]",
-                "tools_used": all_tools_used,
-                "token_usage": {
-                    "input_tokens": final_message.usage.input_tokens,
-                    "output_tokens": final_message.usage.output_tokens,
-                    "cache_creation_input_tokens": cache_created,
-                    "cache_read_input_tokens": cache_read,
-                },
-                "tool_call_messages": tool_call_messages,
-                "truncated": True,
-            }
-            if full_thinking:
-                done_event["thinking_content"] = full_thinking
-            yield done_event
-            return
+        # --- Truncation: any stop reason that isn't end_turn or tool_use ---
+        stop_reason = final_message.stop_reason or "none"
 
-        # --- Unexpected stop reason ---
+        # Auto-continue if enabled, under the retry cap, and we have content
+        if auto_continue and continuation_count < max_cont and full_text:
+            continuation_count += 1
+            logger.info(
+                "Auto-continuation %d/%d (stop_reason=%s, output_so_far=%d chars)",
+                continuation_count, max_cont, stop_reason,
+                len(total_text) + len(full_text),
+            )
+
+            # Emit continuation marker for frontend visibility
+            yield {
+                "type": "continuation",
+                "attempt": continuation_count,
+                "max_attempts": max_cont,
+                "reason": str(stop_reason),
+            }
+
+            # Serialize partial response and append to working_messages
+            serialized_assistant = _serialize_content(final_message.content)
+            working_messages.append({
+                "role": "assistant",
+                "content": serialized_assistant,
+            })
+
+            # Continuation instruction with tail context
+            last_chars = full_text[-200:] if len(full_text) > 200 else full_text
+            working_messages.append({
+                "role": "user",
+                "content": (
+                    "Your previous response was cut off. Continue exactly where you "
+                    "left off. Do not repeat any content already produced. Pick up "
+                    f"mid-sentence if needed.\n\nYour last output ended with:\n{last_chars}"
+                ),
+            })
+
+            # Reduce thinking budget for continuation calls
+            if thinking:
+                thinking = {
+                    "type": "enabled",
+                    "budget_tokens": cont_thinking_budget,
+                }
+
+            # Carry text to total, reset for next segment
+            total_text += full_text
+            full_text = ""
+            # full_thinking is NOT reset — accumulates across everything
+
+            continue  # Back to while True
+
+        # Auto-continue exhausted or disabled — emit truncated done
         logger.warning(
-            "Unexpected stop_reason during streaming: %s",
-            final_message.stop_reason,
+            "Response truncated: stop_reason=%s, continuations=%d/%d, total_output=%d chars",
+            stop_reason, continuation_count, max_cont,
+            len(total_text) + len(full_text),
         )
-        yield {
+        done_event = {
             "type": "done",
-            "content": full_text or "[No response generated]",
+            "content": (total_text + full_text) or "[No response generated]",
             "tools_used": all_tools_used,
             "token_usage": {
-                "input_tokens": final_message.usage.input_tokens,
-                "output_tokens": final_message.usage.output_tokens,
+                "input_tokens": total_input_tokens,
+                "output_tokens": total_output_tokens,
+                "cache_creation_input_tokens": total_cache_created,
+                "cache_read_input_tokens": total_cache_read,
             },
             "tool_call_messages": tool_call_messages,
+            "truncated": True,  # ALWAYS mark non-end_turn as truncated
         }
+        if full_thinking:
+            done_event["thinking_content"] = full_thinking
+        yield done_event
         return
 
 
