@@ -1074,13 +1074,25 @@ async def oneshot_execute(
 
         if partial_msg and partial_msg.get("content"):
             api_messages.append({"role": "assistant", "content": partial_msg["content"]})
+
+            continuation_text = (
+                "Your previous response was interrupted by a connection failure. "
+                "Continue exactly where you left off. Do not repeat any content "
+                "already produced. Pick up mid-sentence if needed."
+            )
+
+            # Include prior thinking so the model can resume with full context
+            if partial_msg.get("thinking_content"):
+                continuation_text += (
+                    "\n\nFor reference, here is your internal reasoning from the "
+                    "interrupted attempt:\n\n<prior_thinking>\n"
+                    + partial_msg["thinking_content"]
+                    + "\n</prior_thinking>"
+                )
+
             api_messages.append({
                 "role": "user",
-                "content": (
-                    "Your previous response was interrupted by a connection failure. "
-                    "Continue exactly where you left off. Do not repeat any content "
-                    "already produced. Pick up mid-sentence if needed."
-                ),
+                "content": continuation_text,
             })
 
         logger.info(
