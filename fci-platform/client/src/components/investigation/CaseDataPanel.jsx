@@ -4,39 +4,53 @@ import MarkdownRenderer from '../shared/MarkdownRenderer';
 
 const POPOUT_TABS = new Set(['elliptic_raw']);
 
-// Full-screen modal rendered via portal. Uses CSS zoom to fit all content
-// in one viewport without scrolling — for single-screenshot capture.
+// Full-screen modal rendered via portal. Uses CSS multi-column layout
+// to spread list-heavy content across 2-3 columns, then a modest zoom
+// fallback if columns alone aren't enough. For single-screenshot capture.
 function FitToScreenModal({ content, onClose }) {
   const containerRef = useRef(null);
   const contentRef = useRef(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [fitting, setFitting] = useState(true);
+  const [layout, setLayout] = useState({ columns: 1, scale: 1, fitting: true });
 
   useEffect(() => {
     const container = containerRef.current;
     const inner = contentRef.current;
     if (!container || !inner) return;
 
-    // Wait for react-markdown to fully render before measuring
-    let raf1 = requestAnimationFrame(() => {
-      let raf2 = requestAnimationFrame(() => {
-        const availableHeight = container.clientHeight;
-        const naturalHeight = inner.scrollHeight;
+    let cancelled = false;
+    const raf = (fn) => requestAnimationFrame(() => { if (!cancelled) fn(); });
 
-        if (naturalHeight <= availableHeight) {
-          // Content already fits at zoom 1
-          setZoomLevel(1);
-        } else {
-          // Shrink to fit: zoom = available / natural, floor to avoid sub-pixel overflow
-          const computed = Math.floor((availableHeight / naturalHeight) * 1000) / 1000;
-          setZoomLevel(Math.max(computed, 0.1));
+    // Reset for measurement
+    inner.style.columnCount = '1';
+    inner.style.zoom = '1';
+
+    // Phase 1: measure natural single-column height
+    raf(() => raf(() => {
+      const availH = container.clientHeight;
+      const naturalH = inner.scrollHeight;
+
+      if (naturalH <= availH) {
+        setLayout({ columns: 1, scale: 1, fitting: false });
+        return;
+      }
+
+      // Compute columns needed (cap at 3 for readability)
+      const cols = Math.min(Math.ceil(naturalH / availH), 3);
+      inner.style.columnCount = String(cols);
+
+      // Phase 2: measure after columns, apply zoom fallback if still overflowing
+      raf(() => raf(() => {
+        const columnedH = inner.scrollHeight;
+        let s = 1;
+        if (columnedH > availH) {
+          s = Math.floor((availH / columnedH) * 100) / 100;
+          s = Math.max(s, 0.5);
         }
-        setFitting(false);
-      });
-      return () => cancelAnimationFrame(raf2);
-    });
+        setLayout({ columns: cols, scale: s, fitting: false });
+      }));
+    }));
 
-    return () => cancelAnimationFrame(raf1);
+    return () => { cancelled = true; };
   }, [content]);
 
   // Close on Escape
@@ -45,6 +59,10 @@ function FitToScreenModal({ content, onClose }) {
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
+
+  const statusParts = [];
+  if (layout.columns > 1) statusParts.push(`${layout.columns} columns`);
+  if (layout.scale < 1) statusParts.push(`${Math.round(layout.scale * 100)}%`);
 
   return createPortal(
     <div
@@ -58,9 +76,11 @@ function FitToScreenModal({ content, onClose }) {
             Elliptic Screening Results — Fit to Screen
           </h3>
           <div className="flex items-center gap-3">
-            <span className="text-[10px] text-surface-400">
-              {Math.round(zoomLevel * 100)}%
-            </span>
+            {statusParts.length > 0 && (
+              <span className="text-[10px] text-surface-400">
+                {statusParts.join(' · ')}
+              </span>
+            )}
             <button
               onClick={onClose}
               className="p-1 rounded-md hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
@@ -71,19 +91,28 @@ function FitToScreenModal({ content, onClose }) {
             </button>
           </div>
         </div>
-        {/* Content — CSS zoom causes full reflow, overflow hidden prevents scroll */}
+        {/* Content — columns spread list items across width, zoom handles overflow */}
         <div ref={containerRef} className="flex-1 overflow-hidden px-6 py-4">
           <div
             ref={contentRef}
+            className="fit-to-screen-columns"
             style={{
-              zoom: zoomLevel,
-              opacity: fitting ? 0 : 1,
+              columnCount: layout.columns,
+              columnGap: '2rem',
+              zoom: layout.scale,
+              opacity: layout.fitting ? 0 : 1,
             }}
           >
             <MarkdownRenderer content={content} className="max-w-none" />
           </div>
         </div>
       </div>
+      {/* Column break rules — keep headings with their content */}
+      <style>{`
+        .fit-to-screen-columns h2,
+        .fit-to-screen-columns h3 { break-after: avoid; }
+        .fit-to-screen-columns li { break-inside: avoid; }
+      `}</style>
     </div>,
     document.body
   );
