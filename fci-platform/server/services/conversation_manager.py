@@ -1115,6 +1115,9 @@ async def oneshot_execute(
             "budget_tokens": settings.ONESHOT_THINKING_BUDGET,
         }
 
+    is_continuation = bool(partial_msg_id)
+    trace_label = f"{'cont' if is_continuation else 'exec'}_{conversation_id}"
+
     async for event in get_ai_response_streaming(
         system_prompt=system_prompt,
         messages=api_messages,
@@ -1124,6 +1127,7 @@ async def oneshot_execute(
         max_tokens=max_tokens,
         thinking=thinking,
         auto_continue=True,
+        trace_id=trace_label,
     ):
         yield event
 

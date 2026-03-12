@@ -12,7 +12,10 @@ this service with an assembled payload; this service handles the API
 interaction, tool processing, and response extraction.
 """
 
+import json
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import AsyncGenerator
 
 from anthropic import AsyncAnthropic, RateLimitError, APIStatusError
@@ -21,6 +24,90 @@ from server.config import settings
 from server.services.knowledge_base import KnowledgeBase
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Oneshot trace logger — dedicated file output for API call diagnostics
+# ---------------------------------------------------------------------------
+
+_trace_logger: logging.Logger | None = None
+
+
+def _get_trace_logger() -> logging.Logger:
+    """Get or create the dedicated oneshot trace file logger."""
+    global _trace_logger
+    if _trace_logger is not None:
+        return _trace_logger
+
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    _trace_logger = logging.getLogger("oneshot_trace")
+    _trace_logger.setLevel(logging.DEBUG)
+    _trace_logger.propagate = False  # Don't send to root/console logger
+
+    handler = logging.FileHandler(log_dir / "oneshot_trace.log", encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    _trace_logger.addHandler(handler)
+
+    return _trace_logger
+
+
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimate: chars / 4."""
+    return len(text) // 4 if text else 0
+
+
+def _message_char_count(msg: dict) -> int:
+    """Count characters in a message's content (handles str and list of blocks)."""
+    content = msg.get("content", "")
+    if isinstance(content, str):
+        return len(content)
+    if isinstance(content, list):
+        total = 0
+        for block in content:
+            if isinstance(block, dict):
+                total += len(block.get("text", ""))
+                total += len(block.get("thinking", ""))
+                # tool_use input
+                if block.get("input"):
+                    total += len(json.dumps(block["input"]))
+                # tool_result content
+                if block.get("content") and isinstance(block["content"], str):
+                    total += len(block["content"])
+                # image blocks — just note presence, don't count base64
+                if block.get("type") == "image":
+                    total += 1000  # placeholder for image token estimate
+            elif isinstance(block, str):
+                total += len(block)
+        return total
+    return 0
+
+
+def _trace_messages_breakdown(messages: list[dict]) -> list[str]:
+    """Build per-message breakdown lines for trace output."""
+    lines = []
+    for i, msg in enumerate(messages):
+        role = msg.get("role", "?")
+        chars = _message_char_count(msg)
+        tokens_est = _estimate_tokens(str(chars))  # rough
+
+        # Try to identify message type
+        content = msg.get("content", "")
+        label = ""
+        if isinstance(content, str):
+            if len(content) > 80:
+                label = f' "{content[:60]}..."'
+            else:
+                label = f' "{content}"'
+        elif isinstance(content, list):
+            types = [b.get("type", "?") for b in content if isinstance(b, dict)]
+            label = f" [{', '.join(types)}]"
+
+        lines.append(
+            f"  msg {i+1:2d} [{role:10s}] {chars:>8,} chars (~{chars // 4:,} tok){label}"
+        )
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +532,7 @@ async def get_ai_response_streaming(
     auto_continue: bool = False,
     continuation_thinking_budget: int | None = None,
     max_continuations: int | None = None,
+    trace_id: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """
     Stream a response from the Anthropic API, handling tool calls.
@@ -487,7 +575,33 @@ async def get_ai_response_streaming(
     # Copy messages so we don't mutate the caller's list
     working_messages = list(messages)
 
+    # Trace setup
+    trace = None
+    api_call_number = 0
+    if trace_id:
+        trace = _get_trace_logger()
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        sys_chars = len(system_prompt)
+        total_msg_chars = sum(_message_char_count(m) for m in working_messages)
+        trace.debug("")
+        trace.debug("=" * 80)
+        trace.debug("=== ONESHOT TRACE START === %s", timestamp)
+        trace.debug("=== trace_id: %s", trace_id)
+        trace.debug("=" * 80)
+        trace.debug("Model: %s | max_tokens: %s | auto_continue: %s | thinking: %s",
+                     model, active_max_tokens, auto_continue,
+                     thinking.get("budget_tokens") if thinking else "off")
+        trace.debug("System prompt: %s chars (~%s tokens est.)",
+                     f"{sys_chars:,}", f"{sys_chars // 4:,}")
+        trace.debug("Messages: %d messages, %s chars (~%s tokens est.)",
+                     len(working_messages), f"{total_msg_chars:,}", f"{total_msg_chars // 4:,}")
+        for line in _trace_messages_breakdown(working_messages):
+            trace.debug(line)
+        trace.debug("-" * 80)
+
     while True:
+        api_call_number += 1
+
         # Build API call params
         api_params = {
             "model": model,
@@ -504,6 +618,18 @@ async def get_ai_response_streaming(
         }
         if thinking:
             api_params["thinking"] = thinking
+
+        if trace:
+            msg_chars = sum(_message_char_count(m) for m in working_messages)
+            trace.debug("--- API CALL %d ---", api_call_number)
+            trace.debug("  Messages: %d | Payload: ~%s chars (~%s tok) + system ~%s tok",
+                         len(working_messages), f"{msg_chars:,}", f"{msg_chars // 4:,}",
+                         f"{len(system_prompt) // 4:,}")
+            if api_call_number > 1:
+                # Show what was added since last call
+                new_msgs = working_messages[-(2 if api_call_number > 1 else 0):]
+                for line in _trace_messages_breakdown(new_msgs):
+                    trace.debug("  (new) %s", line)
 
         # Stream the API call
         async with client.messages.stream(**api_params) as stream:
@@ -538,6 +664,24 @@ async def get_ai_response_streaming(
             continuation_count,
         )
 
+        if trace:
+            context_total = final_message.usage.input_tokens + cache_read + cache_created
+            trace.debug("  Result: stop=%s | input=%s | output=%s | cache_create=%s | cache_read=%s",
+                         final_message.stop_reason,
+                         f"{final_message.usage.input_tokens:,}",
+                         f"{final_message.usage.output_tokens:,}",
+                         f"{cache_created:,}", f"{cache_read:,}")
+            trace.debug("  Context window: ~%s tokens (input + cache)",
+                         f"{context_total:,}")
+            trace.debug("  Output this call: %s chars | Cumulative output: %s chars",
+                         f"{len(full_text):,}",
+                         f"{len(total_text) + len(full_text):,}")
+            trace.debug("  Running totals: input=%s | output=%s | cache_create=%s | cache_read=%s",
+                         f"{total_input_tokens:,}",
+                         f"{total_output_tokens:,}",
+                         f"{total_cache_created:,}",
+                         f"{total_cache_read:,}")
+
         # --- Final response (no more tool calls) ---
         if final_message.stop_reason == "end_turn":
             done_event = {
@@ -554,6 +698,23 @@ async def get_ai_response_streaming(
             }
             if full_thinking:
                 done_event["thinking_content"] = full_thinking
+
+            if trace:
+                trace.debug("=" * 80)
+                trace.debug("=== ONESHOT TRACE END === status=end_turn (success)")
+                trace.debug("  API calls: %d | Continuations: %d | Tool calls: %d",
+                             api_call_number, continuation_count, tool_call_count)
+                trace.debug("  Final output: %s chars (~%s tokens est.)",
+                             f"{len(total_text) + len(full_text):,}",
+                             f"{(len(total_text) + len(full_text)) // 4:,}")
+                trace.debug("  Thinking: %s chars", f"{len(full_thinking):,}")
+                trace.debug("  TOTALS: input=%s | output=%s | cache_create=%s | cache_read=%s",
+                             f"{total_input_tokens:,}",
+                             f"{total_output_tokens:,}",
+                             f"{total_cache_created:,}",
+                             f"{total_cache_read:,}")
+                trace.debug("=" * 80)
+
             yield done_event
             return
 
@@ -586,6 +747,10 @@ async def get_ai_response_streaming(
                 final_message.content, knowledge_base
             )
             all_tools_used.extend(tools_used)
+
+            if trace:
+                for t in tools_used:
+                    trace.debug("  Tool: %s(%s)", t["tool"], t["document_id"])
 
             # Notify the frontend about tool usage
             for tool_info in tools_used:
@@ -653,6 +818,10 @@ async def get_ai_response_streaming(
                 len(total_text) + len(full_text),
             )
 
+            if trace:
+                trace.debug("  >>> AUTO-CONTINUATION %d/%d (reason: %s)",
+                             continuation_count, max_cont, stop_reason)
+
             # Emit continuation marker for frontend visibility
             yield {
                 "type": "continuation",
@@ -714,6 +883,23 @@ async def get_ai_response_streaming(
         }
         if full_thinking:
             done_event["thinking_content"] = full_thinking
+
+        if trace:
+            trace.debug("=" * 80)
+            trace.debug("=== ONESHOT TRACE END === status=TRUNCATED (stop_reason=%s)", stop_reason)
+            trace.debug("  API calls: %d | Continuations: %d/%d | Tool calls: %d",
+                         api_call_number, continuation_count, max_cont, tool_call_count)
+            trace.debug("  Final output: %s chars (~%s tokens est.)",
+                         f"{len(total_text) + len(full_text):,}",
+                         f"{(len(total_text) + len(full_text)) // 4:,}")
+            trace.debug("  Thinking: %s chars", f"{len(full_thinking):,}")
+            trace.debug("  TOTALS: input=%s | output=%s | cache_create=%s | cache_read=%s",
+                         f"{total_input_tokens:,}",
+                         f"{total_output_tokens:,}",
+                         f"{total_cache_created:,}",
+                         f"{total_cache_read:,}")
+            trace.debug("=" * 80)
+
         yield done_event
         return
 
