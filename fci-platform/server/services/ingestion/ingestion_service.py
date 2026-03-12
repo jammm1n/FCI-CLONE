@@ -210,7 +210,7 @@ def _build_preprocessed_from_sections(sections: dict) -> tuple[dict, list, list]
                 all_addresses.append(addr)
 
     if all_addresses:
-        preprocessed_data['elliptic_addresses'] = '\n'.join(all_addresses)
+        preprocessed_data['elliptic_addresses'] = '\n'.join(f'- `{a}`' for a in all_addresses)
 
     return preprocessed_data, sections_included, sections_none
 

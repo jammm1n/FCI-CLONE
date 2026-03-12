@@ -24,32 +24,32 @@ function FitToScreenModal({ content, onClose }) {
     inner.style.columnCount = '1';
     inner.style.zoom = '1';
 
-    // Phase 1: measure natural single-column height
+    // Wait for react-markdown to render, then find optimal column count
     raf(() => raf(() => {
       const cs = getComputedStyle(container);
       const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      const naturalH = inner.scrollHeight;
 
-      if (naturalH <= availH) {
-        setLayout({ columns: 1, scale: 1, fitting: false });
-        return;
+      // Try increasing columns until content fits with minimal zoom.
+      // Synchronous: setting columnCount then reading scrollHeight forces reflow.
+      let cols = 1;
+      let scale = 1;
+
+      for (let c = 1; c <= 5; c++) {
+        inner.style.columnCount = String(c);
+        const h = inner.scrollHeight;
+        cols = c;
+
+        if (h <= availH) {
+          scale = 1;
+          break;
+        }
+
+        scale = availH / h;
+        if (scale >= 0.85) break; // Acceptable zoom, prefer fewer columns
       }
 
-      // Compute columns needed, capped at 5 for readability
-      const cols = Math.min(Math.ceil(naturalH / availH), 5);
-      inner.style.columnCount = String(cols);
-
-      // Phase 2: measure after columns, apply zoom if still overflowing
-      raf(() => raf(() => {
-        const columnedH = inner.scrollHeight;
-        let s = 1;
-        if (columnedH > availH) {
-          // Zoom reflows content (fills width), 5% buffer for rounding
-          s = (availH / columnedH) * 0.95;
-          s = Math.max(s, 0.5);
-        }
-        setLayout({ columns: cols, scale: s, fitting: false });
-      }));
+      scale = Math.max(scale, 0.5);
+      setLayout({ columns: cols, scale, fitting: false });
     }));
 
     return () => { cancelled = true; };
