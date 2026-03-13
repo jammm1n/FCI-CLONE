@@ -733,22 +733,40 @@ This classification should be applied to every LE
 case and the tier stated in the risk position
 statement for the LE section. See also Decision
 Matrix Rule #56.
-**Required output:** Concise narrative covering all LE
-cases. For each case state: requesting authority, date,
-subject matter, LE target count (mandatory), subject
-role (direct target vs third-party), and specificity
-tier (High / Medium / Low). Group related cases from
-the same agency where appropriate. Conclude with a
-single risk position statement summarising the overall
-LE risk profile.
+**Required output:** A concise narrative paragraph (not
+a list of individual cases) covering all LE cases.
+Group related cases from the same agency. Conclude
+with a single risk position statement summarising the
+overall LE risk profile.
 **Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **Brevity rule:** State conclusions, not the reasoning
-chain. A single case should be 2-3 sentences. Multiple
-cases should not exceed one short paragraph per case
-plus the concluding risk position. The LE Risk Weight
-Assessment is an analytical input — apply it, state the
-tier, but do not reproduce the classification logic in
-the output.
+chain. A single case should be 2-3 sentences. The LE
+Risk Weight Assessment is an analytical input — apply
+it, state the tier, but do not reproduce the
+classification logic in the output.
+**HIGH LE COUNT — CONSOLIDATION (6+ Kodex cases):**
+When 6 or more Kodex cases exist, do NOT enumerate
+each case as a separate paragraph or bullet point.
+Instead, write ONE consolidated narrative paragraph
+that:
+1. States the total number of LE cases and the date
+   range they span
+2. Groups cases by agency or jurisdiction (e.g.,
+   "Seven requests were submitted by [Agency A]
+   between [dates], targeting [X-Y] UIDs each")
+3. Identifies the 1-3 highest-specificity cases and
+   provides brief detail (authority, crime type,
+   target count, any freezes/seizures)
+4. Summarises the remaining cases in aggregate
+   (e.g., "The remaining [N] cases were broad data
+   requests targeting [range] UIDs with no freezes
+   or specific attribution — all assessed as Low
+   Specificity")
+5. Concludes with the overall risk position
+Target: one paragraph, 150-250 words maximum
+regardless of how many Kodex cases exist. The reader
+needs the pattern and the risk assessment, not a
+case-by-case log.
 **If no LE enquiries:** State "No law enforcement
 enquiries identified."
 **QC Check (Ref: qc-submission-checklist.md #3.11):**

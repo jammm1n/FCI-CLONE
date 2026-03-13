@@ -894,7 +894,7 @@ counterparties.
    retain everything else exactly as Hexa generated
    it → append Supplemental Analysis block below.
    Never rewrite the Hexa structure at this step.
-   **Output format:** Wrap the entire box replacement (corrected Hexa + corrected bullet points + supplemental paragraph) in ONE ` ```icr ` block — no internal labels like "Supplemental Analysis:" inside the block (see ICR Output Formatting in icr-general-rules.md). Separate each UID entry with TWO blank lines so HaoDesk's bullet formatter treats them as individual items.
+   **Output format:** Wrap the entire box replacement (corrected Hexa + corrected bullet points + supplemental paragraph) in ONE ` ```icr ` block — no internal labels like "Supplemental Analysis:" inside the block. Separate each UID entry with exactly ONE blank line (see ICR Output Formatting in icr-general-rules.md).
    CORPORATE LANGUAGE SUBSTITUTION: For corporate
    accounts, find-and-replace throughout the Hexa
    counterparty text: "the user" → "the company" and
