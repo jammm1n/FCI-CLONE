@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     KODEX_SYNTHESIS_MODEL: str = "claude-sonnet-4-6"            # Stage 2: cross-case synthesis
 
     # KB Feedback
-    KB_FEEDBACK_MODEL: str = "anthropic/claude-sonnet-4-6"
+    KB_FEEDBACK_MODEL: str = "anthropic/claude-sonnet-4.6"
 
     # One-shot mode
     ONESHOT_MODEL: str = "claude-opus-4-6"
