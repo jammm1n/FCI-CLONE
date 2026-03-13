@@ -355,6 +355,7 @@ account balance. Apply corrections in-place — do not
 rewrite accurate Hexa text. If corrections were made,
 append a brief note: "Corrections applied: [list fields
 changed and reason]."
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **METADATA DISPLAY — FORMAT-DEPENDENT:**
 The metadata exclusion rule above applies to the
 NEWER Hexa box format where these fields are displayed
@@ -413,6 +414,7 @@ A single paragraph listing all block/unblock actions in
 chronological order with block type, action taken,
 timestamp, unlock reasons, and current status of each
 block type.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **If no blocks exist:** No action needed beyond auditing
 the Hexa content.
 **2FA RESET AND ONE-CLICK DISABLE BLOCKS:**
@@ -460,6 +462,7 @@ L1 referral reason.
 allegation]. The activity was performed between
 YYYY-MM-DD to YYYY-MM-DD and was attempted in [ADID or
 OID] for a total attempted amount of XXX USD."
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **Multiple Suspects / Unidentified UIDs:**
 If the L1 referral mentions multiple suspects or UIDs
 that cannot be immediately connected to the case:
@@ -497,6 +500,7 @@ ICRs with reference numbers and outcomes.
 A single paragraph (~60-75 words) summarizing each ICR
 with reference number, creation date, and outcome.
 Concludes with one neutral sentence on overall patterns.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **QC Check (Ref: qc-submission-checklist.md #3.6):**
 - All previous ICRs mentioned with outcomes.
 - Hexa content alone is NOT sufficient — analysis must
@@ -737,6 +741,7 @@ tier (High / Medium / Low). Group related cases from
 the same agency where appropriate. Conclude with a
 single risk position statement summarising the overall
 LE risk profile.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **Brevity rule:** State conclusions, not the reasoning
 chain. A single case should be 2-3 sentences. Multiple
 cases should not exceed one short paragraph per case

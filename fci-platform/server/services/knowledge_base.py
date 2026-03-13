@@ -332,7 +332,7 @@ Before producing ANY ICR text, use your extended thinking to complete this decis
 This gate ensures narrative tone is consistent with the conclusion throughout the ICR.
 ---
 ### EXECUTION SEQUENCE
-Work through ALL ICR sections in order. The step documents are loaded below. Produce copy-paste-ready ICR text for every section.
+Work through ALL ICR sections in order. The step documents are loaded below. Produce copy-paste-ready ICR text for every section. Wrap each HaoDesk box output in a ` ```icr ` fenced block — no internal labels, no headings inside the block. Reasoning goes outside.
 
 **Block 1 — Setup (Steps 1-6)**
 Follow icr-steps-setup.md. Produce all sections including Phase 0 and Steps 1-6.

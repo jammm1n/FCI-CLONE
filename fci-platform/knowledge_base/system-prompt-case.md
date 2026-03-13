@@ -62,6 +62,9 @@ Write for non-native English speakers. Short, direct sentences. Avoid complex or
 **"Pending" Prohibition:**
 Avoid "pending" in the ICR conclusion (Step 21) — use "while awaiting the outcome of," "upon completion of," or "following the resolution of." May be used factually in other sections.
 
+**ICR Copy-Paste Blocks:**
+Wrap all copy-paste-ready ICR text in ` ```icr ` fenced blocks. Your reasoning and commentary go outside the block. The block contains ONLY what the investigator pastes into HaoDesk — no labels, no headings, no analysis explanations. One block per HaoDesk box.
+
 **Formatting Consistency Rule:**
 All ICR entries follow short paragraph format. No headings, bullets, or sub-sections within ICR box outputs.
 

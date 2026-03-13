@@ -15,6 +15,7 @@ Populate with any additional unusual activity not
 covered in previous sections.
 **Default (if nothing additional):**
 "None identified."
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 ---
 ## STEP 18: RFI ISSUED AS PART OF THIS INVESTIGATION
 **ICR Section:** RFI Issued as part of this investigation
@@ -36,6 +37,7 @@ IF no RFI was sent:
 State: "No RFI has been issued as part of this
 investigation."
 Remove the template section entirely from HaoDesk.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **RFI TIPPING OFF EXCEPTION:**
 Do NOT send an RFI when:
 1. The subject is an active law enforcement target
@@ -296,6 +298,7 @@ State the RFI date, the number of reminders sent, the dates of reminders, and co
 **Mandatory Content (Always Editable Field):**
 Must contain analysis or the default statement.
 Never empty.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 ---
 ## STEP 20: SUMMARY OF UNUSUAL TRANSACTIONS
 **ICR Section:** Summary of the Unusual transactions
@@ -397,6 +400,8 @@ TOTAL SUCCESSFUL UNUSUAL TRANSACTIONS: X (XXXX USD)
 TOTAL REJECTED UNUSUAL TRANSACTIONS: X (XXXX USD)
 [Plain text description listing specific amounts and
 TXIDs as applicable]
+**Output format:** Wrap the complete Step 20 output (transaction totals + executive summary) in ONE ` ```icr ` block — no "Part A:" or "Part B:" labels inside the block (see ICR Output Formatting in icr-general-rules.md).
+
 **PART B: Executive Summary**
 Using the L1 Narrative and ALL outputs generated in
 Steps 2-19 as context, write an executive case summary.
@@ -547,6 +552,7 @@ sub-account structure, business model expectations),
 and (3) clear instruction to frame the narrative as
 mitigating. This is an accepted practice for drafting
 mitigation sections.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **Structure (Strict):**
 TARGET: 2-3 sentences for standard offboard/retain
 cases. The conclusion assumes the reader has already

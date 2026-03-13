@@ -26,6 +26,20 @@ the investigator resolves it.
 
 ---
 
+## ICR Output Formatting
+
+All copy-paste-ready ICR text must be wrapped in ` ```icr ` fenced code blocks. One block per HaoDesk box/field.
+
+**Inside the block:** ONLY text that goes into HaoDesk — no reasoning, no analysis labels, no section headings, no internal labels like "Supplemental Analysis:", "Part A:", "Part B:", "Executive Summary:", or any organizational heading from step docs.
+
+**Outside the block:** Rationale, explanations, commentary about what was changed and why.
+
+**Paragraph breaks:** Use blank lines between logical entries (e.g., between counterparty UIDs). Never use single line breaks where paragraph breaks are needed.
+
+The text inside the block must be immediately pasteable with no reformatting needed.
+
+---
+
 ## Hexa Protocol
 - Hexa-populated boxes are editable. If the Hexa AI
   output is poor or inaccurate, it should be tidied up.
@@ -44,29 +58,28 @@ it → append Supplemental Analysis block below.
 Never rewrite the Hexa structure at this step.
 
 **Correction Sequence Rule:** When correcting Hexa
-content at any step, always provide the complete
-corrected output in the exact same format as the
-original Hexa (same bullet point structure, same
-paragraph layout) ready for direct copy-paste FIRST.
-Then provide the Supplemental Analysis paragraph
-separately below. Never provide corrections as a
-list of edit instructions that the investigator must
-manually apply, and never provide only a Supplemental
+content at any step, provide the complete corrected
+output (corrected Hexa + Supplemental Analysis
+paragraph) wrapped in a single ` ```icr ` block,
+ready for direct copy-paste into the HaoDesk box.
+Do not include internal labels inside the block.
+Never provide corrections as a list of edit
+instructions that the investigator must manually
+apply, and never provide only a Supplemental
 Analysis paragraph without the corrected Hexa above
-it. The investigator must be able to select the
-corrected Hexa output and paste it directly into
-HaoDesk, then separately select and paste the
-Supplemental Analysis below it.
+it. Your reasoning and explanation of what was
+changed goes outside the block.
 
 **Individual Entry Rule:** When correcting Hexa
 bullet point entries (e.g., counterparty entries at
 Step 12), output the COMPLETE corrected bullet point
-— the full text as it should appear in HaoDesk.
-Never output a description of changes or edit
-instructions like "UID X entry updated to include
-[change]." Only reproduce entries that require
-correction. For unchanged entries, state "All other
-Hexa entries retained as-is."
+— the full text as it should appear in HaoDesk,
+inside the same ` ```icr ` block as the rest of the
+box content. Never output a description of changes
+or edit instructions like "UID X entry updated to
+include [change]." Only reproduce entries that
+require correction. For unchanged entries, state
+"All other Hexa entries retained as-is."
 
 ---
 

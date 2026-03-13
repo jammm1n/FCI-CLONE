@@ -41,6 +41,7 @@ A single ~80-100 word paragraph covering:
   whether the pattern is "consistent with" or
   "inconsistent with" the entity's declared business
   profile
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **Mandatory Content (Always Editable Field):**
 This field must NEVER be empty. Must contain velocity
 assessment, ratios, and fund flow summary.
@@ -293,6 +294,7 @@ IF data includes a "Snapshot of Suspicious Transactions"
 IF data is general lifetime alert summary:
 → Write the CTM alert summary using the following spec:
 **Required output:** Single paragraph, 60-80 words.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 1. Report the date range covered by the CTM alerts
    (only if start and end dates are explicitly present).
 2. Identify the top 1-3 entities by exposure amount (or
@@ -420,6 +422,7 @@ wallet analysis are presented in Step 10 (Top
 Addresses by Value), not in this section. See the
 COMBINED SCREENING WORKFLOW above.
 **STEP 9 NARRATIVE CONTENT:**
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 When exposed addresses exist, Step 9 should contain
 a short paragraph (2-4 sentences maximum) that:
 1. States how many exposed addresses were identified
@@ -706,6 +709,7 @@ Per the current version of the CTM phased approach SOP, for CTM alerts at the In
    Use the screening results to write the Step 10
    narrative.
 **STEP 10 NARRATIVE CONTENT:**
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 Step 10 is where all substantive Elliptic analysis
 is presented. This section must contain:
 1. THE ELLIPTIC OPENING TEMPLATE:
@@ -857,6 +861,7 @@ greyed-out section.
 50-70 words reporting total transaction count, USD
 value, date range, and relevant privacy coin features
 (XMR, ZEC, DASH) with AML/CFT risk statement.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 ---
 ## STEP 12: INTERNAL COUNTERPARTY ANALYSIS
 **ICR Section:** Internal counterparty analysis
@@ -889,6 +894,7 @@ counterparties.
    retain everything else exactly as Hexa generated
    it → append Supplemental Analysis block below.
    Never rewrite the Hexa structure at this step.
+   **Output format:** Wrap the entire box replacement (corrected Hexa + corrected bullet points + supplemental paragraph) in ONE ` ```icr ` block — no internal labels like "Supplemental Analysis:" inside the block (see ICR Output Formatting in icr-general-rules.md).
    CORPORATE LANGUAGE SUBSTITUTION: For corporate
    accounts, find-and-replace throughout the Hexa
    counterparty text: "the user" → "the company" and
@@ -1188,6 +1194,7 @@ failed fiat analysis. Do not add card-level
 breakdowns, discrepancy investigations, temporal
 analysis, channel-by-channel breakdowns, or
 additional commentary beyond the prompt output.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 If the Hexa rejected count does not match the
 spreadsheet row count, note the discrepancy in
 one sentence — do not investigate the cause.
@@ -1293,6 +1300,7 @@ Assessment of whether access locations and device
 languages are normal for user's nationality/residence,
 VPN usage percentage, sanctioned/restricted jurisdiction
 access, and likelihood of multi-person account access.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **LOW-RISK DEVICE PROFILES:**
 When all access locations are consistent with the
 user's nationality and residence, a brief
@@ -1468,6 +1476,7 @@ shared device analysis. Never empty.
      but no specific / negative news has been
      identified."
 **Required output:**
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 IF no adverse findings:
 "Open source research has been performed but no specific
 / negative news has been identified."
@@ -1504,6 +1513,7 @@ RFI cases with dates, types, and response summaries.
 **Required output:**
 50-60 word summary of RFI types sent and responses
 received, with date range.
+**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
 **RFI LOOKUP — ALTERNATIVE METHOD:**
 For a more complete view of the user's RFI history,
 use Binance Admin > User profile > RFI section
