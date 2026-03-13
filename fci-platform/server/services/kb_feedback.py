@@ -114,6 +114,15 @@ def _build_transcript(messages: list) -> str:
     return "\n\n".join(lines)
 
 
+async def _clear_submitted_flag(db, conversation_id: str) -> None:
+    """Clear kb_feedback_submitted so the user can retry after a failure."""
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {"$unset": {"kb_feedback_submitted": ""}},
+    )
+    logger.info("KB feedback: cleared submitted flag for %s (will allow retry)", conversation_id)
+
+
 # ── Core Analysis ───────────────────────────────────────────────
 
 
@@ -179,9 +188,11 @@ async def analyze_conversation(conversation_id: str) -> dict:
 
     except json.JSONDecodeError as e:
         logger.exception("KB feedback: failed to parse JSON response for %s", conversation_id)
+        await _clear_submitted_flag(db, conversation_id)
         return {"status": "error", "reason": f"JSON parse error: {e}"}
     except Exception as e:
         logger.exception("KB feedback: analysis failed for %s", conversation_id)
+        await _clear_submitted_flag(db, conversation_id)
         return {"status": "error", "reason": str(e)}
 
 
