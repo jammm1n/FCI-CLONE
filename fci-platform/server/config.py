@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     KODEX_EXTRACTION_MODEL: str = "claude-haiku-4-5-20251001"   # Stage 1: per-entry extraction
     KODEX_SYNTHESIS_MODEL: str = "claude-sonnet-4-6"            # Stage 2: cross-case synthesis
 
+    # KB Feedback
+    KB_FEEDBACK_MODEL: str = "claude-sonnet-4-6"
+
     # One-shot mode
     ONESHOT_MODEL: str = "claude-opus-4-6"
     ONESHOT_THINKING_ENABLED: bool = True

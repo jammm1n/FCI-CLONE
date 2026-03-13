@@ -414,7 +414,7 @@ A single paragraph listing all block/unblock actions in
 chronological order with block type, action taken,
 timestamp, unlock reasons, and current status of each
 block type.
-**Output format:** Wrap in ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md).
+**Output format:** Wrap ONLY the blocks paragraph in an ` ```icr ` block (see ICR Output Formatting in icr-general-rules.md). Do NOT wrap or reproduce the existing Hexa summary — the investigator will append the blocks paragraph underneath it themselves.
 **If no blocks exist:** No action needed beyond auditing
 the Hexa content.
 **2FA RESET AND ONE-CLICK DISABLE BLOCKS:**

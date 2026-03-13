@@ -1033,6 +1033,9 @@ async def get_history(conversation_id: str) -> dict:
         "messages": visible_messages,
     }
 
+    if conversation.get("kb_feedback_submitted"):
+        result["kb_feedback_submitted"] = True
+
     # Include investigation state if present
     state = conversation.get("investigation_state")
     if state:

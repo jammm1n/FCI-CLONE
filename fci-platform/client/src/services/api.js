@@ -245,6 +245,37 @@ export async function exportPdf(token, conversationId) {
 }
 
 // ---------------------------------------------------------------------------
+// KB Feedback
+// ---------------------------------------------------------------------------
+
+export function submitKBFeedback(token, conversationId) {
+  // sendBeacon survives page navigation — can't send custom headers,
+  // so auth token is passed as query param
+  navigator.sendBeacon(
+    `${BASE_URL}/conversations/${conversationId}/kb-feedback?token=${encodeURIComponent(token)}`
+  );
+}
+
+export async function downloadKBFeedbackReport(token) {
+  const res = await fetch(`${BASE_URL}/conversations/kb-feedback/report`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Download failed: ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'kb-feedback-report.md';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
 // Images
 // ---------------------------------------------------------------------------
 

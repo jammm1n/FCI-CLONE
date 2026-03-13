@@ -16,7 +16,7 @@ import json
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from sse_starlette.sse import EventSourceResponse
 from anthropic import RateLimitError
@@ -340,6 +340,25 @@ async def list_conversations(
         mode=mode,
     )
     return {"conversations": conversations}
+
+
+# ---------------------------------------------------------------------------
+# KB Feedback — download report (must be before /{conversation_id} routes)
+# ---------------------------------------------------------------------------
+
+@router.get("/kb-feedback/report")
+async def download_kb_feedback_report(
+    current_user: dict = Depends(get_current_user),
+):
+    """Download a combined markdown report of all KB feedback issues."""
+    from server.services.kb_feedback import generate_markdown_report
+
+    report = generate_markdown_report()
+    return Response(
+        content=report,
+        media_type="text/markdown",
+        headers={"Content-Disposition": 'attachment; filename="kb-feedback-report.md"'},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -947,3 +966,66 @@ async def reset_case(
         raise HTTPException(status_code=404, detail=str(e))
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# KB Feedback — submit conversation for analysis
+# ---------------------------------------------------------------------------
+
+async def _get_current_user_optional(
+    authorization: str | None = Header(None),
+) -> dict | None:
+    """Like get_current_user but returns None instead of raising 401."""
+    if not authorization:
+        return None
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+    from server.routers.auth import _sessions
+    return _sessions.get(parts[1])
+
+
+@router.post("/{conversation_id}/kb-feedback", status_code=202)
+async def submit_kb_feedback(
+    conversation_id: str,
+    background_tasks: BackgroundTasks,
+    token: str | None = None,
+    current_user: dict | None = Depends(_get_current_user_optional),
+):
+    """
+    Submit a conversation for KB feedback analysis (runs in background).
+
+    Accepts auth via Bearer header OR ?token= query param (for sendBeacon).
+    """
+    from server.services import kb_feedback
+    from server.routers.auth import _sessions
+
+    # sendBeacon can't send headers, so accept token as query param
+    if current_user is None and token:
+        current_user = _sessions.get(token)
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db = get_database()
+    conv = await db.conversations.find_one(
+        {"_id": conversation_id},
+        {"user_id": 1, "mode": 1, "kb_feedback_submitted": 1},
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if conv.get("user_id") != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if conv.get("mode") == "free_chat":
+        raise HTTPException(status_code=400, detail="KB feedback not available for free chat")
+    if conv.get("kb_feedback_submitted"):
+        raise HTTPException(status_code=409, detail="Feedback already submitted for this conversation")
+
+    # Mark as submitted before queuing background task
+    await db.conversations.update_one(
+        {"_id": conversation_id},
+        {"$set": {"kb_feedback_submitted": True}},
+    )
+
+    background_tasks.add_task(kb_feedback.analyze_conversation, conversation_id)
+
+    return {"status": "submitted"}

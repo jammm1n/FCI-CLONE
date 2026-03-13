@@ -15,6 +15,7 @@ env/
 # Data
 data/images/*
 !data/images/.gitkeep
+data/kb_feedback/
 
 # Node / Frontend
 node_modules/

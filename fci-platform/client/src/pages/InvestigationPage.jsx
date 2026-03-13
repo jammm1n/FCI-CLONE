@@ -12,6 +12,7 @@ import ChatInput from '../components/investigation/ChatInput';
 import StreamingIndicator from '../components/investigation/StreamingIndicator';
 import Skeleton from '../components/shared/Skeleton';
 import DownloadPdfButton from '../components/shared/DownloadPdfButton';
+import SubmitFeedbackButton from '../components/shared/SubmitFeedbackButton';
 import TokenUsageDisplay from '../components/shared/TokenUsageDisplay';
 import StepIndicator from '../components/shared/StepIndicator';
 import QCPasteModal from '../components/shared/QCPasteModal';
@@ -43,6 +44,7 @@ export default function InvestigationPage() {
   const [oneshotExecuted, setOneshotExecuted] = useState(false);
   const [oneshotExecuting, setOneshotExecuting] = useState(false);
   const [oneshotPartial, setOneshotPartial] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const autoAbortRef = useRef(null);
   const dragging = useRef(false);
 
@@ -98,6 +100,7 @@ export default function InvestigationPage() {
           // Existing conversation — load history
           setConversationId(caseDetail.conversation_id);
           const history = await loadHistory(caseDetail.conversation_id);
+          if (history?.kb_feedback_submitted) setFeedbackSubmitted(true);
           // Detect mode from conversation
           if (history?.mode === 'oneshot') {
             setConvMode('oneshot');
@@ -994,6 +997,11 @@ export default function InvestigationPage() {
               <DownloadPdfButton
                 conversationId={conversationId}
                 disabled={sending || aiLoading || autoExecuting}
+              />
+              <SubmitFeedbackButton
+                conversationId={conversationId}
+                disabled={sending || aiLoading || autoExecuting || oneshotExecuting}
+                alreadySubmitted={feedbackSubmitted}
               />
             </div>
           </div>

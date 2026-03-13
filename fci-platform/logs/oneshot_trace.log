@@ -77,3 +77,48 @@ I've completed a thorough review of the case data. Let me ..."
   Thinking: 24,839 chars
   TOTALS: input=61,310 | output=23,932 | cache_create=155,120 | cache_read=0
 ================================================================================
+
+================================================================================
+=== ONESHOT TRACE START === 2026-03-13 11:19:19 UTC
+=== trace_id: exec_conv_7a6aa554ba4d
+================================================================================
+Model: claude-opus-4-6 | max_tokens: 64000 | auto_continue: True | thinking: 16000
+System prompt: 297,942 chars (~74,485 tokens est.)
+Messages: 7 messages, 42,635 chars (~10,658 tokens est.)
+  msg  1 [user      ]   36,899 chars (~9,224 tok) "[CASE DATA]
+
+**Case ID:** 9999999999
+**Case Type:** investig..."
+  msg  2 [assistant ]    4,570 chars (~1,142 tok) "## Case Data Review — UID 274819633 / Case 9999999999
+
+I've ..."
+  msg  3 [user      ]      100 chars (~25 tok) "thi is a system test - ignore data errors and use your best ..."
+  msg  4 [assistant ]      508 chars (~127 tok) [text, tool_use]
+  msg  5 [user      ]      173 chars (~43 tok) [tool_result]
+  msg  6 [assistant ]      157 chars (~39 tok) "[READY TO EXECUTE]
+
+All flagged issues will be handled with ..."
+  msg  7 [user      ]      228 chars (~57 tok) "Execute the full ICR now. Work through all four blocks in or..."
+--------------------------------------------------------------------------------
+--- API CALL 1 ---
+  Messages: 7 | Payload: ~42,635 chars (~10,658 tok) + system ~74,485 tok
+  Result: stop=tool_use | input=13,630 | output=10,715 | cache_create=77,777 | cache_read=0
+  Context window: ~91,407 tokens (input + cache)
+  Output this call: 0 chars | Cumulative output: 0 chars
+  Running totals: input=13,630 | output=10,715 | cache_create=77,777 | cache_read=0
+  Tool: get_reference_document(mlro-escalation-decisions)
+--- API CALL 2 ---
+  Messages: 9 | Payload: ~126,153 chars (~31,538 tok) + system ~74,485 tok
+  (new)   msg  1 [assistant ]   19,873 chars (~4,968 tok) [thinking, tool_use]
+  (new)   msg  2 [user      ]   63,645 chars (~15,911 tok) [tool_result]
+  Result: stop=end_turn | input=46,604 | output=10,903 | cache_create=0 | cache_read=77,777
+  Context window: ~124,381 tokens (input + cache)
+  Output this call: 40,664 chars | Cumulative output: 40,664 chars
+  Running totals: input=60,234 | output=21,618 | cache_create=77,777 | cache_read=77,777
+================================================================================
+=== ONESHOT TRACE END === status=end_turn (success)
+  API calls: 2 | Continuations: 0 | Tool calls: 1
+  Final output: 40,664 chars (~10,166 tokens est.)
+  Thinking: 19,829 chars
+  TOTALS: input=60,234 | output=21,618 | cache_create=77,777 | cache_read=77,777
+================================================================================

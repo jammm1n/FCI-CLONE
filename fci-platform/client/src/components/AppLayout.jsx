@@ -1,11 +1,26 @@
+import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { capitalize } from '../utils/formatters';
+import { downloadKBFeedbackReport } from '../services/api';
 
 export default function AppLayout({ children, caseInfo }) {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const [feedbackDownloading, setFeedbackDownloading] = useState(false);
+
+  const handleDownloadFeedback = useCallback(async () => {
+    if (feedbackDownloading) return;
+    setFeedbackDownloading(true);
+    try {
+      await downloadKBFeedbackReport(token);
+    } catch {
+      // silent — file just won't download
+    } finally {
+      setFeedbackDownloading(false);
+    }
+  }, [token, feedbackDownloading]);
 
   return (
     <div className="flex flex-col h-screen bg-surface-50 dark:bg-surface-900">
@@ -60,6 +75,24 @@ export default function AppLayout({ children, caseInfo }) {
               <path fillRule="evenodd" d="M10 3c-4.31 0-8 3.033-8 7 0 2.024.978 3.825 2.499 5.085a3.478 3.478 0 01-.522 1.756.75.75 0 00.584 1.143 5.976 5.976 0 003.243-1.028c.659.103 1.357.169 2.196.169 4.31 0 8-3.033 8-7s-3.69-7-8-7z" clipRule="evenodd" />
             </svg>
           </Link>
+
+          {/* Download feedback report */}
+          <button
+            onClick={handleDownloadFeedback}
+            disabled={feedbackDownloading}
+            className="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center text-surface-500 hover:text-gold-500 disabled:opacity-50"
+            title="Download Feedback Report"
+          >
+            {feedbackDownloading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm4.75 11.25a.75.75 0 001.5 0v-2.546l.943.942a.75.75 0 001.06-1.06l-2.22-2.22a.75.75 0 00-1.06 0l-2.22 2.22a.75.75 0 001.06 1.06l.937-.938v2.542z" clipRule="evenodd" />
+              </svg>
+            )}
+          </button>
 
           {/* Theme toggle */}
           <button

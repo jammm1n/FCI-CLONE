@@ -34,7 +34,7 @@ All copy-paste-ready ICR text must be wrapped in ` ```icr ` fenced code blocks. 
 
 **Outside the block:** Rationale, explanations, commentary about what was changed and why.
 
-**Paragraph breaks:** Use blank lines between logical entries (e.g., between counterparty UIDs). Never use single line breaks where paragraph breaks are needed.
+**Line breaks between entries:** When ICR output contains multiple entries that the investigator will format as bullet points in HaoDesk (e.g., counterparty UID entries at Step 12), separate each entry with TWO blank lines inside the ` ```icr ` block. This ensures HaoDesk recognises them as distinct items when the investigator highlights and clicks the bullet formatter. A single blank line is insufficient — HaoDesk collapses it into one block.
 
 The text inside the block must be immediately pasteable with no reformatting needed.
 
