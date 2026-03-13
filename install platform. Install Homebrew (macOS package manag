@@ -348,3 +348,17 @@ anthropic.AuthenticationError: Error code: 401 - {'error': {'message': "team not
 
   mongosh fci_platform --eval "db.conversations.updateMany({kb_feedback_submitted: true}, {\$unset:
   {kb_feedback_submitted: ''}})"
+
+
+ANTHROPIC_API_KEY=sk-ts02xxxxxxxxxxxxxxxxxxx
+ANTHROPIC_BASE_URL=https://litellm.safuapi.secfdg.net
+ANTHROPIC_MODEL=anthropic/claude-opus-4.6
+ONESHOT_MODEL=anthropic/claude-opus-4.6
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DB_NAME=fci_platform
+KODEX_EXTRACTION_MODEL=anthropic/claude-haiku-4.5
+KODEX_SYNTHESIS_MODEL=anthropic/claude-sonnet-4.6
+
+ELLIPTIC_API_KEY=b84e3e243defbxxxxxxxxxxxxxxxx
+ELLIPTIC_API_SECRET=34cdfbf6e51b8xxxxxxxxxxxxxxxxx
+ELLIPTIC_DEMO_MODE=false
