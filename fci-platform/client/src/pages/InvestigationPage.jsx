@@ -606,11 +606,18 @@ export default function InvestigationPage() {
             // If we have accumulated content, save it as partial before showing error
             if (accumulatedContent.length > 0) {
               await savePartialOnFailure();
+            } else if (accumulatedThinking.length > 0) {
+              // Thinking accumulated but no content yet — save thinking as partial
+              await savePartialOnFailure();
             } else {
+              // Nothing accumulated — show actionable error
+              const retryMsg = event.message?.includes('retry')
+                ? event.message
+                : 'Connection lost during execution. Click Execute Full ICR to retry.';
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.message_id === streamMsgId
-                    ? { ...msg, content: `**Error:** ${event.message}`, isStreaming: false }
+                    ? { ...msg, content: `**Error:** ${retryMsg}`, isStreaming: false }
                     : msg
                 )
               );
@@ -642,11 +649,11 @@ export default function InvestigationPage() {
       } else {
         setStepError(err.message);
         await savePartialOnFailure();
-        if (accumulatedContent.length === 0) {
+        if (accumulatedContent.length === 0 && accumulatedThinking.length === 0) {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.message_id === streamMsgId
-                ? { ...msg, content: `**Error:** ${err.message}`, isStreaming: false }
+                ? { ...msg, content: '**Error:** Connection lost during execution. Click Execute Full ICR to retry.', isStreaming: false }
                 : msg
             )
           );

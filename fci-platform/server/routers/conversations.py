@@ -784,6 +784,9 @@ async def oneshot_execute(
 
     async def event_generator():
         done_event = None
+        accum_content = ""
+        accum_thinking = ""
+        accum_tools = []
 
         try:
             async for event in conversation_manager.oneshot_execute(
@@ -793,6 +796,16 @@ async def oneshot_execute(
                 if event["type"] == "done":
                     done_event = event
                 else:
+                    if event["type"] == "content_delta":
+                        accum_content += event.get("text", "")
+                    elif event["type"] == "thinking_delta":
+                        accum_thinking += event.get("text", "")
+                    elif event["type"] == "tool_use":
+                        accum_tools.append({
+                            "tool": event.get("tool", ""),
+                            "document_id": event.get("document_id", ""),
+                            "document_title": event.get("document_title", ""),
+                        })
                     yield {"data": json.dumps(event)}
 
         except ValueError as e:
@@ -800,11 +813,31 @@ async def oneshot_execute(
             return
         except RateLimitError as e:
             logger.warning("Rate limit during oneshot execution: %s", e)
-            yield {"data": json.dumps({"type": "error", "message": "AI service rate-limited. Try again shortly."})}
+            if accum_content or accum_thinking:
+                try:
+                    await conversation_manager.store_oneshot_partial(
+                        conversation_id=conversation_id,
+                        partial_content=accum_content,
+                        tools_used=accum_tools,
+                        thinking_content=accum_thinking,
+                    )
+                except Exception:
+                    logger.exception("Failed to save oneshot partial on rate limit")
+            yield {"data": json.dumps({"type": "error", "message": "AI service rate-limited. Click Execute Full ICR to retry."})}
             return
         except Exception as e:
             logger.exception("Oneshot execution error in conversation %s", conversation_id)
-            yield {"data": json.dumps({"type": "error", "message": "Internal server error"})}
+            if accum_content or accum_thinking:
+                try:
+                    await conversation_manager.store_oneshot_partial(
+                        conversation_id=conversation_id,
+                        partial_content=accum_content,
+                        tools_used=accum_tools,
+                        thinking_content=accum_thinking,
+                    )
+                except Exception:
+                    logger.exception("Failed to save oneshot partial on stream error")
+            yield {"data": json.dumps({"type": "error", "message": "Connection lost during execution. Click Execute Full ICR to retry."})}
             return
 
         # Store to MongoDB FIRST, then yield done event
